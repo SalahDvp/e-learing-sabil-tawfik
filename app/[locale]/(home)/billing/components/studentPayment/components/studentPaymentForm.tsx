@@ -335,7 +335,7 @@ const onSelected=(selectedStudent:any)=>{
           parent: data.parent.name,
           paymentAmount: data.paymentAmount,
           amountLeftToPay:data.amountLeftToPay,
-          paymentDate: data.paymentDate.toLocaleDateString(),
+          paymentDate:format(data.paymentDate, 'dd/MM/yyyy'),
           status: t(data.status),
           fromWho: data.fromWho,
         },

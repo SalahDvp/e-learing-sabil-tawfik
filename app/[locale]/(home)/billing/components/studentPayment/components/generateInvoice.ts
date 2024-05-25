@@ -39,7 +39,7 @@ export function downloadInvoice(paymentData:any,id:string,titles:any[],words:any
         [
           {
             content: `ReferenceID #${id}`
-            +`\nDate: ${format(paymentData.paymentDate, 'dd/MM/yyyy')}`,
+            +`\nDate:${paymentData.paymentDate}`,
             styles: {
               halign: 'right'
             }
@@ -243,10 +243,10 @@ export function downloadInvoice(paymentData:any,id:string,titles:any[],words:any
   }
   export function generateBill(paymentData:any,id:string,titles:any[],words:any,paidMonths:any) {
     const doc = new jsPDF();
-
     doc.addFileToVFS('Amiri-Regular.ttf', font);
     doc.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
     doc.setFont('Amiri');
+
     autoTable(doc, {
 
       body: [
@@ -283,7 +283,7 @@ export function downloadInvoice(paymentData:any,id:string,titles:any[],words:any
         [
           {
             content: `ReferenceID #${id}`
-            +`\nDate: ${format(paymentData.paymentDate, 'dd/MM/yyyy')}`,
+            +`\nDate:${paymentData.paymentDate}`,
             styles: {
               halign: 'right',
               font:'Amiri',
@@ -439,7 +439,7 @@ export function downloadInvoice(paymentData:any,id:string,titles:any[],words:any
           [
             {
               content: `ReferenceID #${id}`
-              +`\nDate: ${format(paymentData.paymentDate, 'dd/MM/yyyy')}`,
+              +`\nDate:${paymentData.paymentDate}`,
               styles: {
                 halign: 'right',
                 font:'Amiri',
