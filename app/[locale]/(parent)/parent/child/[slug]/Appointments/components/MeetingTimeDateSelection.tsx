@@ -167,19 +167,14 @@ function MeetingTimeDateSelection() {
       const startTimeUTC = fromZonedTime(data.slotStart, timeZoneAlgeria)
       const endTimeUTC = fromZonedTime(data.slotEnd, timeZoneAlgeria)      
       const createGoogleMeetLink = httpsCallable<{ emails: string[]; startTime: Date; endTime: Date;},GoogleMeetLinkResponse>(functions, 'createGoogleMeetLink');
-      createGoogleMeetLink({
+      const result: HttpsCallableResult<GoogleMeetLinkResponse> = await createGoogleMeetLink({
         emails: ["youcefmilk@gmail.com"],
-        startTime:new Date(),
-        endTime:new Date(new Date().setHours(new Date().getHours() + 1)),
-      })
-        .then((result:HttpsCallableResult<GoogleMeetLinkResponse>) => {
-          const meetLink = result.data.meetLink;
-          console.log('Google Meet link:', meetLink);
-        })
-        .catch(error => {
-          console.error('Error:', error);
-        });
-      const appointmentData={teacher:data.teacher,teacherId:data.teacherId,duration:data.duration,date:data.date,slot:data.slot,student:childData.student,studentId:childData.id,parent:`${parent.firstName} ${parent.lastName}`,parentId:parent.id,start:data.slotStart,end:data.slotEnd}
+        startTime: startTimeUTC,
+        endTime: endTimeUTC,
+      });
+  
+      const meetLink = result.data.meetLink;
+      const appointmentData={teacher:data.teacher,teacherId:data.teacherId,duration:data.duration,date:data.date,slot:data.slot,student:childData.student,studentId:childData.id,parent:`${parent.firstName} ${parent.lastName}`,parentId:parent.id,start:data.slotStart,end:data.slotEnd,meetLink:meetLink}
       const appointmentId=addAppointment(appointmentData);
       setTeachers((prevTeachers:any) =>
         prevTeachers.map((teacher:any) =>

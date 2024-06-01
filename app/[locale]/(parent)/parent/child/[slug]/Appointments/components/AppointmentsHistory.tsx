@@ -15,12 +15,13 @@ import {
     CardHeader,
     CardTitle,
   } from "@/components/ui/card"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import { useChildData } from "@/app/[locale]/(parent)/components/childDataProvider"
 import { format } from 'date-fns';
 import { Badge } from "@/components/ui/badge";
 import React from "react";
 import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
 
 interface FirestoreTimestamp {
   seconds: number;
@@ -52,8 +53,9 @@ const AppointmentHistory=()=>{
       // Default to white for unknown status
     }
   }, []);
+  const sortedAppointments = [...childData.appointments].sort((a, b) => b.start.toDate().getTime() - a.start.toDate().getTime());
     return(
-        <Card className='w-full md:w-1/3'>
+        <Card className='w-full md:w-2/4'>
         <CardHeader className="pb-3">
           <CardTitle>{t('appointment-history')}</CardTitle>
      
@@ -66,19 +68,26 @@ const AppointmentHistory=()=>{
         <TableRow>
           <TableHead >{t('date')}</TableHead>
           <TableHead>{t('teacher')}</TableHead>
-          <TableHead className="text-right">{t('status')}</TableHead>
-
+          <TableHead >{t('status')}</TableHead>
+          <TableHead className="text-left">Link</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {childData.appointments.map((appointment:any,index:number) => (
+    
+        {sortedAppointments.map((appointment:any,index:number) => (
           <TableRow key={index}>
             <TableCell className="font-medium text-left">{formatFirestoreTimestamp(appointment.start, appointment.end)}</TableCell>
             <TableCell >{appointment.teacher}</TableCell>
             <TableCell className="text-right"> <Badge style={{backgroundColor:getStatusColor(appointment.status)}}>{t(appointment.status)}</Badge></TableCell>
-
+            <TableCell > 
+              <Button variant="link" onClick={()=>window.open(appointment.meetLink, '_blank', 'noopener,noreferrer')}>
+                {appointment?.meetLink}
+                </Button>
+            </TableCell>
           </TableRow>
+          
         ))}
+                 
       </TableBody>
       {/* <TableFooter>
         <TableRow>

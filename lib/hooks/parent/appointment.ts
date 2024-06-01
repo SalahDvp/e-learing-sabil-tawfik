@@ -13,6 +13,7 @@ export interface Appointment {
     studentId: string;
     teacher: string;
     teacherId: string;
+    meetLink: string | null
   }
 
 export const addAppointment = async (appointment: Appointment): Promise<string | null> => {
