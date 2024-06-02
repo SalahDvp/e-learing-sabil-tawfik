@@ -179,7 +179,7 @@ const paymentPlans = React.useMemo(() => {
     }
   }
   return [];
-}, [form,levels]);
+}, [form,levels,watchlevel]);
 const onSelected=(selectedStudent:any)=>{
   form.setValue("class",selectedStudent.class)
   form.setValue("parent",{name:selectedStudent.parentFullName,id:selectedStudent.parentId})
