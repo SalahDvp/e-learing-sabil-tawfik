@@ -15,6 +15,7 @@ import { ModeToggle } from "../(home)/dashboard/components/theme-mode"
 import { usePathname, useRouter } from "@/navigation"
 import { useTranslations } from "next-intl"
 import LocaleSwitcher from "@/components/LocaleSwitcher"
+import { signOut } from "@/lib/auth"
 
 export default function Header(){
 const pathname=usePathname()
@@ -162,7 +163,7 @@ const t=useTranslations()
             <DropdownMenuItem>{t('settings')}</DropdownMenuItem>
             <DropdownMenuItem>{t('support')}</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>{t('logout')}</DropdownMenuItem>
+            <DropdownMenuItem onClick={signOut}>{t('logout')}</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
         <ModeToggle/>

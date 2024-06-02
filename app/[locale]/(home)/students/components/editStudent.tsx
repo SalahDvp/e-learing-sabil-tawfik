@@ -215,7 +215,7 @@ useEffect(() => {
       
       downloadFiles();
     }
-  }, [student,reset])
+  }, [student,reset,levels])
   const renderInput = (fieldName: string, field:any) => {
     switch (fieldName) {
       case "dateOfBirth":

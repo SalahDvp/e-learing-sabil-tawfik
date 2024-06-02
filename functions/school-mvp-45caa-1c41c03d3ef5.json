@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "school-mvp-45caa",
+  "private_key_id": "1c41c03d3ef573a314501dea7588ce3f04980bb3",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDvEI2deHZskdrc\nyDkzbj16aU4L4g/22spCWwNw6tXB/gDhohwiHki/zArdZesRrAVStzLp+tbAirwK\nwdUf3q2HFXrXbxnLcbiX2/RS4OiM27wb7U3kfM/Qd4ust5iF4Nug/WNiMZR4iiy2\nGWvBd35ILB7/xbN9Vtc5iz+uEJZGTfXiRno87PVjrsZTkbHyPTseJD7khNjJJOf/\nHemv7qQEVFU2PvHrNh2N6uZH948IQjAP2Kv8dUUQem+csN1+fn3oymA/7Cddo9mJ\nfxc7in3rnQn5A9VKiVHTDESopnHBNLKQocXpwsqsQpQ1zWHtOq9XU7ZZe0Dapg2R\n43bMi4PBAgMBAAECggEAAIUHpcZCXLLoDZMg9f7wIPL5gK0jqhFdPaC2os3rZzxb\nJzj+Je1d9FJN0xhJx/nkFhI4yPLMvQbJliztxj3i+vDScEkPq8cr7j1l0c+I9htr\n/eqqj+YoUcdY+ty8EVSqqcj++2klFzl014MjQFbzbxmyvuec45sMpRlGBWmPnKZ6\nCd7OhFne4wx3+dCqXrohkFe2d7pTQSukXxMhl0xwUG3Zrndhf5rv/bQ7aA43G2gQ\nAjby/Az9Hoy2moeFOfCGwYOqDrF5YzNvv5E0Tw6i/nvRimh/AnJP7SFLx27JFNcO\ne74LN3VPWKESQbivDXCibnZ5ZpD2pL+6VPOAaQF3EQKBgQD/WnANxsq4zyRctJtF\n5i3PBwZvvv3IRcoP3TgQUbOmSFdQe2gw+D4twRtF36Wo0TZS+aNy101y0Fqz8zKg\nTVvWKtXSmgxWXcWgwiioksfmumccKBKhmQMwcZ1sXRuhr06Eg+EH0kM3XX9yjzi8\ndafhwjVw0w3rbnm3/+J3pKX62QKBgQDvq43zkHjcL8urhcLmYvNjhbFZcOZrPs2z\nZ8sEs+Fb5N3EjPR34GZPAC5T9ybExvsn06kr03bZm4TpV2YZzHFmhqDITtiCbxlg\ntBP6s9oLi9KZL3V8UAmLHR2c0bqsYQnUjwr4i4TKGEkVmjbCrzyQd3OPQ3DJ4Bo3\n95/+bdyvKQKBgQCoufFgqQI6q2SzfQM8ZKPQMCwommLGepbRdLMe1V2HejV3kJOA\nCAfN49NJkEW+Dr9+hEVkFK+wNcw5K3FASt1r3lH7Hp8YUk3Ls396I8LCylhnWnM1\nJA3fbLNAbyVa6KNRHHMM3/paEwWrhMdQf822dsUpD8wazJzQ39ucgsbJwQKBgDvA\nhpRpuWgT1nA92fh8RPfT9gI5fojQUJJg1yGmAxJY/d0p0y0r2fXqMqKmZJj8jtNA\nFtYhU2kvN7TBIGhgKwmHmQA3gA0My8PrQWvoeP0V7/xW87B5d9eh+6cENskRLFU9\nEFwk1IdaBKaJGwvwimXuEfZutujtoTvA1bemBjX5AoGBANgMEOYOczTs3Rjm+vuV\n24YBp25RS2fdf0cVudpnIIPVrXmERx/7by/euxm6eWkdpPr6olsdt17Rk19Ybcap\noSBT/GH7Yy0Sub6aQfiNagdf9pHKfh0mZz05aDRWhjo0MLe7u1JnMxKSbERTpipg\nQpRt9lJVOrk9u5QQXLHSHbL4\n-----END PRIVATE KEY-----\n",
+  "client_email": "googlemeetlink@school-mvp-45caa.iam.gserviceaccount.com",
+  "client_id": "113952193621805526716",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/googlemeetlink%40school-mvp-45caa.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

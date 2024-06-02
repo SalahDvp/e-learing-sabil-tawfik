@@ -14,7 +14,8 @@ export default function RootLayout({
   
   if (user === false) return <>Auth loading...</>;
   if (!user) return redirect("/Auth");
-  return (
+  if(user.role==='parent') return redirect("/parent")
+  return ( 
     
     <FetchDataProvider>
       <div>

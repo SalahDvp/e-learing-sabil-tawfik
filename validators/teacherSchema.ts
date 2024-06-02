@@ -21,6 +21,7 @@ export const teacherRegistrationSchema: ZodSchema<{
   medicalConditions: string | null;
   salary: number| null;
   status:string;
+  officeHours:{day:string;start:string;end:string}[]
 
 }> = z.object({
   id: z.string(),
@@ -43,4 +44,5 @@ export const teacherRegistrationSchema: ZodSchema<{
   emergencyContactPhone: z.string().min(10, 'Please enter a value between 10 and 15 characters.').max(15, 'Please enter a value between 10 and 15 characters.'),
   medicalConditions: z.string().max(255).nullable(),
   status: z.enum(['active', 'suspended', 'expelled'])||z.string(),
+  officeHours:z.array(z.object({day:z.string(),start:z.string(),end:z.string()}))
 });

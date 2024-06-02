@@ -9,7 +9,12 @@ function Page() {
 
   const user = useUser();
   if (user) {
-    return redirect('/dashboard')
+    if (user.role === 'parent') {
+      return redirect('/parent')
+    } else {
+      return redirect('/dashboard')
+    }
+   
   }
 
   if (user === false) {

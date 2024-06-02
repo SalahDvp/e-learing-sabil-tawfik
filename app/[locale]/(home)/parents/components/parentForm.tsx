@@ -33,6 +33,8 @@ import { useData } from "@/context/admin/fetchDataContext";
 import { addParent } from "@/lib/hooks/parents";
 import { uploadFilesAndLinkToCollection } from "@/context/admin/hooks/useUploadFiles";
 import { useTranslations } from "next-intl";
+import { functions } from "@/firebase/firebase-config";
+import { getFunctions, httpsCallable } from "firebase/functions";
 const fieldNames = [
   "firstName",
   "lastName",
@@ -150,22 +152,28 @@ type FormKeys =
 
   async function onSubmit(data: ParentFormValues) {
     try {
-      const parentId = await addParent({...data,documents:[]});
-      const uploaded = await uploadFilesAndLinkToCollection("Parents", parentId, filesToUpload);
-      
-      setParents((prev: ParentFormValues[]) => [
+      const addParent = httpsCallable(functions, 'createUserAndAssignRole');
+      const parentadded:any=await addParent({...data,documents:[]})
+      //const parentId = await addParent({...data,documents:[]});
+      if(parentadded.data){
+        const uploaded = await uploadFilesAndLinkToCollection("Parents",parentadded.data?.uid, filesToUpload);
+        setParents((prev: ParentFormValues[]) => [
        
-        { ...data, id: parentId, parent: `${data.firstName} ${data.lastName}`,     
-        value: `${data.firstName} ${data.lastName}`,
-        label: `${data.firstName} ${data.lastName}`, documents: uploaded },...prev
-      ]);
-  
-      toast({
-        title: t('changes-applied-1'),
-        description: t(`changes-applied-Successfully`),
-      });
-      console.log(data);
-      reset();
+          { ...data, id: parentadded.data?.uid, parent: `${data.firstName} ${data.lastName}`,     
+          value: `${data.firstName} ${data.lastName}`,
+          label: `${data.firstName} ${data.lastName}`, documents: uploaded },...prev
+        ]);
+    
+        toast({
+          title: t('changes-applied-1'),
+          description: t(`changes-applied-Successfully`),
+        });
+        console.log(data);
+        reset();
+      }
+     
+      
+   
     } catch (error) {
       console.error("Error submitting form:", error);
       // Handle the error, e.g., show an error message to the user

@@ -68,9 +68,9 @@ export function SheetDemo() {
   });
 const t=useTranslations()
 const objectOptions = [
-  { value: 'math', label: 'Math' },
-  { value: 'english', label: 'English' },
-  { value: 'arabic', label: 'Arabic' },
+  { value: 'math', label: t('Mathematics') },
+  { value: 'english', label: t('English') },
+  { value: 'arabic', label: t('Arabic_Language') },
   { value: 'physics', label: t('physics') },
   { value: 'science', label: t('science') },
   { value: 'history', label: t('history') },
@@ -79,6 +79,11 @@ const objectOptions = [
   { value: 'music', label: t('music') },
   { value: 'physical_education', label: t('physical-education') },
   { value: 'ict', label: t('ict-information-and-communication-technology') },
+  {value:'islamic_education',label:t('Islamic_Education')},
+  {value:'scientific_activities',label:t('Scientific_Activities')},
+  {value:'art',label:t('Artistic_Education_and_Technological_Alertness')},
+  {value:'social_science',label:t('Social_Sciences')},
+  {value:'french',label:t("French_Language")}
 
 ];
   const { reset, handleSubmit, control, isSubmitting,getValues,register,setValue} = form;

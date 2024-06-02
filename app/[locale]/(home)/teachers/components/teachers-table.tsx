@@ -104,7 +104,12 @@ export type teacher = {
       emergencyContactPhone: '987-654-3210',
       medicalConditions: 'None',
       salary: 50000,
-      status:"active",})
+      status:"active",
+    officeHours:[{
+      day:'Monday',
+      start:"08:00",
+      end:"09:00"
+    }]})
     const getStatusColor = React.useCallback((status:Status) => {
       switch (status) {
         case 'active':

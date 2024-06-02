@@ -44,19 +44,26 @@ import { LoadingButton } from "@/components/ui/loadingButton"
 import { useData } from "@/context/admin/fetchDataContext"
 import { addClass } from "@/lib/hooks/classes"
 import { useTranslations } from "next-intl"
+import FileUpload from "./upload-lessons"
+import { uploadLessonsAndLinkToCollection } from "@/lib/hooks/uploadLessons"
 
 
 
-  
+interface FileUploadProgress {
+  file: File;
+  name: string;
+  source:any;
+  subject:string;
+} 
 export type ClassFormValues = z.infer<typeof classSchema>;
 export function ClassForm() {
   const{levels,teachers,students,setClasses,setStudents,setTeachers,profile}=useData()
   const allTeachers=teachers.map((teacher:any)=>({name:teacher.teacher,id:teacher.id}))
-  const allStudents=students.map((student:any)=>({name:student.student,id:student.id}))
+
   const form = useForm<ClassFormValues>({
     resolver: zodResolver(classSchema),
     defaultValues: {
-        teachers: [{}],
+        teachers: [],
         students: [],
   
 },
@@ -66,6 +73,7 @@ const {toast}=useToast()
 const { reset, formState,watch} = form;
 const {isSubmitting}=formState
 const [selectedTeachers, setSelectedTeachers] = React.useState<({ name: string; id: string; }|undefined)[]>(form.getValues('teachers'));
+const [filesToUpload, setFilesToUpload] = React.useState<FileUploadProgress[]>([]);
 
 React.useEffect(() => {
 
@@ -74,20 +82,48 @@ React.useEffect(() => {
   return () => subscription.unsubscribe();
 }, [watch]);
 
+const selectedLevel = watch('level');
+const selectedClass = watch('className');
+
+// Memoize the filtered students based on the selected level and class
+const filteredStudents = React.useMemo(() => {
+  return students
+      .filter((student:any) => 
+        student.level === selectedLevel && student.class === selectedClass
+      )
+      .map((student:any) => ({
+        id: student.id,
+        name: student.student
+      }));
+  }, [selectedLevel, selectedClass]);
+
+
+// Update the students field whenever the selected level or class changes
+React.useEffect(() => {
+  form.setValue('students', filteredStudents);
+}, [selectedLevel,selectedClass]);
+const selectedLevelId = watch('levelId');
+
+// Memoize the classes array for the selected level
+const classes = React.useMemo(() => {
+  const level = levels.find((level:any) => level.id === selectedLevelId);
+  return level ? level.classes : [];
+}, [selectedLevelId, levels]);
 
 async function onSubmit(values:ClassFormValues) {
-  const classRef=await addClass(values)
+  const classRef:any=await addClass({...values,documents:[]})
+  const uploaded = await uploadLessonsAndLinkToCollection(values.level, values.className,classRef,filesToUpload);
   setClasses((prev:ClassFormValues[])=>[{...values,id:classRef,
     value:values.className,
     label:values.className,
     level:{level:values.level.level,id:values.level.id},
-    levelName:values.level.level},...prev])
+    levelName:values.level.level,documents:uploaded},...prev])
     values.students.forEach((student) => {
 
     setStudents((prev:any[]) => {
                 const updatedLevels = prev.map((std:any) =>
                   std.id === student.id ? { ...std,
-                    class:{name:values.name,id:classRef}}: std
+                    class:{name:values.className,id:classRef}}: std
                 );
                 return updatedLevels;
               });
@@ -98,7 +134,7 @@ async function onSubmit(values:ClassFormValues) {
                 const updatedLevels = prev.map((std:any) =>
                   std.id === teacher.id ? { ...std,
                     class: {
-                        name: values.name,
+                        name: values.className,
                         id: classRef
                     }
                 }: std
@@ -161,7 +197,8 @@ async function onSubmit(values:ClassFormValues) {
                    
                     const parsedValue = JSON.parse(value);
                     const level=parsedValue
-                    field.onChange(level);
+                    field.onChange(level.level);
+                    form.setValue('levelId',level.id)
                   }}
           
                         >
@@ -211,7 +248,7 @@ async function onSubmit(values:ClassFormValues) {
                           </FormControl>
 
                           <SelectContent>
-                            {profile.classNames.map((cls:string) => (
+                            {classes.map((cls:string) => (
                               <SelectItem key={cls} value={cls}>
                                 {cls}
                               </SelectItem>
@@ -310,7 +347,7 @@ async function onSubmit(values:ClassFormValues) {
             <FormLabel>{t('add-students')}</FormLabel>
                 <MultiSelect
                     selected={field.value}
-                 options={allStudents}
+                 options={filteredStudents}
                     {...field}
                     className="sm:w-[510px]"
                 />
@@ -318,7 +355,7 @@ async function onSubmit(values:ClassFormValues) {
         </FormItem>
     )}
  />
-
+    <FileUpload filesToUpload={filesToUpload} setFilesToUpload={setFilesToUpload}/>
          
 <SheetFooter className=" pb-20">
             <SheetClose asChild>
@@ -333,7 +370,7 @@ async function onSubmit(values:ClassFormValues) {
               </SheetFooter>
       </form>
     </Form>
-    
+
     </ScrollArea>
     </SheetContent>
   </Sheet>

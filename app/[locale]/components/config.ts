@@ -64,7 +64,32 @@ export const pathnames = {
     "en":  "/Auth",
     "ar":   "/Auth",
     "fr":"/Auth"
-  }
+  },
+  "/parent": {
+    "en": "/parent",
+    "ar": "/parent",
+    "fr":"/parent"
+  },
+  "/parent/child/[slug]": {
+    "en": "/parent/child/[slug]",
+    "ar": "/parent/child/[slug]",
+    "fr":"/parent/child/[slug]"
+  },
+  "/parent/child/[slug]/Balance": {
+    "en": "/parent/child/[slug]/Balance",
+    "ar": "/parent/child/[slug]/Balance",
+    "fr":"/parent/child/[slug]/Balance"
+  },
+  "/parent/child/[slug]/Appointments": {
+    "en": "/parent/child/[slug]/Appointments",
+    "ar": "/parent/child/[slug]/Appointments",
+    "fr":"/parent/child/[slug]/Appointments"
+  },
+  "/parent/child/[slug]/Courses": {
+    "en": "/parent/child/[slug]/Courses",
+    "ar": "/parent/child/[slug]/Courses",
+    "fr":"/parent/child/[slug]/Courses"
+  },
 } satisfies Pathnames<typeof locales>;
 
 // Use the default: `always`

@@ -40,8 +40,15 @@ import { LoadingButton } from "@/components/ui/loadingButton"
 import { useData } from "@/context/admin/fetchDataContext"
 import { updateClass, updateStudents, updateTeachers } from "@/lib/hooks/classes"
 import { useTranslations } from "next-intl"
+import { fetchLessons, updateDocuments } from "@/lib/hooks/uploadLessons"
+import FileUpload from "./upload-lessons"
 
-  
+interface FileUploadProgress {
+  file: File;
+  name: string;
+  source:any;
+  subject:string;
+} 
 type ClassFormValues = z.infer<typeof classSchema> & { [key: string]: string | Date | number | any;};
 interface SheetDemoProps {
     cls: ClassFormValues;
@@ -54,7 +61,7 @@ const EditClassForm: React.FC<SheetDemoProps> = ({ cls,setOpen,open }) => {
     resolver: zodResolver(classSchema),
     defaultValues: {
       "name": "Math Class",
-      "level": {"name":"Elementary","id":"1"},
+      "level": "Elementary",
       "className": "Mathematics",
       "capacity": 30,
       "teachers": [
@@ -89,9 +96,56 @@ const allTeachers=teachers.map((teacher:any)=>({name:teacher.teacher,id:teacher.
 const {toast}=useToast()
 const { reset,formState,watch} = form;
 const {isSubmitting}=formState
+const [filesToUpload, setFilesToUpload] = React.useState<FileUploadProgress[]>([]);
+
 const [selectedTeachers, setSelectedTeachers] = React.useState<({ name: string; id: string; }|undefined)[]>(form.getValues('teachers'));
+const selectedLevel = watch('level');
+const selectedClass = watch('className');
+console.log(selectedLevel);
+
+// Memoize the filtered students based on the selected level and class
+const filteredStudents = React.useMemo(() => {
+  return students
+      .filter((student:any) => 
+        student.level === selectedLevel && student.class === selectedClass
+      )
+      .map((student:any) => ({
+        id: student.id,
+        name: student.student
+      }));
+  }, [selectedLevel, selectedClass]);
+
+
+// Update the students field whenever the selected level or class changes
 React.useEffect(() => {
+  form.setValue('students', filteredStudents);
+}, [selectedLevel,selectedClass]);
+const selectedLevelId = watch('levelId');
+
+// Memoize the classes array for the selected level
+const classes = React.useMemo(() => {
+  const level = levels.find((level:any) => level.id === selectedLevelId);
+  return level ? level.classes : [];
+}, [selectedLevelId, levels]);React.useEffect(() => {
   reset(cls)
+}, [cls,reset])
+React.useEffect(() => {
+  const downloadFiles = async () => {
+    if (cls && cls.documents) {
+      const files=await fetchLessons(cls.documents)
+      console.log("files",files);
+      
+      setFilesToUpload(files);
+    }
+  };
+
+  if (cls) {
+
+   
+    reset(cls)
+
+    downloadFiles();
+  }
 }, [cls,reset])
 React.useEffect(() => {
 
@@ -107,11 +161,13 @@ async function onSubmit(values:ClassFormValues) {
   await updateClass(updatedData,cls.id)
   const updatedStudents= await updateStudents(cls.students,values.students,{...cls,level:levelData})
   const updatedTeachers= await updateTeachers(cls.teachers,values.teachers,cls)
+    const documents= await updateDocuments(cls.documents && cls.documents> 0?cls.documents:[],filesToUpload,cls.level,cls.className,cls.id)
+
 updatedStudents.added.map((student)=>{
   setStudents((prev:any[]) => {
     const updatedLevels = prev.map((std:any) =>
       std.id === student.id ? { ...std,
-        class:{name:values.name,id:values.id}}: std
+        class:values.className}: std
     );
     return updatedLevels;
   });
@@ -131,7 +187,7 @@ updatedTeachers.added.forEach((teacher) => {
       const updatedLevels = prev.map((std:any) =>
         std.id === teacher.id ? { ...std,
           class: {
-              name: values.name,
+              name: values.className,
               id: values.id
           }
       }: std
@@ -153,7 +209,7 @@ updatedTeachers.added.forEach((teacher) => {
 
     setClasses((prev:any[]) => {
       const updatedLevels = prev.map((std:any) =>
-        std.id === values.id ? updatedData: std
+        std.id === values.id ? {...updatedData,documents}: std
       );
       return updatedLevels;
     });
@@ -176,7 +232,7 @@ updatedTeachers.added.forEach((teacher) => {
         <SheetDescription>
           {t('enter-the-details-for-the-class-including-information-and-subjects-of-study')} </SheetDescription>
       </SheetHeader>
-    <Form {...form}>
+      <Form {...form}>
       <form  onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             
             <FormField
@@ -195,7 +251,6 @@ updatedTeachers.added.forEach((teacher) => {
                 </FormItem>
               )}
             />
-            
                               <FormField
               control={form.control}
               name="level"
@@ -204,11 +259,11 @@ updatedTeachers.added.forEach((teacher) => {
                   <FormLabel>{t('class-level')}</FormLabel>
                   <FormControl>
                   <Select
-                defaultValue={JSON.stringify(levels.find((level:any)=>level.id===field.value.id))}
-                  onValueChange={(value) => {        
-                    const parsedValue = JSON.parse(value);
-                    const level={level:parsedValue.level,id:parsedValue.id}
-                    field.onChange(level);
+                          defaultValue={field.value.toString()}
+                  onValueChange={(value) => {
+                    const level=levels.find((lvl:any)=>lvl.level===value)
+                    field.onChange(level.level);
+                    form.setValue('levelId',level.id)
                   }}
           
                         >
@@ -217,13 +272,13 @@ updatedTeachers.added.forEach((teacher) => {
                               id={`level`}
                               aria-label={`Select level`}
                             >
-                              <SelectValue placeholder={t('select-level')}   />
+                              <SelectValue placeholder={t('select-level')} />
                             </SelectTrigger>
                           </FormControl>
 
                           <SelectContent>
                             {levels.map((level:any,index:number) => (
-                              <SelectItem key={index} value={JSON.stringify(level)}>
+                              <SelectItem key={index} value={level.level}>
                                 {level.level}
                               </SelectItem>
                             ))}
@@ -258,7 +313,7 @@ updatedTeachers.added.forEach((teacher) => {
                           </FormControl>
 
                           <SelectContent>
-                            {profile.classNames.map((cls:any) => (
+                            {classes.map((cls:string) => (
                               <SelectItem key={cls} value={cls}>
                                 {cls}
                               </SelectItem>
@@ -314,13 +369,12 @@ updatedTeachers.added.forEach((teacher) => {
                   <FormLabel>{t('main-teacher')}</FormLabel>
                   <FormControl>
                   <Select
-                  defaultValue={JSON.stringify(selectedTeachers.find((teacher)=>teacher?.id===field.value.id))}
+      
                   onValueChange={(value) => {
-
+                   console.log(value);
+                   
                     const parsedValue = JSON.parse(value);
                     const mainteacher={name:parsedValue.name,id:parsedValue.id}
-            
-                    
                     field.onChange(mainteacher);
                   }}
      
@@ -358,7 +412,7 @@ updatedTeachers.added.forEach((teacher) => {
             <FormLabel>{t('add-students')}</FormLabel>
                 <MultiSelect
                     selected={field.value}
-                 options={allStudents}
+                 options={filteredStudents}
                     {...field}
                     className="sm:w-[510px]"
                 />
@@ -366,7 +420,7 @@ updatedTeachers.added.forEach((teacher) => {
         </FormItem>
     )}
  />
-
+    <FileUpload filesToUpload={filesToUpload} setFilesToUpload={setFilesToUpload}/>
          
 <SheetFooter className=" pb-20">
             <SheetClose asChild>

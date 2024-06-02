@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/card";
 import {ResetIcon } from "@radix-ui/react-icons";
 import { Input } from "@/components/ui/input";
-import { useForm } from "react-hook-form";
+import { useFieldArray, useForm } from "react-hook-form";
 import { teacherRegistrationSchema } from "@/validators/teacherSchema"
 import { zodResolver } from "@hookform/resolvers/zod";
 import React, { useCallback, useState} from "react";
@@ -33,6 +33,23 @@ import { useData } from "@/context/admin/fetchDataContext";
 import { addTeacher } from "@/lib/hooks/teachers";
 import { uploadFilesAndLinkToCollection } from "@/context/admin/hooks/useUploadFiles";
 import { useTranslations } from "next-intl";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableCaption
+} from "@/components/ui/table";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+  } from "@/components/ui/select"
 const fieldNames = [
   "firstName",
   "lastName",
@@ -76,11 +93,46 @@ type FormKeys =
   |"medicalConditions"
   |"joiningDate"
   |"status"
+
 type TeacherFormValues = z.infer<typeof teacherRegistrationSchema>;
 interface FileUploadProgress {
   file: File;
   name: string;
   source:any;
+}
+const generateTimeOptions = (startTime: string, endTime: string, interval: number): string[] => {
+  const timeOptions: string[] = [];
+  let [startHour, startMinute] = startTime.split(':').map(Number);
+  let [endHour, endMinute] = endTime.split(':').map(Number);
+
+  while (startHour < endHour || (startHour === endHour && startMinute <= endMinute)) {
+      const formattedHour = startHour.toString().padStart(2, '0'); // Ensure two digits for hours
+      const formattedMinute = startMinute.toString().padStart(2, '0'); // Ensure two digits for minutes
+      const time = `${formattedHour}:${formattedMinute}`;
+      timeOptions.push(time);
+
+      // Add interval minutes
+      startMinute += interval;
+      if (startMinute >= 60) {
+          startHour++;
+          startMinute -= 60;
+      }
+  }
+
+  return timeOptions;
+};
+
+interface OpenDay {
+  day: string;
+  start: string;
+  end: string;
+  state: string;
+  id:any,
+}
+
+interface DashboardProps {
+  openDays: OpenDay[];
+  form:any
 }
 export default function TeacherForm() {
   const { toast } = useToast();
@@ -90,11 +142,14 @@ export default function TeacherForm() {
   const [open, setOpen] = useState(false);
   const [openGender, setOpenGender] = useState(false);
   const [openSubject, setOpenSubject] = useState(false);
+  const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const timeOptions = generateTimeOptions("07:00","18:00", 30);
   const form = useForm<TeacherFormValues>({
     resolver: zodResolver(teacherRegistrationSchema),
     defaultValues: {
       id: '1',
       year: '2024',
+      officeHours:[]
     },
   });
   const { reset, formState, setValue, getValues } = form;
@@ -140,6 +195,10 @@ export default function TeacherForm() {
       label: t("English"),
     },
   ];
+  const { fields: fields, append: append,remove:removeClass } = useFieldArray({
+    control: form.control,
+    name: "officeHours",
+  });
   const renderInput = (fieldName:string, field:any) => {
     switch (fieldName) {
       case "dateOfBirth":
@@ -218,6 +277,7 @@ export default function TeacherForm() {
           );
           case "salary":
             return (<Input {...field} onChange={event => field.onChange(+event.target.value)}/>)
+       
       default:
         return <Input {...field}  />;
     }
@@ -285,6 +345,132 @@ documents:uploaded},...prev])
                   )}
                 />
               ))}
+           <FormLabel>Office Hours</FormLabel>    
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[100px]">Day</TableHead>
+              <TableHead>Start</TableHead>
+              <TableHead>end</TableHead>
+              <TableHead className="w-[100px]">Action</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {fields.map((field, index) => (
+              <TableRow key={index}>
+                <TableCell>
+                  <FormField
+                    control={form.control}
+                    key={field.id}
+                    name={`officeHours.${index}.day`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger
+                              id={`day-${index}`}
+                              aria-label={`Select day`}
+                            >
+                              <SelectValue placeholder="Select day" />
+                            </SelectTrigger>
+                          </FormControl>
+
+                          <SelectContent>
+                            {daysOfWeek.map((time) => (
+                              <SelectItem key={time} value={time}>
+                                {time}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                </TableCell>
+                <TableCell>
+                  <FormField
+                    control={form.control}
+                    key={field.id}
+                    name={`officeHours.${index}.start`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger
+                              id={`start-${index}`}
+                              aria-label={`Select start time`}
+                            >
+                              <SelectValue placeholder="Select start time" />
+                            </SelectTrigger>
+                          </FormControl>
+
+                          <SelectContent>
+                            {timeOptions.map((time) => (
+                              <SelectItem key={time} value={time}>
+                                {time}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                </TableCell>
+                <TableCell>
+                  <FormField
+                    control={form.control}
+                    key={field.id}
+                    name={`officeHours.${index}.end`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger
+                              id={`end-${index}`}
+                              aria-label={`Select end time`}
+                            >
+                              <SelectValue placeholder="Select End time" />
+                            </SelectTrigger>
+                          </FormControl>
+
+                          <SelectContent>
+                            {timeOptions.map((time) => (
+                              <SelectItem key={time} value={time}>
+                                {time}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                </TableCell>
+                <TableCell>
+                <Button  type="button" variant="destructive" onClick={()=>removeClass(index)}>{t('remove')}</Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+          <TableCaption> <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mb-2"
+            onClick={() => append({day:"",start:"",end:""})}
+          >
+            Add Office hour </Button></TableCaption>
+       
+        </Table>
+       
             </form>
           </Form>
 

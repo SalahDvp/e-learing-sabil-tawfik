@@ -3,6 +3,7 @@ import { z } from "zod";
  const classSchema = z.object({
   name: z.string().min(1).max(255).min(1,"Name is required and must be between 1 and 255 characters"),
   level:z.any(),
+  levelId:z.string(),
   className: z.string().min(1,"Class name is required"),
   capacity: z.number().int().min(1).max(9999).min(1,"Capacity is required and must be between 1 and 9999"),
   teachers: z.array(

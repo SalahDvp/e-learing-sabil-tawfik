@@ -463,5 +463,27 @@
   "add-classes-to-this-level": "add Classes to this level",
   "remove": "Remove",
   "select-a-class": "select a Class",
-  "amount-left-to-pay": "amount left to pay"
+  "amount-left-to-pay": "amount left to pay",
+  "about": "About",
+  "family": "Family",
+  "appointments": "Appointments",
+  "years": ", 2 years",
+  "schedule-an-appointment": "Schedule an Appointment",
+  "pick-a-time-that-works-best-for-you": "Pick a time that works best for you.",
+  "select-a-teacher": "Select a teacher",
+  "duration": "Duration",
+  "20-min": "20 min",
+  "select-teacher-or-date": "select Teacher or date",
+  "book-meeting": "Book meeting",
+  "appointment-history": "Appointment History",
+  "a-list-of-your-recent-appoitnments": "A list of your recent Appoitnments.",
+  "Balance": "Balance",
+  "Islamic_Education": "Islamic Education",
+  "Arabic_Language": "Arabic Language",
+    "French_Language": "French Language ",
+    "Social_Sciences": "Social Sciences",
+    "Mathematics": "Mathematics",
+    "Scientific_Activities": "Scientific Activities",
+    "Artistic_Education_and_Technological_Alertness": "Artistic Education and Technological Alertness"
+  
 }

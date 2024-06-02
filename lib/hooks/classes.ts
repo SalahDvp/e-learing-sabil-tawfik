@@ -2,19 +2,19 @@ import { db } from "@/firebase/firebase-config"
 import { addDoc, collection, deleteDoc, doc, updateDoc, writeBatch,increment } from "firebase/firestore"
 import classSchema from "@/validators/classSchema";
 import { z } from "zod";
-type ClassFormValue=z.infer<typeof classSchema> & {level?:any}
+type ClassFormValue=z.infer<typeof classSchema> & {level?:any,documents?:any[]}
 export const addClass = async (cls: ClassFormValue) => {
     try {
  
         const batch = writeBatch(db)
-        const classRef = await addDoc(collection(db, "Classes"), {...cls,level:{level:cls.level.level,id:cls.level.id},levelName:cls.level.level});
+        const classRef = await addDoc(collection(db, "Classes"), {...cls,level:{level:cls.level,id:cls.levelId},levelName:cls.level});
         console.log("Class added successfully:", classRef.id);
-        const levelRef=doc(db,"Levels",cls.level.id)
+        const levelRef=doc(db,"Levels",cls.levelId)
         // Loop through students and update fields using batch
         cls.students.forEach((student) => {
             const studentRef =doc(db,'Students',student.id)
             batch.update(studentRef, {
-                class:{name:cls.name,id:classRef.id}
+                class:cls.className,
             });
          
         });
@@ -24,7 +24,7 @@ export const addClass = async (cls: ClassFormValue) => {
             const teacherRef = doc(db,"Teachers",teacher.id)
             batch.update(teacherRef, {
                 class: {
-                    name: cls.name,
+                    name: cls.className,
                     id: classRef.id
                 }
             });
@@ -52,15 +52,15 @@ interface ElementWithId {
     const deleted: T[] = [];
     const batch = writeBatch(db); 
     const originalMap = new Map(original.map(item => [item.id, item]));
-    const levelRef = doc(db, 'Levels', cls.level.id);
+    const levelRef = doc(db, 'Levels', cls.levelId);
   
     for (const item of updated) {
       if (!originalMap.has(item.id)) {
         added.push(item);
         const studentRef = doc(db, 'Students', item.id);
         batch.update(studentRef, {
-          class: { name: cls.name, id: cls.id }
-        });
+          class:cls.className, 
+        })
       }
     }
     batch.update(levelRef, {
@@ -98,7 +98,7 @@ interface ElementWithId {
         added.push(item);
         const teacherRef = doc(db, 'Teachers', item.id);
         batch.update(teacherRef, {
-          class: { name: cls.name, id: cls.id }
+          class: { name: cls.className, id: cls.id }
         });
       }
     }
