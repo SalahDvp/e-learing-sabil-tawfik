@@ -252,7 +252,7 @@ export function downloadInvoice(paymentData:any,id:string,titles:any[],words:any
       body: [
         [
           {
-            content: 'Newton school',
+            content: 'AMIR EL WASSIM school',
             styles: {
               halign: 'left',
               fontSize: 20,
@@ -324,7 +324,7 @@ export function downloadInvoice(paymentData:any,id:string,titles:any[],words:any
           },
           {        
             content:words.from
-            +'\nNewton school'
+            +'\nAMIR EL WASSIM school'
             +'\n'
             +'\n'
             +'\n'
@@ -408,7 +408,7 @@ export function downloadInvoice(paymentData:any,id:string,titles:any[],words:any
         body: [
           [
             {
-              content: 'Newton school',
+              content: 'AMIR EL WASSIM school',
               styles: {
                 halign: 'left',
                 fontSize: 20,
@@ -480,7 +480,7 @@ export function downloadInvoice(paymentData:any,id:string,titles:any[],words:any
             },
             {        
               content:words.from
-              +'\nNewton school'
+              +'\nAMIR EL WASSIM school'
               +'\n'
               +'\n'
               +'\n'

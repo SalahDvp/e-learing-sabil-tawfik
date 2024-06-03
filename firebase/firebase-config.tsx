@@ -10,13 +10,13 @@ import { connectFunctionsEmulator, getFunctions } from 'firebase/functions';
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyDI7u9LrHEyvwf1ZsbzY4EMjMDluW-3rTU",
-  authDomain: "newton-sch.firebaseapp.com",
-  projectId: "newton-sch",
-  storageBucket: "newton-sch.appspot.com",
-  messagingSenderId: "633312336525",
-  appId: "1:633312336525:web:7398401c5973380203e0c4",
-  measurementId: "G-E8T47WQP29"
+  apiKey: "AIzaSyCKlzj5ZNvAcqZdLyBesed3zQzxPGRMi_Y",
+  authDomain: "amirelwassim-blida-db.firebaseapp.com",
+  projectId: "amirelwassim-blida-db",
+  storageBucket: "amirelwassim-blida-db.appspot.com",
+  messagingSenderId: "616828376351",
+  appId: "1:616828376351:web:ca06d3d5cd5e27f3a2cc2a",
+  measurementId: "G-M3P944NMHT"
 };
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
