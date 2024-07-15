@@ -55,7 +55,8 @@ import { useData } from "@/context/admin/fetchDataContext";
 import { z } from "zod"
 import { useTranslations } from "next-intl"
 import { deleteStudent } from "@/lib/hooks/students"
-
+import StudentForm from "./studentForm"
+import StudentPaymentSheet from "./studentPaymentSheet"
 type Status = 'accepted' | 'pending' | 'rejected';
 export type StudentSummary = {
   id: string;
@@ -72,6 +73,7 @@ interface DataTableDemoProps {
   type StudentFormValues = z.infer<typeof studentRegistrationSchema>  & {id:string };
   export const DataTableDemo: React.FC<DataTableDemoProps> = ({ filter }) => {
     const [open,setOpen]=React.useState(false)
+    const [openPayment,setOpenPayment]=React.useState(false)
     const t=useTranslations()
     const {students,setStudents}=useData()
     const [student,setStudent]=React.useState<StudentFormValues>({  
@@ -120,6 +122,10 @@ interface DataTableDemoProps {
       setStudent(student)
       setOpen(true); // Open the sheet after setting the level
     };
+    const openPaymentSheet = (student:StudentFormValues) => {
+      setStudent(student)
+      setOpenPayment(true); // Open the sheet after setting the level
+    };
     const getMonthAbbreviation = (monthIndex: number) => {
       const startDate = new Date(2024, 8); // September 2023 (month index 8)
       const date = new Date(startDate.getFullYear(), startDate.getMonth() + monthIndex);
@@ -137,16 +143,17 @@ interface DataTableDemoProps {
           accessorKey: `monthlyPayments.${monthAbbreviation}`,
           header: () => <div>{monthAbbreviation}</div>,
           cell: ({ row }: { row: any }) => {
-            const isPaid = row.original.monthly_payments[monthAbbreviation]?.status 
-     
+            const isPaid = parseFloat('16000' )
+         
+            // row.original.monthly_payments[monthAbbreviation]?.paymentAmount
+            // Format the amount as a dollar amount
+            const formatted = new Intl.NumberFormat("en-US", {
+              style: "currency",
+              currency: "DZD",
+            }).format(isPaid)
             
             return (
-              <Badge
-                style={{ backgroundColor: isPaid === 'Paid' ? "#4CAF50" : "#F44336" }}
-              >
-       {isPaid === 'Paid' && t('paid')}
-            
-              </Badge>
+              <div className=" font-medium">{formatted}</div>
             );
           },
         };
@@ -178,17 +185,41 @@ interface DataTableDemoProps {
       },
       ...generateMonthlyPaymentColumns(getMonthAbbreviation),
       {
+        accessorKey: "amountLeftToPay",
+        header:() => <div style={{ whiteSpace: 'pre-wrap', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t('amount-left-to-pay-0')}</div>, 
+  
+        cell: ({ row }) => {
+          const amount = parseFloat(row.getValue("amountLeftToPay"))
+    
+          // Format the amount as a dollar amount
+          const formatted = new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: "DZD",
+          }).format(amount)
+    
+          return <div className=" font-medium">{formatted}</div>
+        },
+      },
+      {
         accessorKey: `registrationAndInsuranceFee`,
-        header: () => <div style={{ whiteSpace: 'pre-wrap' }}>{t('registrationAndInsuranceFee')}</div>,
+        header: () =>  <div style={{ whiteSpace: 'pre-wrap', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {t('registrationAndInsuranceFee')}
+      </div>,
         cell: ({ row }: { row: any }) => {
-          const isPaid = row.original.registrationAndInsuranceFee
+          const amount = parseFloat(row.getValue("registrationAndInsuranceFee"))
+    
+          // Format the amount as a dollar amount
+          const formatted = new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: "DZD",
+          }).format(amount)
    
           
           return (
             <Badge
-              style={{ backgroundColor: isPaid === 'Paid' ? "#4CAF50" : "#F44336" }}
+              style={{ backgroundColor:"#4CAF50" }}
             >
-     {isPaid === 'Paid' && t('paid')}
+     {formatted}
           
             </Badge>
           );
@@ -198,16 +229,33 @@ interface DataTableDemoProps {
         accessorKey: `feedingFee`,
         header: () => <div style={{ whiteSpace: 'pre-wrap' }}>{t('feedingFee')}</div>,
         cell: ({ row }: { row: any }) => {
-          const isPaid = row.original.feedingFee
+          const amount = parseFloat(row.getValue("feedingFee"))
+    
+          // Format the amount as a dollar amount
+          const formatted = new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: "DZD",
+          }).format(amount)
    
           
           return (
             <Badge
-              style={{ backgroundColor: isPaid === 'Paid' ? "#4CAF50" : "#F44336" }}
+              style={{ backgroundColor:"#4CAF50" }}
             >
-     {isPaid === 'Paid' && t('paid')}
+     {formatted}
           
             </Badge>
+          );
+        },
+      },
+      {
+        id: "addPayment",
+        enableHiding: false,
+        cell: ({ row }) => {
+          const student = row.original;
+    
+          return (
+          <StudentPaymentSheet student={student}/>
           );
         },
       },
@@ -227,7 +275,8 @@ interface DataTableDemoProps {
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => openEditSheet(student)}>
                   {t('edit')} </DropdownMenuItem>
-       
+                  <DropdownMenuItem >
+                  {t('payment')} </DropdownMenuItem>
                 <DropdownMenuItem onClick={() =>{deleteStudent(student.id), setStudents((prevStudents:any) =>
       prevStudents.filter((std:any) => std.id !== student.id)
     )}}>
@@ -238,6 +287,22 @@ interface DataTableDemoProps {
         },
       },
     ];
+    const data = {
+      studentName: 'John Doe',
+      level: 'Grade 5',
+      class: '5A',
+      parentName: 'Jane Doe',
+      address: '123 Main St, City, Country',
+      phoneNumber: '123-456-7890',
+      restaurantPaymentPaid: 500,
+      restaurantPaymentLeft: 200,
+      insurancePaymentPaid: 300,
+      insurancePaymentLeft: 150,
+      schoolPaymentPaid: 1000,
+      schoolPaymentLeft: 0,
+    }
+
+
   const handleExport = () => {
   
 
@@ -303,15 +368,13 @@ const orderedMonths = [
       },
     },
   })
- 
-
 
   return (
     <>
 
 
-    <ScrollArea className="w-full whitespace-nowrap mt-2">
-    <Card x-chunk="dashboard-05-chunk-3">
+
+    <Card x-chunk="dashboard-05-chunk-3" className="mt-2 ">
     <CardHeader className="px-7">
       <CardTitle>{t('your-students')}</CardTitle>
       <CardDescription>
@@ -329,6 +392,7 @@ const orderedMonths = [
           className="max-w-sm mt-4"
         />
           <div className=" ml-auto space-y-4 ">
+            <StudentForm/>
     <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="ml-auto">
@@ -368,7 +432,7 @@ const orderedMonths = [
     <CardContent>     
 
  
- 
+    <ScrollArea style={{ width: 'calc(100vw - 170px)'}}>
         <Table id="students-table">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -416,7 +480,8 @@ const orderedMonths = [
             )}
           </TableBody>
         </Table>
-   
+        <ScrollBar orientation="horizontal" />
+        </ScrollArea>
       <div className="flex items-center justify-end space-x-2 py-4">
         <div className="flex-1 text-sm text-muted-foreground">
           {table.getFilteredSelectedRowModel().rows.length} of{" "}
@@ -442,8 +507,8 @@ const orderedMonths = [
       <SheetDemo open={open} setOpen={setOpen}  student={student}/>
     </CardContent>
   </Card>
-  <ScrollBar orientation="horizontal" />
-      </ScrollArea>
+
+
   </>
   )
 }

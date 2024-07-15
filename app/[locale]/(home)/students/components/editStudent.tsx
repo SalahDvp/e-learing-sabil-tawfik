@@ -293,34 +293,14 @@ useEffect(() => {
             }}
           />
         );
-          case "feedingFee":
+        case "feedingFee":
+          return (
+            <Input {...field}  readOnly/>
+          )
+          case "registrationAndInsuranceFee":
             return (
-              <Combobox
-              {...field}
-              open={openFeedingFee}
-              setOpen={setOpenFeedingFee}
-              placeHolder={t("status")}
-              options={studentPaymentStatus}
-              value={getValues("feedingFee")}
-              onSelected={(selectedValue) => {
-                form.setValue(fieldName, selectedValue);
-              }}
-            />
-            )
-            case "registrationAndInsuranceFee":
-              return (
-                <Combobox
-                {...field}
-                open={openRegistrationAndInsuranceFee}
-                setOpen={setOpenRegistrationAndInsuranceFee}
-                placeHolder={t("status")}
-                options={studentPaymentStatus}
-                value={getValues("registrationAndInsuranceFee")}
-                onSelected={(selectedValue) => {
-                  form.setValue(fieldName, selectedValue);
-                }}
-              />
-              )
+              <Input {...field} readOnly/>
+            );
               case "level":
                 return(   <Select
                   defaultValue={levels.find((lvl:any)=>lvl.level===getValues("level")).level}
@@ -333,8 +313,8 @@ useEffect(() => {
                     form.setValue("lastPaymentDate", level.start);
                     form.setValue("level", level.level);
                     form.setValue("levelId", level.id);
-                    form.setValue("registrationAndInsuranceFee", "notPaid");
-                    form.setValue("feedingFee", "notPaid");
+                    form.setValue('registrationAndInsuranceFee', level.registrationAndInsuranceFee);
+                    form.setValue("levelId", level.feedingFee);
                     form.setValue("level", level.level);
                     const data=createMonthlyPaymentsData(level)
                     form.setValue(data.monthlyPaymentsKey,data.monthlyPaymentsObj)
