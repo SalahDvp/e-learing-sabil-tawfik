@@ -175,16 +175,13 @@ getClasses()
       
         const StudentsData = studentSnapshot.docs.map((doc) => ({ ...doc.data(),
            id: doc.id,
-           dateOfBirth:new Date(doc.data().dateOfBirth.toDate()),
-           joiningDate:new Date(doc.data().joiningDate.toDate()),
-           lastPaymentDate:new Date(doc.data().joiningDate.toDate()),
-           nextPaymentDate:new Date(doc.data().nextPaymentDate.toDate()),
-           startDate:new Date(doc.data().joiningDate.toDate()),
-           student: `${doc.data().firstName} ${doc.data().lastName}`,
-           value: `${doc.data().firstName} ${doc.data().lastName}`,
-           label: `${doc.data().firstName} ${doc.data().lastName}`,
+           birthdate:new Date(doc.data().birthdate.toDate()),
+           student: `${doc.data().name}`,
+           value:`${doc.data().name}`,
+           label: `${doc.data().name}`,
           
         }))
+        console.log("students: ",StudentsData);
 setStudents(StudentsData)
        
       } catch (error) {

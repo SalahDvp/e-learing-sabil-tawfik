@@ -19,7 +19,8 @@ export function useStepper() {
 	}
 
 	const { children, className, ...rest } = context;
-
+	const steps=context.steps.length
+	
 	const isLastStep = context.activeStep === context.steps.length - 1;
 	const hasCompletedAllSteps = context.activeStep === context.steps.length;
 
@@ -38,5 +39,6 @@ export function useStepper() {
 		isDisabledStep,
 		currentStep,
 		previousActiveStep,
+		steps
 	};
 }

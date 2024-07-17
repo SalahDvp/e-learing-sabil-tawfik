@@ -1,37 +1,23 @@
-import { ZodSchema, z } from 'zod';
-const studentRegistrationSchema = z.object({
-  id: z.string(),
-  level: z.string(),
-  firstName: z.string(),
-  lastName: z.string(),
-  dateOfBirth:z.date().refine((value:Date) => value < new Date(), { message: 'Please enter a valid date of birth.' }),
-  gender: z.enum(['male', 'female', 'other']),
-  address: z.string(),
-  city: z.string(),
-  state: z.string(),
-  postalCode: z.string(),
-  country: z.string(),
-  parentFullName: z.string(),
-  parentFirstName:z.string(),
-  parentLastName:z.string(),
-  parentEmail: z.string(),
-  parentPhone: z.string(),
-  parentId:z.string(),
-  emergencyContactName: z.string(),
-  emergencyContactPhone: z.string(),
-  medicalConditions: z.string().nullable(),
-  status: z.string(),
-  joiningDate: z.date().refine((valuee:Date) => valuee < new Date(), { message: 'Please enter a valid date of birth.' }), // You may need to adjust this based on your actual date format
-  registrationStatus: z.string(),
-  startDate:z.date().refine((valueee:Date) => valueee < new Date(), { message: 'Please enter a valid date of birth.' }), // You may need to adjust this based on your actual date format
-  lastPaymentDate: z.date(), // You may need to adjust this based on your actual date format
-  nextPaymentDate: z.date(), // You may need to adjust this based on your actual date format
-  totalAmount: z.number(),
-  amountLeftToPay: z.number(),
-  class: z.string(),
-  [`monthlyPayments${'23'}_${'24'}`]:z.any(),
-  registrationAndInsuranceFee:z.string(),
-  feedingFee:z.string()
+import { z } from 'zod';
+export const SubjectsSchema = z.array(z.object({
+  id:z.string(),
+  subject: z.string().min(1, { message: "Subject is required" }),
+  name: z.string().min(1, { message: "Group name is required" }),
+  time: z.string().min(1, { message: "Time is required" }),
+}));
+// Define the Zod schema
+export const StudentSchema = z.object({
+  name: z.string().min(1, { message: "Name is required" }),
+  birthdate: z.date(),
+  birthplace: z.string().min(1, { message: "Birthplace is required" }),
+  school: z.string().min(1, { message: "School is required" }),
+  year: z.string().min(1, { message: "Year is required" }),
+  field: z.string().min(1, { message: "Field is required" }),
+  phoneNumber: z.string().min(1, { message: "Phone number is required" }),
+  photo:z.string().nullable(),
+  classes:SubjectsSchema,
 });
 
-export default studentRegistrationSchema;
+// Generate TypeScript type from the Zod schema
+export type Student = z.infer<typeof StudentSchema>;
+

@@ -50,13 +50,14 @@ import { Badge } from "@/components/ui/badge"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import {exportTableToExcel} from '@/components/excelExport'
 import SheetDemo from "./editStudent"
-import  studentRegistrationSchema  from "@/validators/auth";
+import { Student }  from "@/validators/auth";
 import { useData } from "@/context/admin/fetchDataContext";
 import { z } from "zod"
 import { useTranslations } from "next-intl"
 import { deleteStudent } from "@/lib/hooks/students"
 import StudentForm from "./studentForm"
 import StudentPaymentSheet from "./studentPaymentSheet"
+import EditStudent from "./editStudent"
 type Status = 'accepted' | 'pending' | 'rejected';
 export type StudentSummary = {
   id: string;
@@ -70,13 +71,14 @@ export type StudentSummary = {
 interface DataTableDemoProps {
   filter: string;
 }
-  type StudentFormValues = z.infer<typeof studentRegistrationSchema>  & {id:string };
   export const DataTableDemo: React.FC<DataTableDemoProps> = ({ filter }) => {
     const [open,setOpen]=React.useState(false)
     const [openPayment,setOpenPayment]=React.useState(false)
     const t=useTranslations()
     const {students,setStudents}=useData()
-    const [student,setStudent]=React.useState<StudentFormValues>({  
+    console.log(students);
+    
+    const [student,setStudent]=React.useState<Student>({  
       id: '123456',
       level: 'Intermediate',
       firstName: 'John',
@@ -118,11 +120,11 @@ interface DataTableDemoProps {
       table.getColumn("level")?.setFilterValue(filter);
     } 
   }, [filter]); 
-    const openEditSheet = (student:StudentFormValues) => {
+    const openEditSheet = (student:Student) => {
       setStudent(student)
       setOpen(true); // Open the sheet after setting the level
     };
-    const openPaymentSheet = (student:StudentFormValues) => {
+    const openPaymentSheet = (student:Student) => {
       setStudent(student)
       setOpenPayment(true); // Open the sheet after setting the level
     };
@@ -133,32 +135,6 @@ interface DataTableDemoProps {
       const yearAbbreviation = date.getFullYear().toString().substr(-2);
       return `${monthAbbreviation}${yearAbbreviation}`;
     };
-    // Updated generateMonthlyPaymentColumns function
-    const generateMonthlyPaymentColumns = (
-      getMonthAbbreviation: (index: number) => string
-    ): ColumnDef<any>[] => {
-      return Array.from({ length: 11 }, (_, i) => {
-        const monthAbbreviation = getMonthAbbreviation(i);
-        return {
-          accessorKey: `monthlyPayments.${monthAbbreviation}`,
-          header: () => <div>{monthAbbreviation}</div>,
-          cell: ({ row }: { row: any }) => {
-            const isPaid = parseFloat('16000' )
-         
-            // row.original.monthly_payments[monthAbbreviation]?.paymentAmount
-            // Format the amount as a dollar amount
-            const formatted = new Intl.NumberFormat("en-US", {
-              style: "currency",
-              currency: "DZD",
-            }).format(isPaid)
-            
-            return (
-              <div className=" font-medium">{formatted}</div>
-            );
-          },
-        };
-      });
-    };
     const columns: ColumnDef<any>[] = [
       {
         accessorKey: "student",
@@ -167,95 +143,47 @@ interface DataTableDemoProps {
         cell: ({ row }) => (
           <div className="capitalize">
              <div className="font-medium">{row.getValue("student")}</div>
-                                <div className="hidden text-sm text-muted-foreground md:inline">
-                                {row.getValue("email")}
-                                </div>
           </div>
         ),
       },
       {
-        accessorKey: "level",
-        header: () => <div style={{ whiteSpace: 'pre-wrap' }}>{t('level')}</div>,
-        cell: ({ row }) => <div>{row.original.level}</div>,
+        accessorKey: "year",
+        header: () => <div style={{ whiteSpace: 'pre-wrap' }}>year</div>,
+        cell: ({ row }) => <div>{row.getValue("year")}</div>,
       },
       {
-        accessorKey: "class",
-        header: () => <div >{t('class')}</div>,
-        cell: ({ row }) => <div>{row.original.class}</div>,
+        accessorKey: "field",
+        header: () => <div >field</div>,
+        cell: ({ row }) => <div>{row.getValue("field")}</div>,
       },
-      ...generateMonthlyPaymentColumns(getMonthAbbreviation),
       {
-        accessorKey: "amountLeftToPay",
-        header:() => <div style={{ whiteSpace: 'pre-wrap', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t('amount-left-to-pay-0')}</div>, 
-  
+        accessorKey: "phone",
+        header: () => <div >Phone</div>,
+        cell: ({ row }) => <div>{row.original.phoneNumber}</div>,
+      },
+      {
+        accessorKey: "school",
+        header: () => <div >school</div>,
+        cell: ({ row }) => <div>{row.getValue("school")}</div>,
+      },
+      {
+        id: "classes",
+        header: () => <div>Classes</div>,
         cell: ({ row }) => {
-          const amount = parseFloat(row.getValue("amountLeftToPay"))
-    
-          // Format the amount as a dollar amount
-          const formatted = new Intl.NumberFormat("en-US", {
-            style: "currency",
-            currency: "DZD",
-          }).format(amount)
-    
-          return <div className=" font-medium">{formatted}</div>
-        },
-      },
-      {
-        accessorKey: `registrationAndInsuranceFee`,
-        header: () =>  <div style={{ whiteSpace: 'pre-wrap', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-        {t('registrationAndInsuranceFee')}
-      </div>,
-        cell: ({ row }: { row: any }) => {
-          const amount = parseFloat(row.getValue("registrationAndInsuranceFee"))
-    
-          // Format the amount as a dollar amount
-          const formatted = new Intl.NumberFormat("en-US", {
-            style: "currency",
-            currency: "DZD",
-          }).format(amount)
-   
-          
+          const classes = row.original.classes;
+      
           return (
-            <Badge
-              style={{ backgroundColor:"#4CAF50" }}
-            >
-     {formatted}
-          
-            </Badge>
-          );
-        },
-      },
-      {
-        accessorKey: `feedingFee`,
-        header: () => <div style={{ whiteSpace: 'pre-wrap' }}>{t('feedingFee')}</div>,
-        cell: ({ row }: { row: any }) => {
-          const amount = parseFloat(row.getValue("feedingFee"))
-    
-          // Format the amount as a dollar amount
-          const formatted = new Intl.NumberFormat("en-US", {
-            style: "currency",
-            currency: "DZD",
-          }).format(amount)
-   
-          
-          return (
-            <Badge
-              style={{ backgroundColor:"#4CAF50" }}
-            >
-     {formatted}
-          
-            </Badge>
-          );
-        },
-      },
-      {
-        id: "addPayment",
-        enableHiding: false,
-        cell: ({ row }) => {
-          const student = row.original;
-    
-          return (
-          <StudentPaymentSheet student={student}/>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              {classes.map((classItem: any, index: number) => (
+                <div key={index} style={{ maxWidth: '200px', marginBottom: '5px' }}>
+                  <div className="font-medium">{classItem.subject}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {classItem.name}, Monday {classItem.time}
+                  </div>
+                </div>
+              ))}
+              
+            </div>
           );
         },
       },
@@ -275,8 +203,6 @@ interface DataTableDemoProps {
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => openEditSheet(student)}>
                   {t('edit')} </DropdownMenuItem>
-                  <DropdownMenuItem >
-                  {t('payment')} </DropdownMenuItem>
                 <DropdownMenuItem onClick={() =>{deleteStudent(student.id), setStudents((prevStudents:any) =>
       prevStudents.filter((std:any) => std.id !== student.id)
     )}}>
@@ -287,21 +213,6 @@ interface DataTableDemoProps {
         },
       },
     ];
-    const data = {
-      studentName: 'John Doe',
-      level: 'Grade 5',
-      class: '5A',
-      parentName: 'Jane Doe',
-      address: '123 Main St, City, Country',
-      phoneNumber: '123-456-7890',
-      restaurantPaymentPaid: 500,
-      restaurantPaymentLeft: 200,
-      insurancePaymentPaid: 300,
-      insurancePaymentLeft: 150,
-      schoolPaymentPaid: 1000,
-      schoolPaymentLeft: 0,
-    }
-
 
   const handleExport = () => {
   
@@ -504,7 +415,7 @@ const orderedMonths = [
             {t('next')} </Button>
         </div>
       </div>
-      <SheetDemo open={open} setOpen={setOpen}  student={student}/>
+      <EditStudent open={open} setOpen={setOpen}  student={student}/>
     </CardContent>
   </Card>
 
