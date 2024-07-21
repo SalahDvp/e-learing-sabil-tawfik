@@ -33,7 +33,6 @@ export type studentAttandance = {
 
 
 export const DailyAtandenceDataTable = ({ filter,teacher }: { filter: string,teacher:any }) => {
-  const [selectedDate, setSelectedDate] = useState(new Date());
   const [searchTerm, setSearchTerm] = useState("");
 
   const {students,setStudents}=useData()
@@ -119,19 +118,6 @@ export const DailyAtandenceDataTable = ({ filter,teacher }: { filter: string,tea
           onChange={(event) => setSearchTerm(event.target.value)}
           className="max-w-sm"
         />
-        <div className="text-muted-foreground">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="flex items-center gap-2 hover:bg-muted/50 transition-colors">
-                <CalendarDaysIcon className="w-5 h-5" />
-                {selectedDate.toLocaleDateString()}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="p-0">
-              <Calendar value={selectedDate} onChange={setSelectedDate} className="p-4" />
-            </PopoverContent>
-          </Popover>
-        </div>
       </div>
       <Table>
         <TableHeader>
