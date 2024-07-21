@@ -10,6 +10,8 @@ const VerticalResourceView = () => {
     { id: '2', title: 'Room 2' },
     { id: '3', title: 'Room 3' },
     { id: '4', title: 'Room 4' },
+    { id: '5', title: 'Room 5' },
+    { id: '6', title: 'Room 6' },
  
   ], []);
 

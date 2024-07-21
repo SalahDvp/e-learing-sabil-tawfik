@@ -128,20 +128,39 @@ export const  FetchDataProvider = ({ children }) => {
   useEffect(()=>{
     const getClasses = async () => {
       try {
-        const classesSnapshot = await getDocs(collection(db, 'Groups'));
-      
-        const classesData = classesSnapshot.docs.map((doc) => ({ ...doc.data(),
-           id: doc.id,
+        // Fetch the documents from the 'Groups' collection
+        const groupsSnapshot = await getDocs(collection(db, 'Groups'));
+        
+        // Create an array to store the classes data
+        const classesData = [];
+    
+        // Loop through each group document
+        for (const groupDoc of groupsSnapshot.docs) {
+          const groupId = groupDoc.id;
+          const groupData = groupDoc.data();
+          
+          // Retrieve the attendance subcollection
+          const attendanceSnapshot = await getDocs(collection(db, `Groups/${groupId}/Attendance`));
+          
+          // Create an object to store the attendance data with document ID as the key
+          const attendanceData = attendanceSnapshot.docs.reduce((acc, doc) => {
+            acc[doc.id] = {...doc.data(),id:doc.id};
+            return acc;
+          }, {});
+    
+          // Add the group data and attendance data to the classesData array
+          classesData.push({
+            id: groupId,
+            ...groupData,
+            attendance: attendanceData,
+          });
+        }
 
-           value:doc.data().className,
-           label:doc.data().className,
-          }))
-       
-     
-          //console.table(parentsData);
-        setClasses(classesData)
+        console.log(classesData);
+        setClasses(classesData);
+    
       } catch (error) {
-        console.error('Error fetching Teachers:', error);
+        console.error('Error fetching Groups and Attendance:', error);
       }
     };
 getClasses()

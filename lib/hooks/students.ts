@@ -3,6 +3,7 @@ import { addDoc,arrayUnion,collection, deleteDoc, doc, increment, updateDoc } fr
 import { getDownloadURL, ref, uploadBytes, uploadString } from "firebase/storage";
 import { storage } from "@/firebase/firebase-config";
 import { StudentSchema,Student } from "@/validators/auth";
+import { parse } from "date-fns";
 function dataURLtoFile(dataurl:string, filename:string) {
     var arr = dataurl.split(','),
         mime = arr[0].match(/:(.*?);/)[1],
@@ -95,3 +96,31 @@ export const deleteStudent = async(studentId:string)=>{
         throw error; // Optionally re-throw the error to propagate it further if needed
     } 
 }
+const parseAndFormatDate = (dateString: string, formatString: string): Date => {
+    return parse(dateString, formatString, new Date());
+  };
+export const formatDateToYYYYMMDD = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are zero-indexed
+    const day = String(date.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
+  };
+  export const writeAttendance = async (std:any) => {
+    try {
+      const date = new Date(); // Current date and time
+      const formattedDate = formatDateToYYYYMMDD(date)
+      const docRef = doc(db, 'Groups', std.id, 'Attendance', formattedDate);
+      const attendanceData = {
+        index:std.studentIndex,
+        group:std.studentGroup,
+        name:std.name,
+        status:'present'
+      };
+  
+      // Use setDoc with merge: true to create or update the document
+      await updateDoc(docRef,attendanceData)
+    } catch (error) {
+      console.error("Error writing attendance: ", error);
+    }
+  };

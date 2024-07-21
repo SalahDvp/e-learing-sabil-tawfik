@@ -1,4 +1,5 @@
 "use client";
+import { formatDateToYYYYMMDD } from "@/lib/hooks/students";
 import Image from "next/image";
 import QrScanner from "qr-scanner";
 import { useEffect, useRef, useState } from "react";
@@ -18,90 +19,177 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-const checkClassTime = (scanTime: Date, classes: any[]) => {
-  const scanDay = scanTime.toLocaleString('en-US', { weekday: 'long' }); // Get the day of the week
-  const scanHour = scanTime.getHours();
-  const scanMinute = scanTime.getMinutes();
+import { Label } from "@/components/ui/label";
+import { RadioGroup,RadioGroupItem } from "@/components/ui/radio-group";
+import { writeAttendance } from "@/lib/hooks/students";
+const checkClassTime = (scanTime: Date, student: any, groupClasses: any[]): any[] | null => {
+  const scanDay = scanTime.toLocaleString('en-US', { weekday: 'long' });
 
-  for (const classObj of classes) {
-    const [classDay, classStartTime] = classObj.time.split(' ');
-    const [classStartHour, classStartMinute] = classStartTime.split(':').map(Number);
 
-    if (scanDay.toLowerCase() === classDay.toLowerCase()) {
-      const classStart = new Date(scanTime);
-      classStart.setHours(classStartHour, classStartMinute, 0, 0);
+  // Extract IDs from student classes into a Set
+  const studentClassIds = new Set(student.classes.map(cls => cls.id));
 
-      const classEnd = addMinutes(classStart, 60); // Assume classes are 1 hour long
-      const startWindow = subMinutes(classStart, 30);
-      const endWindow = addMinutes(classEnd, 30);
+  // Filter group classes to get only those that match the student class IDs
+  const relevantGroupClasses = groupClasses.filter(groupClass =>
+    studentClassIds.has(groupClass.id)
+  );
+  // Array to store matching class objects with group class information
+  const matchingClassesWithGroup: any[] = [];
 
-      if (isWithinInterval(scanTime, { start: startWindow, end: endWindow })) {
-        return classObj;
+  // Loop through each relevant group class
+  for (const groupClass of relevantGroupClasses) {
+    for (const groupElement of groupClass.groups) {
+      const groupDay = groupElement.day;
+      const groupStartTime = groupElement.start;
+      const groupEndTime = groupElement.end;
+      const [groupStartHour, groupStartMinute] = groupStartTime.split(':').map(Number);
+      const [groupEndHour, groupEndMinute] = groupEndTime.split(':').map(Number);
+
+      if (scanDay.toLowerCase() === groupDay.toLowerCase()) {
+        const groupStart = new Date(scanTime);
+        groupStart.setHours(groupStartHour, groupStartMinute, 0, 0);
+
+        const groupEnd = new Date(scanTime);
+        groupEnd.setHours(groupEndHour, groupEndMinute, 0, 0);
+
+        const startWindow = subMinutes(groupStart, 30);
+        const endWindow = addMinutes(groupEnd, 30);
+
+        if (isWithinInterval(scanTime, { start: startWindow, end: endWindow })) {
+          // Find matching student classes for this group
+          const matchingClasses = student.classes.find(cls => cls.id === groupClass.id);
+
+          if (matchingClasses) {
+            matchingClassesWithGroup.push({...groupElement,subject:matchingClasses.subject,id:matchingClasses.id,studentIndex:matchingClasses.index,studentGroup:matchingClasses.group,name:groupClass.teacherName
+            });
+          }
+        }
       }
     }
   }
 
-  return null;
+  // Return array of matching classes with group information if any are found
+  if (matchingClassesWithGroup.length > 0) {
+    return matchingClassesWithGroup;
+  } else {
+    return null;
+  }
 };
 export default function Home() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const highlightCodeOutlineRef = useRef<HTMLDivElement>(null);
   const qrScanner = useRef<QrScanner | null>(null);
-  const {students}=useData()
+  const {students,classes,setClasses}=useData()
   const [showingQrScanner, setShowingQrScanner] = useState(false);
   const [studentData, setStudentData] = useState<Student | null>(null);
-  const [currentClass, setCurrentClass] = useState(false);
+  const [currentClass, setCurrentClass] = useState<String| any>();
+  const [currentClasses, setCurrentClasses] = useState<String| any[]>();
   const audioRefSuccess = useRef(null);
   const audioRefError = useRef(null);
   const processedQrCodes = useRef(new Set<string>()); // Set to track processed QR codes
   const [openAlert,setOpenAlert]=useState(false)
   const[alertText,setAlertText]=useState('')
-  const [scanTimeout, setScanTimeout] = useState(false);
+  console.log(currentClass);
+  
   const handleQrScan = (result) => {
-    setTimeout(() => {
-      setScanTimeout(false);
+    if (processedQrCodes.current.has(result.data)) {
+      console.log("This student has already scanned their code in the past hour.");
+      
+      setAlertText("This student has already scanned their code in the past hour.");
+      setOpenAlert(true);
 
-      if (processedQrCodes.current.has(result.data)) {
-        console.log("This student has already scanned their code in the past hour.");
-        
-        setAlertText("This student has already scanned their code in the past hour.");
-        setOpenAlert(true);
-  
-        return;
-      }
-  
-      processedQrCodes.current.add(result.data);
-      setCurrentClass(false);
-      const parsedData = students.find((student) => student.id === result.data);
-  
-      if (!parsedData) {
-        setAlertText("Invalid QR code");
-        setOpenAlert(true);
-        audioRefError.current?.play();
-        return;
-      }
-  
-      setStudentData(parsedData);
-      const scanTime = new Date();
-      const classInfo = checkClassTime(scanTime, parsedData.classes);
-  
-      if (classInfo) {
-        setAlertText(`Student came for class: ${classInfo.subject}`);
-        setOpenAlert(true);
-        audioRefSuccess.current?.play();
-        setCurrentClass(true);
-        // Optional: Add your attendance writing logic here if needed
-      } else {
-        setAlertText("No current class found for this student to attend.");
-        setOpenAlert(true);
-        audioRefError.current?.play();
-      }
-    }, 3000); // 3 seconds delay
+      return;
+    }
+
+    processedQrCodes.current.add(result.data);
+
+    const parsedData = students.find((student) => student.id === result.data);
+
+    if (!parsedData) {
+      setAlertText("Invalid QR code");
+      setOpenAlert(true);
+      audioRefError.current?.play();
+      return;
+    }
+
+    setStudentData(parsedData);
+    const scanTime = new Date();
+    const classInfo =checkClassTime(scanTime,parsedData,classes);
+    
+    if (classInfo) {
+      audioRefSuccess.current?.play();
+    
+      setCurrentClasses(classInfo)
+      
+    } else {
+      setAlertText("No current class found for this student to attend.");
+      setOpenAlert(true);
+      audioRefError.current?.play();
+    }
   };
-  const writeAttendance = (studentId) => {
-    // Example function to write attendance to Firebase
-    // Replace this with your actual Firebase request logic
-    console.log(`Writing attendance for student ID: ${studentId}`);
+
+  const stopScanner = () => {
+    qrScanner.current?.stop();
+    qrScanner.current = null; // Reset the qrScanner to null
+    videoRef.current!.hidden = true; // Hide the video element
+    processedQrCodes.current.clear(); // Clear processed QR codes
+    setShowingQrScanner(false); // Update state to hide QR scanner
+    setStudentData(null); // Clear student data
+    setCurrentClass(undefined)
+    setCurrentClasses(undefined)
+
+
+  };
+
+  const onConfirm =async() => {
+ await writeAttendance(currentClass)
+ const formattedDate = formatDateToYYYYMMDD(new Date()); // Format the date
+
+ setClasses(prevClasses => {
+   // Find the index of the class to update
+   const classIndex = prevClasses.findIndex(cls => cls.id === currentClass.id);
+
+   // If class is found, update its attendanceList
+   if (classIndex !== -1) {
+     // Create a copy of the previous classes
+     const updatedClasses = [...prevClasses];
+     const classToUpdate = updatedClasses[classIndex];
+
+     // Ensure attendanceList for the date exists
+     const attendanceList = classToUpdate.attendanceList || {};
+     const dateAttendance = attendanceList[formattedDate] || { attendanceList: [] };
+
+     // Update the attendanceList for the specific date
+     dateAttendance.attendanceList = [
+       ...dateAttendance.attendanceList,
+       {
+         index: currentClass.studentIndex,
+         group: currentClass.studentGroup,
+         name: currentClass.name,
+         status: 'present'
+       }
+     ];
+
+     // Update the class with the new attendance list
+     updatedClasses[classIndex] = {
+       ...classToUpdate,
+       attendanceList: {
+         ...attendanceList,
+         [formattedDate]: dateAttendance
+       }
+     };
+
+     return updatedClasses;
+   }
+   
+   return prevClasses; // Return unchanged state if class not found
+ });
+ audioRefSuccess.current?.play();
+    
+ setCurrentClass(undefined)
+ setCurrentClasses(undefined)
+ setStudentData(null)
+
     
   };
   const handleButtonClick = async () => {
@@ -109,20 +197,12 @@ export default function Home() {
     qrScanner.current = new QrScanner(videoRef.current!, handleQrScan, {
       highlightScanRegion: true,
       overlay: highlightCodeOutlineRef.current!,
+      maxScansPerSecond:0.5,
     });
     await qrScanner.current.start();
     setShowingQrScanner(true);
   };
 
-  const stopScanner = () => {
-    qrScanner.current?.stop();
-    qrScanner.current = null; // Reset the qrScanner to null
-    videoRef.current!.hidden = true; // Hide the video element
-    processedQrCodes.current.clear()
-    setShowingQrScanner(false);
-    setStudentData(null)
-    setCurrentClass(false)
-  };
   
   return (
     <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto p-4 md:p-8">
@@ -210,6 +290,10 @@ export default function Home() {
       <span className="text-muted-foreground">Year:</span>
       <span>{studentData.year}</span>
     </div>
+    <div className="flex items-center justify-between">
+      <span className="text-muted-foreground">CS:</span>
+      <span>{studentData.year}</span>
+    </div>
   </div>
   <Separator />
   <div className="grid gap-2">
@@ -217,23 +301,45 @@ export default function Home() {
     {studentData.classes.map((subject) => (
       <div key={subject.id} className="flex flex-col">
         <span className="font-semibold">{subject.subject}</span>
-        <span>{subject.name}</span>
-        <span>{subject.time}</span>
-        {currentClass && (
-          <span className="text-primary">Currently Attending</span>
-        )}
+        <span>prof:{subject.name}</span>
+        <span>time:{subject.time}</span>
+        <span>CS:{subject.cs}</span>
       </div>
     ))}
   </div>
-  {/* Reset Button */}
-  <div className="mt-4 flex justify-end">
+  <Separator />
+  {Array.isArray(currentClasses) && currentClasses.length > 0 && (
+  <RadioGroup defaultValue="card" className="grid grid-cols-3 gap-4">
+    {currentClasses.map((classObj,index) => (
+      <div key={index}>
+        <RadioGroupItem value={classObj.id} onClick={()=>setCurrentClass(classObj)
+        } id={classObj.id} className="peer sr-only" />
+        <Label
+          htmlFor={classObj.id}
+          className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+        >
+          <span className="font-semibold">{classObj.subject}</span>
+          <span>{classObj.name}</span>
+          <span>{classObj.day},{classObj.start}-{classObj.end}</span>
+        </Label>
+      </div>
+    ))}
+  </RadioGroup>
+)}
+{currentClass &&(  <div className="mt-4 flex justify-end">
     <Button
-      onClick={() => {setStudentData(null);setCurrentClass(false)}}
+      onClick={() => {setStudentData(null);setCurrentClass(undefined);setCurrentClasses(undefined)}}
       variant='outline'
     >
       Reset
     </Button>
-  </div>
+    <Button
+      onClick={() => onConfirm()}
+      variant='default'
+    >
+      Confirm
+    </Button>
+  </div>)}
 </div>) :(<div className="bg-muted rounded-lg p-6 flex flex-col gap-4">
                 <div className="flex items-center gap-4">
           <Avatar className="w-12 h-12 border">
