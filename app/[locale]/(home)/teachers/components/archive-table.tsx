@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -18,7 +18,8 @@ import {
 } from "@tanstack/react-table";
 import { z } from "zod";
 import { Input } from "@/components/ui/input";
-import { studnetRegistrationSchema } from "@/validators/studentinfo";
+import { useData } from "@/context/admin/fetchDataContext";
+
 
 export type studentAttandance = {
   id: string;
@@ -26,14 +27,17 @@ export type studentAttandance = {
   status: string;
 };
 
-type StudentValues = z.infer<typeof studnetRegistrationSchema> & { id: string };
 
-export const ArchiveDataTable = () => {
+export const ArchiveDataTable = ({teacher}) => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [searchTerm, setSearchTerm] = useState("");
   const daysInMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate();
   const startDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1).getDay();
-  
+  const {students,classes}=useData()
+  const selectedAttendance = useMemo(() => 
+    classes.find((cls) =>
+      cls.teacherUID==='TM9WDDNGjlCfcmBrl9Tn' && cls.subject==='Mathematics').attendance
+    , [classes]);
   const algebraData = [
     {
       id: "1",
@@ -115,7 +119,7 @@ export const ArchiveDataTable = () => {
       student.id.includes(searchTerm)
   );
 
-  const columns: ColumnDef<StudentValues>[] = [
+  const columns: ColumnDef<any>[] = [
     {
       accessorKey: "id",
       header: () => <div>ID</div>,
@@ -146,13 +150,11 @@ export const ArchiveDataTable = () => {
   ];
 
   const getStatusIcon = (status) => {
-    if (status === "Present") {
+    if (status === "present") {
       return <CheckIcon className="ml-5 w-5 h-5 text-green-500" />;
-    } else if (status === "Absent") {
+    } else  {
       return <XIcon className="ml-5 w-5 h-5 text-red-500" />;
-    } else {
-      return null; // Handle other cases if necessary
-    }
+    } 
   };
 
   const [sorting, setSorting] = useState<SortingState>([]);

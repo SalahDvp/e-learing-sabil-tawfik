@@ -53,7 +53,7 @@ import { Teacher, TeacherSchema } from '@/validators/teacher';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import CalendarDatePicker from './date-picker';
+import CalendarDatePicker from '../../students/components/date-picker';
 
 import { addTeacher, updateTeacher } from '@/lib/hooks/teachers';
 import { LoadingButton } from '@/components/ui/loadingButton';
@@ -83,7 +83,7 @@ const steps = [
 interface openModelProps {
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
   open: boolean; // Specify the type of setOpen
-  teacher:Teacher
+  teacher:any
 }
 const EditTeacher: React.FC<openModelProps> = ({ setOpen, open,teacher }) => {
 

@@ -1,9 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
+import { useState, useMemo } from "react";
+
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import {
   ColumnDef,
@@ -17,41 +15,36 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { useData } from "@/context/admin/fetchDataContext";
 import React from "react";
+import { Tabs,TabsList,TabsTrigger } from '@/components/ui/tabs';
 
 
-export type studentAttandance = {
-  id: string;
-  name: string;
-  group: string;
-  filter: string;
-  level:string
-};
 
-
-export const DailyAtandenceDataTable = ({ filter,teacher }: { filter: string,teacher:any }) => {
+export const DailyAtandenceDataTable = ({teacher }: {teacher:any }) => {
   const [searchTerm, setSearchTerm] = useState("");
 
-  const {students,setStudents}=useData()
-      console.log("teacher",teacher);
-      
-  React.useEffect(() => {
-       
-    if (filter === "All") {
-      table.resetColumnFilters()
-    } else {
-      table.getColumn("year")?.setFilterValue(filter);
-    } 
-  }, [filter]); 
+  const { students, setStudents } = useData();
 
-  const columns: ColumnDef<any>[] = useMemo(() => [
+  const [filter,setFilter]=useState("All")
+
+  const selectedStudents = useMemo(() => 
+    students.filter((std) =>
+      std.classes.some((cls) => teacher.groupUIDs.includes(cls.id))
+    ), [students]);
+
+  const columns = useMemo(() => [
     {
       accessorKey: "id",
-      header: () => <div>ID</div>,
-      cell: ({ row }) => <div className="lowercase hidden sm:table-cell">{row.getValue("id")}</div>,
+      header: () => <div>Index</div>,
+      cell: ({ row }) =>{
+        const index=row.original.classes.find((cls:any) => teacher.groupUIDs.includes(cls.id)).index
+       
+        
+        return(
+        <div className="lowercase hidden sm:table-cell">{index}</div>
+      ) },
     },
     {
       accessorKey: "name",
@@ -62,10 +55,22 @@ export const DailyAtandenceDataTable = ({ filter,teacher }: { filter: string,tea
         </div>
       ),
     },
+    
+    {
+      accessorKey: "year",
+      header: () => <div>year</div>,
+      cell: ({ row }) => <div>{row.getValue("year")}</div>,
+    },
     {
       accessorKey: "group",
-      header: () => <div>Group</div>,
-      cell: ({ row }) => <div>{row.getValue("group")}</div>,
+      header: () => <div>group</div>,
+      cell: ({ row }) =>{
+        const index=row.original.classes.find((cls:any) => teacher.groupUIDs.includes(cls.id)).group
+       
+        
+        return(
+        <div className="lowercase hidden sm:table-cell">{index}</div>
+      ) },
     },
     // Add any additional columns you might need here
   ], []);
@@ -76,7 +81,7 @@ export const DailyAtandenceDataTable = ({ filter,teacher }: { filter: string,tea
   const [rowSelection, setRowSelection] = useState({});
 
   const table = useReactTable({
-    data: students || [],
+    data: selectedStudents,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -100,6 +105,8 @@ export const DailyAtandenceDataTable = ({ filter,teacher }: { filter: string,tea
     },
   });
 
+
+
   // Ensure that the column you interact with exists
   
 
@@ -108,8 +115,8 @@ export const DailyAtandenceDataTable = ({ filter,teacher }: { filter: string,tea
       <div className="flex flex-col md:flex-row items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold">SAID YOUCEF</h1>
-            <p className="text-muted-foreground">Math Teacher</p>
+            <h1 className="text-2xl font-bold">{teacher?.name}</h1>
+            <p className="text-muted-foreground">{teacher[`educational-subject`]}</p>
           </div>
         </div>
         <Input
@@ -118,7 +125,22 @@ export const DailyAtandenceDataTable = ({ filter,teacher }: { filter: string,tea
           onChange={(event) => setSearchTerm(event.target.value)}
           className="max-w-sm"
         />
+              <div className="text-muted-foreground">
+        </div>
       </div>
+      <Tabs defaultValue="all">
+              <div className="flex items-center">
+                <TabsList>
+                <TabsTrigger value="all" onClick={() =>       table.resetColumnFilters()}>ooo</TabsTrigger>
+                  {teacher.year.map((level) => (
+                    <TabsTrigger key={level} value={level} onClick={() =>    table.getColumn("year")?.setFilterValue(level)}>
+                      {level}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </div>
+              {/*  */}
+            </Tabs>
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map(headerGroup => (
@@ -151,31 +173,3 @@ export const DailyAtandenceDataTable = ({ filter,teacher }: { filter: string,tea
     </div>
   );
 };
-
-function CalendarDaysIcon(props) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M8 2v4" />
-      <path d="M16 2v4" />
-      <rect width="18" height="18" x="3" y="4" rx="2" />
-      <path d="M3 10h18" />
-      <path d="M8 14h.01" />
-      <path d="M12 14h.01" />
-      <path d="M16 14h.01" />
-      <path d="M8 18h.01" />
-      <path d="M12 18h.01" />
-      <path d="M16 18h.01" />
-    </svg>
-  );
-}

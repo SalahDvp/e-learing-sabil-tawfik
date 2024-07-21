@@ -529,17 +529,19 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
         heightLeft -= pageHeight;
       }
       pdf.save('download.pdf');
+      form.setValue('classes',[])
       reset()
+
       setQr('')
      
   }
-  const {setStudents,setClasses}=useData()
+  const {setStudents,setClasses,students}=useData()
   const onSubmit = async(data:Student) => {
-    console.log(data);
     
-    const studentId=await addStudent(data)
+    
+    const studentId=await addStudent({...data,studentIndex:students.length+1})
     generateQrCode(studentId);
-    setStudents((prev: Student[]) => [...prev, {...data,id:studentId,student:data.name}]);
+    setStudents((prev: Student[]) => [...prev, {...data,id:22,student:data.name,studentIndex:prev.length+1}]);
     setClasses((prev: any[]) =>
       prev.map((cls) => {
         const matchingClass = data.classes.find((sls) => sls.id === cls.id);
@@ -549,7 +551,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
             students: [
               ...cls.students,
               {
-                id: studentId,
+                id: 22,
                 name: data.name,
                 index: matchingClass.index,
                 year:data.year,group:cls.group
@@ -560,6 +562,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
         return cls;
       })
     );
+  
     nextStep()
   };
 
@@ -574,7 +577,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
             <div className="grid gap-1 text-center">
               <div className="text-xl font-semibold">{formData.name}</div>
               <div className="text-muted-foreground">{formData.year}</div>
-              <div className="text-sm text-muted-foreground">Born: {format(formData.birthdate, 'MMMM d, yyyy')}</div>
+              {/* <div className="text-sm text-muted-foreground">Born: {format(formData?.birthdate, 'MMMM d, yyyy')}</div> */}
               <div className="text-sm text-muted-foreground">School: {formData.school}</div>
             </div>
           </div>

@@ -1,16 +1,8 @@
 "use client"
 
-import { useState } from "react";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Separator } from "@/components/ui/separator";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
-import { ArchiveDataTable } from './archive-table';
 import { DailyAtandenceDataTable } from './daily-table';
 
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import {
   Sheet,
@@ -21,6 +13,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { ArchiveDataTable } from './archive-table';
 
 interface openModelProps {
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -29,18 +22,8 @@ interface openModelProps {
 }
 
 export const AtandenceDataModel: React.FC<openModelProps> = ({ setOpen, open, teacher }) => {
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [filter ,setFilter] = useState();
-  const levels = [
-  { level: '1AM' },
-  { level: '2AM' },
-  { level: '3AM' }
-];
 
-  const handleFilter = (classYear) => {
-     // Debugging line
-    setFilter(classYear);
-  };
+
 
 
   return (
@@ -55,22 +38,8 @@ export const AtandenceDataModel: React.FC<openModelProps> = ({ setOpen, open, te
           </SheetHeader>
 
           <div className="bg-background text-foreground p-6 md:p-10">
-            <Tabs defaultValue="all">
-              <div className="flex items-center">
-                <TabsList>
-                <TabsTrigger value="all" onClick={() => handleFilter("All")}>ooo</TabsTrigger>
-                  {levels.map((level) => (
-                    <TabsTrigger key={level.level} value={level.level} onClick={() => handleFilter(level.level)}>
-                      {level.level}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </div>
-              {/*  */}
-            </Tabs>
-            <DailyAtandenceDataTable  />
-              <Separator className="my-8" />
-              <ArchiveDataTable />
+            <DailyAtandenceDataTable  teacher={{...teacher,groupUIDs:['Cyw29fA7hQH4SH4JlCSn']}}/>
+            <ArchiveDataTable teacher={{...teacher,groupUIDs:['Cyw29fA7hQH4SH4JlCSn']}}/> 
           </div>
 
           <SheetFooter className="mt-5">

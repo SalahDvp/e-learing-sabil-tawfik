@@ -53,7 +53,7 @@ import { Teacher, TeacherSchema } from '@/validators/teacher';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import CalendarDatePicker from './date-picker';
+import CalendarDatePicker from '../../students/components/date-picker';
 
 import { addTeacher, groupClassesByYear } from '@/lib/hooks/teachers';
 import { LoadingButton } from '@/components/ui/loadingButton';
@@ -82,7 +82,7 @@ const steps = [
 ] satisfies StepItem[]
 export default function TeacherForm() {
 
-  const timeOptions = generateTimeOptions("07:00","18:00", 30);
+  const timeOptions = generateTimeOptions("07:00","22:00", 30);
   const form = useForm<any>({
     defaultValues:{
       year:[]
@@ -105,7 +105,7 @@ export default function TeacherForm() {
     value: string | number
   ) => {
     const classes = [...getValues('classes')]; // Get the current classes array
-    console.log('abdooooo', classes[index]);
+  
   
     if (field === 'stream') {
       if (Array.isArray(classes[index].stream)) {

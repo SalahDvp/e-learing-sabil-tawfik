@@ -77,20 +77,11 @@ interface DataTableDemoProps {
     const [openPayment,setOpenPayment]=React.useState(false)
     const t=useTranslations()
     const {teachers,setTeachers}=useData()
-    console.table(teachers);
+
     
 
     
-    const [teacher,setTeacher]=React.useState<Teacher | null>({name:"eqweqweqwe"})
-
-  React.useEffect(() => {
-         
-    if (filter === "All") {
-      table.resetColumnFilters()
-    } else {
-      table.getColumn("level")?.setFilterValue(filter);
-    } 
-  }, [filter]); 
+    const [teacher,setTeacher]=React.useState<Teacher | null>()
     const openEditSheet = (teacher:Teacher) => {
       setTeacher(teacher)
       setOpen(true); // Open the sheet after setting the level
@@ -165,7 +156,7 @@ interface DataTableDemoProps {
       <div className="font-medium">{classItem.subject}</div>
       <div className="text-sm text-muted-foreground">
         <div>{classItem.day}</div>
-        <div>{classItem.start} -> {classItem.end}</div>
+        <div>{`${classItem.start} -> ${classItem.end}`}</div>
       </div>
     </div>
   ))}
@@ -177,7 +168,7 @@ interface DataTableDemoProps {
         id: "actions",
         enableHiding: false,
         cell: ({ row }) => {
-          const teacher = row.original;
+          const teacherss = row.original;
     
           return (
             <DropdownMenu>
@@ -187,14 +178,14 @@ interface DataTableDemoProps {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => openEditSheet(teacher)}>
+                <DropdownMenuItem onClick={() => openEditSheet(teacherss)}>
                   {t('edit')} </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => openAttendanceCard(teacher)}>
+                  <DropdownMenuItem onClick={() => openAttendanceCard(teacherss)}>
                   {t('Attandance')} </DropdownMenuItem>
 
 
-                <DropdownMenuItem onClick={() =>{deleteTeacher(teacher.id), setTeachers((prevTeachers:any) =>
-      prevTeachers.filter((std:any) => std.id !== teacher.id)
+                <DropdownMenuItem onClick={() =>{deleteTeacher(teacherss.id), setTeachers((prevTeachers:any) =>
+      prevTeachers.filter((std:any) => std.id !== teacherss.id)
     )}}>
           {t('delete')} </DropdownMenuItem>
          

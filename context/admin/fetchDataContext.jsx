@@ -182,10 +182,9 @@ getClasses()
 
 
           
-           }))
-        console.log('zakamo extra',TeachersData);
+           }))     
      
-        console.table(TeachersData);
+    
         setTeachers(TeachersData)
       } catch (error) {
         console.error('Error fetching Teachers:', error);
