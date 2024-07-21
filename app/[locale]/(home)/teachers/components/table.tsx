@@ -81,8 +81,8 @@ interface DataTableDemoProps {
     
 
     
-    const [teacher,setTeacher]=React.useState<Teacher | null>(null)
-      // Define your table and set up filtering
+    const [teacher,setTeacher]=React.useState<Teacher | null>({name:"eqweqweqwe"})
+
   React.useEffect(() => {
          
     if (filter === "All") {

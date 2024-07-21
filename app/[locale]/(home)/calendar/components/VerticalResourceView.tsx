@@ -1,4 +1,4 @@
-import FullCalendar, { EventInput } from '@fullcalendar/react';
+import FullCalendar  from '@fullcalendar/react';
 import resourceDayGridPlugin from '@fullcalendar/resource-daygrid';
 import resourceTimeGridPlugin from '@fullcalendar/resource-timegrid';
 import { useMemo } from 'react';
@@ -15,7 +15,7 @@ const VerticalResourceView = () => {
  
   ], []);
 
-  const generateThisWeeksEvents = (): EventInput[] => {
+  const generateThisWeeksEvents = () => {
     const now = new Date();
     const start = startOfWeek(now, { weekStartsOn: 1 }); // Start of the week (Monday)
 
@@ -131,7 +131,6 @@ const VerticalResourceView = () => {
   plugins={[resourceDayGridPlugin, resourceTimeGridPlugin]}
   initialDate={new Date()}
   initialView='resourceTimeGridWeek'
-  groupByResource={true}
   resources={(fetchInfo, successCallback) =>
     successCallback(resources)
   }
