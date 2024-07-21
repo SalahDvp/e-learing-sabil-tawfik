@@ -541,7 +541,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
     
     const studentId=await addStudent({...data,studentIndex:students.length+1})
     generateQrCode(studentId);
-    setStudents((prev: Student[]) => [...prev, {...data,id:22,student:data.name,studentIndex:prev.length+1}]);
+    setStudents((prev: Student[]) => [...prev, {...data,id:studentId,student:data.name,studentIndex:prev.length+1}]);
     setClasses((prev: any[]) =>
       prev.map((cls) => {
         const matchingClass = data.classes.find((sls) => sls.id === cls.id);
@@ -551,7 +551,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
             students: [
               ...cls.students,
               {
-                id: 22,
+                id: studentId,
                 name: data.name,
                 index: matchingClass.index,
                 year:data.year,group:cls.group
