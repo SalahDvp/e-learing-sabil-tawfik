@@ -119,7 +119,9 @@ export const formatDateToYYYYMMDD = (date: Date): string => {
       };
   
       // Use setDoc with merge: true to create or update the document
-      await updateDoc(docRef,attendanceData)
+      await updateDoc(docRef,{
+        attendanceList:arrayUnion(attendanceData)
+      })
     } catch (error) {
       console.error("Error writing attendance: ", error);
     }

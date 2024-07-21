@@ -142,48 +142,41 @@ export default function Home() {
   };
 
   const onConfirm =async() => {
- await writeAttendance(currentClass)
+  await writeAttendance(currentClass)
  const formattedDate = formatDateToYYYYMMDD(new Date()); // Format the date
 
- setClasses(prevClasses => {
-   // Find the index of the class to update
-   const classIndex = prevClasses.findIndex(cls => cls.id === currentClass.id);
+ setClasses((prevClasses) => {
+  // Find the index of the class to update
+  const classIndex = prevClasses.findIndex(cls => cls.id === currentClass.id);
 
-   // If class is found, update its attendanceList
-   if (classIndex !== -1) {
+  // If class is found, update its attendanceList
+  if (classIndex !== -1) {
+
+    
      // Create a copy of the previous classes
      const updatedClasses = [...prevClasses];
-     const classToUpdate = updatedClasses[classIndex];
+     console.log(updatedClasses);
+     //Get the current attendance list for the given class
+    const currentAttendanceList = updatedClasses[classIndex].attendance|| {};
 
-     // Ensure attendanceList for the date exists
-     const attendanceList = classToUpdate.attendanceList || {};
-     const dateAttendance = attendanceList[formattedDate] || { attendanceList: [] };
+    // Add new student data to the attendance list
+    currentAttendanceList[formattedDate].attendanceList.push({index:currentClass.studentIndex,
+      group:currentClass.studentGroup,
+      name:currentClass.name,
+      status:'present'});
 
-     // Update the attendanceList for the specific date
-     dateAttendance.attendanceList = [
-       ...dateAttendance.attendanceList,
-       {
-         index: currentClass.studentIndex,
-         group: currentClass.studentGroup,
-         name: currentClass.name,
-         status: 'present'
-       }
-     ];
+    // Update the class with the new attendance list
+    updatedClasses[classIndex] = {
+      ...updatedClasses[classIndex],
+      attendanceList: currentAttendanceList
+    };
 
-     // Update the class with the new attendance list
-     updatedClasses[classIndex] = {
-       ...classToUpdate,
-       attendanceList: {
-         ...attendanceList,
-         [formattedDate]: dateAttendance
-       }
-     };
+    return updatedClasses;
+  }
 
-     return updatedClasses;
-   }
-   
-   return prevClasses; // Return unchanged state if class not found
- });
+  // Return unchanged state if class is not found
+  return prevClasses;
+});
  audioRefSuccess.current?.play();
     
  setCurrentClass(undefined)
