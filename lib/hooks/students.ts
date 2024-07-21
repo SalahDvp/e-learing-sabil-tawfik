@@ -1,5 +1,5 @@
 import { db } from "@/firebase/firebase-config"
-import { addDoc,collection, deleteDoc, doc, increment, updateDoc } from "firebase/firestore"
+import { addDoc,arrayUnion,collection, deleteDoc, doc, increment, updateDoc } from "firebase/firestore"
 import { getDownloadURL, ref, uploadBytes, uploadString } from "firebase/storage";
 import { storage } from "@/firebase/firebase-config";
 import { StudentSchema,Student } from "@/validators/auth";
@@ -36,12 +36,18 @@ export async function uploadAndLinkToCollection(
     // Assuming you want to return an array of objects with metadata
     return downloadUrl
   }
-export const addStudent = async (student:Student) => {
+export const addStudent = async (student:Student,) => {
     try {
   
         const studentRef = await addDoc(collection(db, "Students"), student);
         await uploadAndLinkToCollection(student.photo,'Students',studentRef.id,'photo')
-        console.log("Student added successfully:", studentRef.id);
+        student.classes.map(async (cls)=>{
+            await updateDoc(doc(db,'Groups',cls.id),{
+                students:arrayUnion({
+                    id:studentRef.id,name:student.name,index:cls.index,year:student.year,group:cls.group
+                })
+            })
+        })
         return studentRef.id; // Assuming you want to return the ID of the added Student
     } catch (error) {
         console.error("Error adding Student:", error);

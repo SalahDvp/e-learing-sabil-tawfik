@@ -55,7 +55,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import CalendarDatePicker from './date-picker';
 
-import { addTeacher, groupClassesByYear } from '@/lib/hooks/teachers';
+import { addTeacher, updateTeacher } from '@/lib/hooks/teachers';
 import { LoadingButton } from '@/components/ui/loadingButton';
 
 import { UseFormReturn } from 'react-hook-form';
@@ -63,10 +63,10 @@ import { UseFormReturn } from 'react-hook-form';
 import { useData } from "@/context/admin/fetchDataContext";
 
 import { generateTimeOptions } from '../../settings/components/open-days-table';
-import { setgroups } from 'process';
  
 interface FooterProps {
   formData: Teacher;
+  teacher:any;
   form: UseFormReturn<any>; // Use the specific form type if available
   isSubmitting: boolean;
   reset: UseFormReturn<any>['reset']; // Adding reset function from useForm
@@ -80,7 +80,12 @@ const steps = [
   { label: "Step 2" },
 
 ] satisfies StepItem[]
-export default function TeacherForm() {
+interface openModelProps {
+  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  open: boolean; // Specify the type of setOpen
+  teacher:Teacher
+}
+const EditTeacher: React.FC<openModelProps> = ({ setOpen, open,teacher }) => {
 
   const timeOptions = generateTimeOptions("07:00","18:00", 30);
   const form = useForm<any>({
@@ -96,7 +101,13 @@ export default function TeacherForm() {
     name: "classes",
 
   });
-  
+  React.useEffect(() => {
+    // you can do async server request and fill up form
+
+      reset(teacher);
+      console.log("teacher",teacher);
+      
+  }, [reset,teacher]); 
 
   
   const handleGroupChange = (
@@ -105,7 +116,6 @@ export default function TeacherForm() {
     value: string | number
   ) => {
     const classes = [...getValues('classes')]; // Get the current classes array
-    console.log('abdooooo', classes[index]);
   
     if (field === 'stream') {
       if (Array.isArray(classes[index].stream)) {
@@ -174,10 +184,7 @@ const years=[
   "3AS"
 ]
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button >Create Teacher</Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-[950px]">
       <Form {...form} >
       <form >
@@ -553,7 +560,7 @@ const years=[
             </Step>
           )
         })}
-        <Footer formData={getValues()} form={form} isSubmitting={isSubmitting} reset={reset}/>
+        <Footer formData={getValues()} form={form} isSubmitting={isSubmitting} reset={reset} teacher={teacher}/>
 
       </Stepper>
 
@@ -564,8 +571,8 @@ const years=[
     </Dialog>
   )
 }
-
-const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) => {
+export default EditTeacher;
+const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teacher}) => {
   const {
     nextStep,
     prevStep,
@@ -576,41 +583,20 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
     isOptionalStep,
   } = useStepper()
   
-  const  {setTeachers,setClasses}= useData()
+  const  {setTeachers}= useData()
 
 
   const onSubmit = async(data:Teacher) => {
 
+    console.log(data);
     
-    const teacherId = await addTeacher(data)
-    const classesByYear = groupClassesByYear(data.classes);
-  
-    const collectiveGroups = Object.entries(classesByYear).map(([year, classes]) => (
-{      year,
-  students:[],
-        teacherUID:teacherId.id,
-        teacherName:data.name,
-        subject: data["educational-subject"],
-        groups: classes.map((cls,index) => ({
-          subject: data["educational-subject"],
-          start: cls.start,
-          end:cls.end,
-          day:cls.day,
-          stream: cls.stream,
-          quota: cls.quota,
-          room:cls.room,
-          group:`G${index+1}`
-        }))}
-   
-        
-    ));
-    const updatedCollectiveGroups = collectiveGroups.map((group, index) => ({
-      ...group,
-      id: teacherId.groupUIDs[index]
-    }));
+    await updateTeacher(data,teacher.id)
     nextStep()
-    setTeachers((prev: Teacher[]) => [...prev, {...data,id:teacherId.id,groupUIDs:teacherId.groupUIDs,teacher:data.name}]);
-    setClasses((prev: any[]) => [...prev, ...updatedCollectiveGroups]);
+    setTeachers((prev: any[]) =>
+      prev.map((tchr) =>
+        tchr.id === teacher.id ? {...data } : tchr
+      )
+    );
   };
 
 
@@ -624,7 +610,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
             <CircleCheckIcon className="h-7 w-7 text-green-400" />
           </div>
           <div className="ml-4">
-            <h3 className="text-lg font-medium text-green-800">Teacher Created Successfully</h3>
+            <h3 className="text-lg font-medium text-green-800">Teacher Edited Successfully</h3>
           
           </div>
         </div>

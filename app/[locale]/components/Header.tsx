@@ -40,6 +40,15 @@ const t=useTranslations()
           }`}
         >
           {t('dashboard')} </Link>
+          <Link
+          href="/calendar"
+          className={`${
+            pathname === '/calendar' 
+              ? 'text-black-500 dark:text-white'
+              : 'text-muted-foreground hover:text-foreground foreground transition-colors'
+          }`}
+        >
+          Calendar </Link>
         <Link
           href="/students"
           className={`${pathname=== '/students' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
@@ -94,6 +103,15 @@ const t=useTranslations()
           }`}
         >
           {t('dashboard')} </Link>
+          <Link
+          href="/calendar"
+          className={`${
+            pathname === '/calendar' 
+              ? 'text-black-500 dark:text-white'
+              : 'text-muted-foreground hover:text-foreground foreground transition-colors'
+          }`}
+        >
+          Calendar </Link>
         <Link
           href="/students"
           className={`${pathname=== '/students' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}

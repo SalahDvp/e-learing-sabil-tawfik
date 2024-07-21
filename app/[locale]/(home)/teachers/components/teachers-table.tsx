@@ -49,7 +49,7 @@ import { Badge } from "@/components/ui/badge"
 import { teacherRegistrationSchema } from "@/validators/teacherSchema"
 import { z } from "zod"
 import { useData } from "@/context/admin/fetchDataContext"
-import SheetDemo from "./edit-teacher-form"
+import SheetDemo from "./editTeacher.tsx"
 import { useTranslations } from "next-intl"
 import { exportTableToExcel } from "@/components/excelExport"
 

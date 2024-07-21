@@ -52,6 +52,7 @@ import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { UseFormReturn } from 'react-hook-form';
+import { useData } from '@/context/admin/fetchDataContext';
 
 interface FooterProps {
   formData: Student;
@@ -59,18 +60,33 @@ interface FooterProps {
   isSubmitting: boolean;
   reset: UseFormReturn<any>['reset']; // Adding reset function from useForm
 }
-
-const classes = [
-  { id: "1", subject: 'Math', name: 'Nasri', time: '13:30' },
-  { id: "2", subject: 'Physique', name: 'Mahdi', time: '15:30' },
-  { id: "3", subject: 'Englais', name: 'Math', time: '17:30' },
-  { id: "4", subject: 'Math', name: 'Mahdi', time: '14:30' },
-  { id: "5", subject: 'Biology', name: 'Aisha', time: '10:00' },
-  { id: "6", subject: 'Chemistry', name: 'Omar', time: '11:30' },
-  { id: "7", subject: 'History', name: 'Fatima', time: '09:00' },
-  { id: "8", subject: 'Geography', name: 'Ali', time: '08:30' },
-  { id: "9", subject: 'Physics', name: 'Zahra', time: '12:00' },
-  { id: "10", subject: 'Computer Science', name: 'Hassan', time: '16:00' },
+const subjects =['Scientific Stream', 'Literature and Philosophy', 'Literature and Languages', 'Economics', 'Mathematics and Technology', 'Mathematics']
+const classess = [
+  "Select Option",
+  "Mathematics",
+  "Physics",
+  "Chemistry",
+  "Biology",
+  "Geography",
+  "History",
+  "Philosophy",
+  "Arabic",
+  "French",
+  "English",
+  "Islamic Education",
+  "Technology",
+  "Computer Science",
+  "Art",
+  "Physical Education",
+  "Economics",
+  "German",
+  "Spanish",
+  "Law",
+  "Business Studies",
+  "Social Sciences",
+  "Engineering",
+  "Architecture",
+  "Environmental Science"
 ];
 const steps = [
   { label: "Step 1" },
@@ -78,12 +94,26 @@ const steps = [
   { label: "Step 3" },
 
 ] satisfies StepItem[]
+const years=[
+  "1AM",
+  "2AM",
+  "3AM",
+  "4AM",
+  "1AS",
+  "2AS",
+  "3AS"
+]
 export default function StudentForm() {
   const camera = useRef<null | { takePhoto: () => string }>(null);
-
-  const form = useForm<Student>({
-    resolver: zodResolver(StudentSchema),
+  const {setStudents,teachers,classes,students}=useData()
+  const form = useForm<any>({
+    // resolver: zodResolver(StudentSchema),
+    defaultValues:{
+      id:'0',
+      studentIndex: students.length + 1
+    }
   });
+
   const { reset,formState, setValue, getValues,control,watch} = form;
   const { isSubmitting } = formState;
   const { fields, append:appendClass,remove:removeClass, } = useFieldArray({
@@ -91,30 +121,59 @@ export default function StudentForm() {
     name: "classes",
 
   });
-  const getClassId = (subject:string, name:string, time:string)  => {
-    const selectedClass = classes.find(cls => cls.subject === subject && cls.name === name && cls.time === time);
-    return selectedClass ? selectedClass.id : "undifined";
+  const getClassId = (subject:string, name:string,day:string,start:string,end:string)  => {
+    const selectedClass = classes.find(cls => cls.subject === subject && cls.year=== watch('year') &&   cls.groups.some(group => group.stream.includes(watch('field'))) && cls.teacherName === name )
+    const selectedGroup=selectedClass.groups.find( grp=> grp.day === day && grp.start === start && grp.end===end)
+    console.log(end);
+    
+    return selectedClass ? {id:selectedClass.id,index:selectedClass.students?selectedClass.students.length+1:1,group:selectedGroup.group}: {id:"",index:0,group:""};
   };
-
-  const handleGroupChange = (index:number, field:'name' | 'id' | 'subject' | 'time', value:string) => {
+  const handleGroupChange = (index: number, field: 'name' | 'id' | 'subject' | 'time', value: string | number) => {
     const classes = [...getValues('classes')];
-    classes[index][field] = value; 
-    setValue('classes',classes); 
-    if (classes[index].time && classes[index].subject && classes[index].name) {
-      const subject = classes[index].subject 
-      const name =classes[index].name
-      const time = classes[index].time
-      const selectedClassId = getClassId(subject, name, time);
-      setValue(`classes.${index}.id`, selectedClassId);
+  
+    if (field === 'subject') {
+      const updatedClass = { id: '', name: '', subject: value, time: '' };
+      classes[index] = updatedClass;
+      setValue(`classes`, classes);
+      console.log(value);
+    } else if (field === 'name') {
+      const updatedClass = { id: '', name: value, subject: classes[index].subject, time: '' };
+      classes[index] = updatedClass;
+      setValue(`classes`, classes);
+    } else if (field === 'time') {
+      const subject = classes[index].subject;
+      const name = classes[index].name;
+      const parsedString=JSON.parse(value)
+      const [dayPart, timePart] = parsedString.split(',');
+      const [start, end] = timePart.split('-');
+  
+      // Assuming getClassId is a synchronous function
+      const selectedClassId = getClassId(subject, name, dayPart, start, end);
+  
+      const updatedClass = {
+        ...classes[index],
+        group: selectedClassId.group,
+        time: value,
+        start,
+        end,
+        day: dayPart,
+        id: selectedClassId.id,
+        index: selectedClassId.index,
+      };
+  
+      classes[index] = updatedClass;
+      setValue(`classes`, classes);
+    } else {
+      classes[index][field] = value;
+      setValue(`classes.${index}`, classes[index]);
     }
   };
-
   return (
     <Dialog>
       <DialogTrigger asChild>
         <Button >Create student</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[550px]">
+      <DialogContent className="sm:max-w-[800px]">
       <Form {...form} >
       <form >
         <DialogHeader>
@@ -145,7 +204,7 @@ export default function StudentForm() {
                       <FormLabel className="text-right">Name</FormLabel>
                       <FormControl><Input id="name"  className="col-span-3"  {...field}/></FormControl>
 
-                      <FormMessage />
+                      
                     </FormItem>
                   )}
                 />
@@ -170,7 +229,7 @@ export default function StudentForm() {
               }
             }}
           /></FormControl>
-                  <FormMessage />
+                  
                 </FormItem>
               )}
             />
@@ -183,7 +242,7 @@ export default function StudentForm() {
                 <FormItem className="grid grid-cols-4 items-center gap-4">
                   <FormLabel className="text-right">Birthplace</FormLabel>
                   <FormControl><Input id="birthplace" className="col-span-3" {...field} /></FormControl>
-                  <FormMessage />
+                  
                 </FormItem>
               )}
             />
@@ -196,36 +255,80 @@ export default function StudentForm() {
                 <FormItem className="grid grid-cols-4 items-center gap-4">
                   <FormLabel className="text-right">School</FormLabel>
                   <FormControl><Input id="school" className="col-span-3" {...field} /></FormControl>
-                  <FormMessage />
+                  
                 </FormItem>
               )}
             />
  
 
-    <FormField
-              control={control}
-              name="year"
-              render={({ field }) => (
-                <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Year</FormLabel>
-                  <FormControl><Input id="year" className="col-span-3" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
 
-    <FormField
-              control={control}
-              name="field"
-              render={({ field }) => (
-                <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Field</FormLabel>
-                  <FormControl><Input id="field" className="col-span-3" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+
+ <FormField
+  control={control}
+  name="year"
+  render={({ field }) => (
+    <FormItem className="grid grid-cols-4 items-center gap-4">
+      <FormLabel className="text-right">Year</FormLabel>
+      <FormControl>
+      <Select
+   onValueChange={field.onChange}
+   defaultValue={field.value}
+              >
+                                 <SelectTrigger
+                              id={`year`}
+                              aria-label={`Select year`}
+                            >
+                              <SelectValue placeholder={"select year"} />
+                            </SelectTrigger>
+            <SelectContent>
+ 
+            {years.map((year) => (
+                              <SelectItem key={year} value={year}   >
+                                {year}
+                              </SelectItem>
+                            ))}
+           
+                          </SelectContent>
+              </Select>
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
+
+ <FormField
+  control={control}
+  name="field"
+  render={({ field }) => (
+    <FormItem className="grid grid-cols-4 items-center gap-4">
+      <FormLabel className="text-right">field</FormLabel>
+      <FormControl>
+      <Select
+   onValueChange={field.onChange}
+   defaultValue={field.value}
+              >
+                                 <SelectTrigger
+                              id={`subject`}
+                              aria-label={`Select subject`}
+                            >
+                              <SelectValue placeholder={"select subject"} />
+                            </SelectTrigger>
+            <SelectContent>
+ 
+            {subjects.map((subject) => (
+                              <SelectItem key={subject} value={subject}   >
+                                {subject}
+                              </SelectItem>
+                            ))}
+           
+                          </SelectContent>
+              </Select>
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
   
 
     <FormField
@@ -235,7 +338,7 @@ export default function StudentForm() {
                 <FormItem className="grid grid-cols-4 items-center gap-4">
                   <FormLabel className="text-right">Phone Number</FormLabel>
                   <FormControl><Input id="phoneNumber" className="col-span-3" {...field} /></FormControl>
-                  <FormMessage />
+                  
                 </FormItem>
               )}
             />
@@ -288,6 +391,7 @@ export default function StudentForm() {
         <TableHead>Subject</TableHead>
           <TableHead >Name</TableHead>
           <TableHead>Time</TableHead>
+          <TableHead>CS</TableHead>
           <TableHead>Action</TableHead>
         </TableRow>
       </TableHeader>
@@ -302,7 +406,7 @@ export default function StudentForm() {
       <SelectContent>
         <SelectGroup>
         <SelectLabel>Subjects</SelectLabel>
-                    {Array.from(new Set(classes.map(cls => cls.subject))).map(subject => (
+                    {classess.map(subject => (
                       <SelectItem key={subject} value={subject}>
                         {subject}
                       </SelectItem>
@@ -319,10 +423,10 @@ export default function StudentForm() {
       {invoice.subject? ( <SelectGroup>
           <SelectLabel>Groups</SelectLabel>
           {Array.from(new Set(classes
-                        .filter(cls => cls.subject === invoice.subject)
-                      )).map(name => (
-                        <SelectItem key={name.name} value={name.name}>
-                          {name.name}
+                        .filter(cls => cls.subject === invoice.subject && cls.year=== watch('year') &&   cls.groups.some(group => group.stream.includes(watch('field'))))
+                      )).map(cls => (
+                        <SelectItem key={cls.teacherName} value={cls.teacherName}>
+                          {cls.teacherName}
                         </SelectItem>
                       ))}
         </SelectGroup>):(<p className="text-sm text-muted-foreground">Select Subject first</p>)}
@@ -335,17 +439,33 @@ export default function StudentForm() {
       <SelectContent>
       {invoice.subject && invoice.name? ( <SelectGroup>
           <SelectLabel>times</SelectLabel>
-          {classes
-                        .filter(cls => cls.subject === invoice.subject && cls.name === invoice.name)
-                        .map(cls => (
-                          <SelectItem key={cls.time} value={cls.time}>
-                            {cls.time}
+          {(classes.find(cls => cls.subject === invoice.subject && cls.year=== watch('year') &&   cls.groups.some(group => group.stream.includes(watch('field'))) && cls.teacherName === invoice.name ))?.groups?.map((cls,index) => (
+                          <SelectItem key={index} value={JSON.stringify(`${cls.day},${cls.start}-${cls.end}`)}>
+                            {cls.day},{cls.start}-{cls.end}
                           </SelectItem>
                         ))}
         </SelectGroup>):(<p className="text-sm text-muted-foreground">Select Subject and name first</p>)}
       </SelectContent>
     </Select></TableCell>
-    <TableCell>    <Button  type="button" variant="destructive" onClick={()=>removeClass(index)}>remove</Button></TableCell>
+    <TableCell className="font-medium"> 
+              <Select value={invoice.cs} onValueChange={(value)=>handleGroupChange(index,'cs',value)}>
+      <SelectTrigger className="">
+        <SelectValue placeholder="Select a cs" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectGroup>
+        <SelectLabel>cs</SelectLabel>
+        <SelectItem  value={"true"}>
+                        True
+                      </SelectItem>
+                      <SelectItem  value={"false"}>
+                        False
+                      </SelectItem>
+        </SelectGroup>
+      </SelectContent>
+    </Select></TableCell>
+    <TableCell>   
+       <Button  type="button" variant="destructive" onClick={()=>removeClass(index)}>remove</Button></TableCell>
 
           </TableRow>
         ))}
@@ -413,9 +533,33 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
       setQr('')
      
   }
+  const {setStudents,setClasses}=useData()
   const onSubmit = async(data:Student) => {
+    console.log(data);
+    
     const studentId=await addStudent(data)
     generateQrCode(studentId);
+    setStudents((prev: Student[]) => [...prev, {...data,id:studentId,student:data.name}]);
+    setClasses((prev: any[]) =>
+      prev.map((cls) => {
+        const matchingClass = data.classes.find((sls) => sls.id === cls.id);
+        if (matchingClass) {
+          return {
+            ...cls,
+            students: [
+              ...cls.students,
+              {
+                id: studentId,
+                name: data.name,
+                index: matchingClass.index,
+                year:data.year,group:cls.group
+              },
+            ],
+          };
+        }
+        return cls;
+      })
+    );
     nextStep()
   };
 

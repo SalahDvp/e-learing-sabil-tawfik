@@ -128,10 +128,11 @@ export const  FetchDataProvider = ({ children }) => {
   useEffect(()=>{
     const getClasses = async () => {
       try {
-        const classesSnapshot = await getDocs(collection(db, 'Classes'));
+        const classesSnapshot = await getDocs(collection(db, 'Groups'));
       
         const classesData = classesSnapshot.docs.map((doc) => ({ ...doc.data(),
            id: doc.id,
+
            value:doc.data().className,
            label:doc.data().className,
           }))
@@ -146,20 +147,26 @@ export const  FetchDataProvider = ({ children }) => {
 getClasses()
   },[])
   useEffect(()=>{
+    console.log('hamadooooooooo ');
     const getTeachers = async () => {
       try {
         const teachersSnapshot = await getDocs(collection(db, 'Teachers'));
       
         const TeachersData = teachersSnapshot.docs.map((doc) => ({ ...doc.data(),
            id: doc.id,
-           dateOfBirth:new Date(doc.data().dateOfBirth.toDate()),
-           joiningDate:new Date(doc.data().joiningDate.toDate()),
-           teacher: `${doc.data().firstName} ${doc.data().lastName}`,
-           value: `${doc.data().firstName} ${doc.data().lastName}`,
-           label: `${doc.data().firstName} ${doc.data().lastName}`,}))
-       
+           birthdate: new Date(doc.data().birthdate.toDate()),
+           teacher: `${doc.data().name}`,
+
+           phoneNumber: doc.data().phoneNumber,
+           year: doc.data().year
+          
+
+
+          
+           }))
+        console.log('zakamo extra',TeachersData);
      
-          //console.table(parentsData);
+        console.table(TeachersData);
         setTeachers(TeachersData)
       } catch (error) {
         console.error('Error fetching Teachers:', error);
@@ -167,7 +174,6 @@ getClasses()
     };
     getTeachers();
   },[])
-  console.log("hello youcef cv ? ");
   useEffect(()=>{
     const getStudents = async () => {
       try {

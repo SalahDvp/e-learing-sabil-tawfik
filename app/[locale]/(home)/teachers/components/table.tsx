@@ -46,20 +46,20 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { File } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import {exportTableToExcel} from '@/components/excelExport'
-import SheetDemo from "./editStudent"
-import { Student }  from "@/validators/auth";
+
+import { Teacher }  from "@/validators/teacher";
 import { useData } from "@/context/admin/fetchDataContext";
-import { z } from "zod"
+
 import { useTranslations } from "next-intl"
-import { deleteStudent } from "@/lib/hooks/students"
-import StudentForm from "./studentForm"
-import StudentPaymentSheet from "./studentPaymentSheet"
-import EditStudent from "./editStudent"
+import { deleteTeacher } from "@/lib/hooks/teachers"
+import TeacherForm from "./teacherForm"
+
+import EditTeacher from "./editTeacher"
+import {AtandenceDataModel} from './attendance-report'
 type Status = 'accepted' | 'pending' | 'rejected';
-export type StudentSummary = {
+export type TeacherSummary = {
   id: string;
   teacher: string;
   status: Status;
@@ -73,44 +73,15 @@ interface DataTableDemoProps {
 }
   export const DataTableDemo: React.FC<DataTableDemoProps> = ({ filter }) => {
     const [open,setOpen]=React.useState(false)
+    const [openCard, setOpenCard] = React.useState(false)
     const [openPayment,setOpenPayment]=React.useState(false)
     const t=useTranslations()
-    const {students,setStudents}=useData()
+    const {teachers,setTeachers}=useData()
+    console.table(teachers);
     
+
     
-    const [student,setStudent]=React.useState<Student>({  
-      id: '123456',
-      level: 'Intermediate',
-      firstName: 'John',
-      lastName: 'Doe',
-      dateOfBirth: new Date('1990-01-01'),
-      gender: 'male',
-      address: '123 Main St',
-      city: 'Anytown',
-      state: 'State',
-      postalCode: '12345',
-      country: 'Country',
-      parentFullName: 'Jane Doe',
-      parentFirstName: 'Jane',
-      parentLastName: 'Doe',
-      parentEmail: 'jane.doe@example.com',
-      parentPhone: '123-456-7890',
-      parentId: '654321',
-      emergencyContactName: 'Emergency Contact',
-      emergencyContactPhone: '987-654-3210',
-      medicalConditions: null,
-      status: 'Active',
-      joiningDate: new Date(),
-      registrationStatus: 'Registered',
-      startDate: new Date(),
-      lastPaymentDate: new Date(),
-      nextPaymentDate: new Date(),
-      totalAmount: 1000,
-      amountLeftToPay: 500,
-      class: "S",
-      registrationAndInsuranceFee:"Paid",
-      feedingFee:"Paid"
-    })
+    const [teacher,setTeacher]=React.useState<Teacher | null>(null)
       // Define your table and set up filtering
   React.useEffect(() => {
          
@@ -120,14 +91,15 @@ interface DataTableDemoProps {
       table.getColumn("level")?.setFilterValue(filter);
     } 
   }, [filter]); 
-    const openEditSheet = (student:Student) => {
-      setStudent(student)
+    const openEditSheet = (teacher:Teacher) => {
+      setTeacher(teacher)
       setOpen(true); // Open the sheet after setting the level
     };
-    const openPaymentSheet = (student:Student) => {
-      setStudent(student)
-      setOpenPayment(true); // Open the sheet after setting the level
+    const openAttendanceCard = (teacher:Teacher) => {
+      setTeacher(teacher)
+      setOpenCard(true); // Open the sheet after setting the level
     };
+
     const getMonthAbbreviation = (monthIndex: number) => {
       const startDate = new Date(2024, 8); // September 2023 (month index 8)
       const date = new Date(startDate.getFullYear(), startDate.getMonth() + monthIndex);
@@ -135,24 +107,18 @@ interface DataTableDemoProps {
       const yearAbbreviation = date.getFullYear().toString().substr(-2);
       return `${monthAbbreviation}${yearAbbreviation}`;
     };
+
+
+  
+    
     const columns: ColumnDef<any>[] = [
       {
-        accessorKey: "studentIndex",
-        header: () => <div >Index</div>,
-  
-        cell: ({ row }) => (
-          <div className="capitalize" style={{ width: '10px' }}>
-             <div className="font-medium">{row.getValue("studentIndex")}</div>
-          </div>
-        ),
-      },
-      {
-        accessorKey: "student",
-        header: () => <div >{t('student')}</div>,
+        accessorKey: "name",
+        header: () => <div >{t('teacher')}</div>,
   
         cell: ({ row }) => (
           <div className="capitalize">
-             <div className="font-medium">{row.getValue("student")}</div>
+             <div className="font-medium">{row.getValue("name")}</div>
           </div>
         ),
       },
@@ -163,8 +129,18 @@ interface DataTableDemoProps {
       },
       {
         accessorKey: "field",
-        header: () => <div >field</div>,
-        cell: ({ row }) => <div>{row.getValue("field")}</div>,
+        header: () => <div>Field</div>,
+        cell: ({ row }) => {
+          const classes = row.original.classes || [];
+          const streams = classes.flatMap((classItem: any) => classItem.stream || []);
+          const uniqueStreams = Array.from(new Set(streams)).sort();
+  
+          return (
+            <div className="text-sm text-muted-foreground">
+              {uniqueStreams.length > 0 ? uniqueStreams.join(', ') : 'No streams available'}
+            </div>
+          );
+        }
       },
       {
         accessorKey: "phone",
@@ -172,39 +148,36 @@ interface DataTableDemoProps {
         cell: ({ row }) => <div>{row.original.phoneNumber}</div>,
       },
       {
-        accessorKey: "school",
-        header: () => <div >school</div>,
-        cell: ({ row }) => <div>{row.getValue("school")}</div>,
+        accessorKey: "educational-subject",
+        header: () => <div >Educational Subject</div>,
+        cell: ({ row }) => <div>{row.getValue("educational-subject")}</div>,
       },
       {
         id: "classes",
         header: () => <div>Classes</div>,
         cell: ({ row }) => {
           const classes = row.original.classes;
-      
-          return (
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-              {classes.map((classItem: any, index: number) => (
-                <div key={index} style={{ maxWidth: '200px', marginBottom: '5px' }}>
-                  <div className="font-medium">{classItem.subject}</div>
-                  <div className="text-sm ">
-                    {classItem.name},{classItem.time}
-                  </div>
-                  <div className="text-sm ">
-                    index: {classItem.index},group: {classItem.group}
-                  </div>
-                </div>
-              ))}
-              
-            </div>
-          );
-        },
+
+      return (
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+  {classes.map((classItem: any, index: number) => (
+    <div key={index} style={{ maxWidth: '200px', marginBottom: '5px' }}>
+      <div className="font-medium">{classItem.subject}</div>
+      <div className="text-sm text-muted-foreground">
+        <div>{classItem.day}</div>
+        <div>{classItem.start} -> {classItem.end}</div>
+      </div>
+    </div>
+  ))}
+</div>
+      );
+        }
       },
       {
         id: "actions",
         enableHiding: false,
         cell: ({ row }) => {
-          const student = row.original;
+          const teacher = row.original;
     
           return (
             <DropdownMenu>
@@ -214,12 +187,18 @@ interface DataTableDemoProps {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => openEditSheet(student)}>
+                <DropdownMenuItem onClick={() => openEditSheet(teacher)}>
                   {t('edit')} </DropdownMenuItem>
-                <DropdownMenuItem onClick={() =>{deleteStudent(student.id), setStudents((prevStudents:any) =>
-      prevStudents.filter((std:any) => std.id !== student.id)
+                  <DropdownMenuItem onClick={() => openAttendanceCard(teacher)}>
+                  {t('Attandance')} </DropdownMenuItem>
+
+
+                <DropdownMenuItem onClick={() =>{deleteTeacher(teacher.id), setTeachers((prevTeachers:any) =>
+      prevTeachers.filter((std:any) => std.id !== teacher.id)
     )}}>
           {t('delete')} </DropdownMenuItem>
+         
+
               </DropdownMenuContent>
             </DropdownMenu>
           );
@@ -236,29 +215,29 @@ const orderedMonths = [
   'Jan24', 'Feb24', 'Mar24', 'Apr24',
   'May24', 'Jun24', 'Jul24','Aug24'
 ];
-    const exceldata=students.map((student:any)=>({[`${t('Name')}`]:student.student,
-    [`${t('level')}`]:student.level,
-    [`${t('class')}`]:student.class,
-    [`${t('status')}`]:t(student.status),
-    [`${t('joining-date-0')}`]:student.joiningDate,
+    const exceldata=teachers.map((teacher:any)=>({[`${t('Name')}`]:teacher.teacher,
+    [`${t('level')}`]:teacher.level,
+    [`${t('class')}`]:teacher.class,
+    [`${t('status')}`]:t(teacher.status),
+    [`${t('joining-date-0')}`]:teacher.joiningDate,
     ...orderedMonths.reduce((acc: Record<string, string>, month: string) => {
-      const monthStatus = student.monthlyPayments23_24[month]?.status;
+      const monthStatus = teacher.monthlyPayments23_24[month]?.status;
       acc[`${month}`] = t(monthStatus);
       return acc;
     }, {}),
-    [t('registrationAndInsuranceFee')]:t(student.registrationAndInsuranceFee),
-    [t('feedingFee')]:t(student.feedingFee),
+    [t('registrationAndInsuranceFee')]:t(teacher.registrationAndInsuranceFee),
+    [t('feedingFee')]:t(teacher.feedingFee),
     [`${t('amount-left')}`]: new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "DZD",
-    }).format(student.amountLeftToPay),
+    }).format(teacher.amountLeftToPay),
     [`${t('total-amount-0')}`]: new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "DZD",
-    }).format(student.totalAmount),
+    }).format(teacher.totalAmount),
 
     }))
-    exportTableToExcel(t('students-table'),exceldata);
+    exportTableToExcel(t('teachers-table'),exceldata);
   };
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -269,7 +248,7 @@ const orderedMonths = [
   const [rowSelection, setRowSelection] = React.useState({})
     
   const table = useReactTable({
-    data:students,
+    data:teachers,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -300,23 +279,23 @@ const orderedMonths = [
 
     <Card x-chunk="dashboard-05-chunk-3" className="mt-2 ">
     <CardHeader className="px-7">
-      <CardTitle>{t('your-students')}</CardTitle>
+      <CardTitle>{t('your-teachers')}</CardTitle>
       <CardDescription>
-      {t('introducing-our-dynamic-student-dashboard-for-seamless-management-and-insightful-analysis')} 
+      {t('introducing-our-dynamic-teacher-dashboard-for-seamless-management-and-insightful-analysis')} 
       
       <div className="flex items-center justify-between">
        
     
     <Input
-          placeholder={t('filter-student')}
-          value={(table.getColumn("student")?.getFilterValue() as string) ?? ""}
+          placeholder={t('filter-teacher')}
+          value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
-            table.getColumn("student")?.setFilterValue(event.target.value)
+            table.getColumn("name")?.setFilterValue(event.target.value)
           }
           className="max-w-sm mt-4"
         />
           <div className=" ml-auto space-y-4 ">
-            <StudentForm/>
+            <TeacherForm/>
     <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="ml-auto">
@@ -357,7 +336,7 @@ const orderedMonths = [
 
  
     <ScrollArea style={{ width: 'calc(100vw - 170px)'}}>
-        <Table id="students-table">
+        <Table id="teachers-table">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
@@ -428,7 +407,8 @@ const orderedMonths = [
             {t('next')} </Button>
         </div>
       </div>
-      <EditStudent open={open} setOpen={setOpen}  student={student}/>
+      <EditTeacher open={open} setOpen={setOpen}  teacher={teacher}/>
+      <AtandenceDataModel open={openCard} setOpen={setOpenCard}  teacher={teacher}/>
     </CardContent>
   </Card>
 

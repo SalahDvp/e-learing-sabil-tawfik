@@ -27,7 +27,7 @@ import {
     FormField,
     FormItem,
   } from "@/components/ui/form";
-  const generateTimeOptions = (startTime: string, endTime: string, interval: number): string[] => {
+ export  const generateTimeOptions = (startTime: string, endTime: string, interval: number): string[] => {
     const timeOptions: string[] = [];
     let [startHour, startMinute] = startTime.split(':').map(Number);
     let [endHour, endMinute] = endTime.split(':').map(Number);

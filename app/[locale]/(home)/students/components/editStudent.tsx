@@ -55,6 +55,7 @@ import { UseFormReturn } from 'react-hook-form';
 
 interface FooterProps {
   formData: Student;
+  student: Student;
   form: UseFormReturn<any>; // Use the specific form type if available
   isSubmitting: boolean;
   reset: UseFormReturn<any>['reset']; // Adding reset function from useForm
@@ -85,9 +86,10 @@ interface openModelProps {
 }
 const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
   const camera = useRef<null | { takePhoto: () => string }>(null);
-
+  
   const form = useForm<Student>({
     resolver: zodResolver(StudentSchema),
+    defaultValues:student
   });
   const { reset,formState, setValue, getValues,control,watch} = form;
   const { isSubmitting } = formState;
@@ -96,6 +98,11 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
     name: "classes",
 
   });
+  React.useEffect(() => {
+    // you can do async server request and fill up form
+
+      reset(student);
+  }, [reset,student]);
   const getClassId = (subject:string, name:string, time:string)  => {
     const selectedClass = classes.find(cls => cls.subject === subject && cls.name === name && cls.time === time);
     return selectedClass ? selectedClass.id : "undifined";
@@ -147,7 +154,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
                       <FormLabel className="text-right">Name</FormLabel>
                       <FormControl><Input id="name"  className="col-span-3"  {...field}/></FormControl>
 
-                      <FormMessage />
+                      
                     </FormItem>
                   )}
                 />
@@ -172,7 +179,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
               }
             }}
           /></FormControl>
-                  <FormMessage />
+                  
                 </FormItem>
               )}
             />
@@ -185,7 +192,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
                 <FormItem className="grid grid-cols-4 items-center gap-4">
                   <FormLabel className="text-right">Birthplace</FormLabel>
                   <FormControl><Input id="birthplace" className="col-span-3" {...field} /></FormControl>
-                  <FormMessage />
+                  
                 </FormItem>
               )}
             />
@@ -198,7 +205,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
                 <FormItem className="grid grid-cols-4 items-center gap-4">
                   <FormLabel className="text-right">School</FormLabel>
                   <FormControl><Input id="school" className="col-span-3" {...field} /></FormControl>
-                  <FormMessage />
+                  
                 </FormItem>
               )}
             />
@@ -211,7 +218,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
                 <FormItem className="grid grid-cols-4 items-center gap-4">
                   <FormLabel className="text-right">Year</FormLabel>
                   <FormControl><Input id="year" className="col-span-3" {...field} /></FormControl>
-                  <FormMessage />
+                  
                 </FormItem>
               )}
             />
@@ -224,7 +231,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
                 <FormItem className="grid grid-cols-4 items-center gap-4">
                   <FormLabel className="text-right">Field</FormLabel>
                   <FormControl><Input id="field" className="col-span-3" {...field} /></FormControl>
-                  <FormMessage />
+                  
                 </FormItem>
               )}
             />
@@ -237,7 +244,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
                 <FormItem className="grid grid-cols-4 items-center gap-4">
                   <FormLabel className="text-right">Phone Number</FormLabel>
                   <FormControl><Input id="phoneNumber" className="col-span-3" {...field} /></FormControl>
-                  <FormMessage />
+                  
                 </FormItem>
               )}
             />
@@ -360,7 +367,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
             </Step>
           )
         })}
-        <Footer formData={getValues()} form={form} isSubmitting={isSubmitting} reset={reset}/>
+        <Footer formData={getValues()} form={form} isSubmitting={isSubmitting} reset={reset} student={student}/>
 
       </Stepper>
 
@@ -372,7 +379,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
   )
 }
 
-const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) => {
+const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,student}) => {
   const {
     nextStep,
     prevStep,
@@ -382,11 +389,25 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
     isLastStep,
     isOptionalStep,
   } = useStepper()
-  const [qr,setQr]=useState<string>()
-  const generateQrCode=(data:string)=>{
-      QRCode.toDataURL(data).then(setQr)
+  const generateQrCode = async (text) => {
+    try {
+      return await QRCode.toDataURL(text);
+    } catch (err) {
+      console.error(err);
+      return '';
+    }
+  };
+  const [qrCodeUrl, setQrCodeUrl] = useState('');
 
-  }
+  React.useEffect(() => {
+    const fetchQrCode = async () => {
+      const url = await generateQrCode(formData.id);
+      setQrCodeUrl(url);
+    };
+
+    fetchQrCode();
+  }, [formData.id]);
+ 
   async function generateStudentCard() {
     
  
@@ -411,14 +432,20 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
         heightLeft -= pageHeight;
       }
       pdf.save('download.pdf');
-      reset()
-      setQr('')
+
      
   }
-  const onSubmit = async(data:Student) => {
-    const studentId=await addStudent(data)
-    generateQrCode(studentId);
-    nextStep()
+  const onSubmit = async (data: Student) => {
+    const updates: Partial<Student> = {};
+  
+    for (const key in data) {
+      if (data[key as keyof Student] !== student[key as keyof Student]) {
+        updates[key as keyof Student] = data[key];
+      }
+    }
+  
+   console.log("updates",updates);
+   
   };
 
   return (
@@ -438,7 +465,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
           </div>
           <div className="flex flex-col items-center justify-center">
             <div className="w-40 h-40 bg-muted rounded-md flex items-center justify-center">
-            <img src={qr} className="w-24 h-24 text-muted-foreground" />
+            <img src={qrCodeUrl} className="w-24 h-24 text-muted-foreground" />
             </div>
           </div>
         </div>
@@ -466,9 +493,9 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
         {hasCompletedAllSteps ? (
                  <DialogFooter>
                      <DialogClose asChild>
-          <Button size="sm"            type='button'  onClick={()=>generateStudentCard()}>
-            Download
-          </Button>
+          <LoadingButton size="sm"            type='submit'  onClick={form.handleSubmit(onSubmit)}>
+            Save changes
+          </LoadingButton>
           
           </DialogClose>
                </DialogFooter>
@@ -483,11 +510,9 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
             >
               Prev
             </Button>
-            {isLastStep?(        <LoadingButton size="sm"    loading={isSubmitting}        type={'button'}   onClick={form.handleSubmit(onSubmit)}>
-              Finish
-            </LoadingButton>):(        <Button size="sm"            type={"button"}    onClick={nextStep}>
-              {isLastStep ? "Finish" : isOptionalStep ? "Skip" : "Next"}
-            </Button>)}
+            <Button size="sm"            type={"button"}    onClick={nextStep}>
+              {"Next"}
+            </Button>
     
           </>
         )}
