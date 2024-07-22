@@ -112,6 +112,7 @@ const VerticalResourceView = () => {
   }, [classes]);
 
 
+console.log("events:",events);
 
   const handleEventClick = (info: any) => {
     setSelectedEvent(info.event);
@@ -136,7 +137,7 @@ const VerticalResourceView = () => {
       editable={true}
       droppable={true}
       events={events}
-      slotMinTime="09:00:00"
+      slotMinTime="07:00:00"
       slotMaxTime="23:00:00"
       scrollTime="09:00:00"
       resourceAreaWidth="150px"
