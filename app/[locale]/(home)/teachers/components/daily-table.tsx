@@ -128,10 +128,10 @@ export const DailyAtandenceDataTable = ({teacher }: {teacher:any }) => {
               <div className="text-muted-foreground">
         </div>
       </div>
-      <Tabs defaultValue="all">
+      <Tabs defaultValue={teacher.year[0]}>
               <div className="flex items-center">
                 <TabsList>
-                <TabsTrigger value="all" onClick={() =>       table.resetColumnFilters()}>ooo</TabsTrigger>
+               
                   {teacher.year.map((level) => (
                     <TabsTrigger key={level} value={level} onClick={() =>    table.getColumn("year")?.setFilterValue(level)}>
                       {level}
