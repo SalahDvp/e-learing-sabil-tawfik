@@ -28,7 +28,32 @@ const formatTimeToDateTime = (timeString: string, date: string) => {
   const dateTime = new Date(`${date}T${hours}:${minutes}:00`);
   return dateTime.toISOString();
 };
+const mapDayToRRule = (day: string) => {
+};
+const generateRecurringEvents = (startDateTime: string, endDateTime: string, day: string, room: string, subject: string) => {
+  const events = [];
+  const startDate = new Date(startDateTime);
+  const endDate = new Date(endDateTime);
 
+  const recurrenceEndDate = new Date('2025-06-20');
+
+  while (startDate <= recurrenceEndDate) {
+    const event: any = {
+      title: subject,
+      resourceId: room.trim(),  // Ensure this matches the resources' ids
+      start: new Date(startDate),
+      end: new Date(endDate),
+      backgroundColor: getRandomColor(),
+    };
+    events.push(event);
+
+    // Move to the same day in the next week
+    startDate.setDate(startDate.getDate() + 7);
+    endDate.setDate(endDate.getDate() + 7);
+  }
+
+  return events;
+};
 const VerticalResourceView = () => {
   const { classes } = useData();
   const [events, setEvents] = useState<any[]>([]);
@@ -44,7 +69,6 @@ const VerticalResourceView = () => {
     { id: 'room 5', title: 'Room 5' },
     { id: 'room 6', title: 'Room 6' },
   ];
-
   useEffect(() => {
     const fetchAndFormatData = async () => {
       console.log('Fetched classes:', classes); // Log the fetched data
@@ -55,13 +79,13 @@ const VerticalResourceView = () => {
       const formattedEvents = classes.flatMap((classItem) => {
         // Extract groups array
         const groups = classItem.groups || [];
-        return groups.map((group) => {
+        return groups.flatMap((group) => {
           const { day, start, end, room, subject } = group;
 
           // Basic validation
           if (!start || !end || !room || !subject) {
             console.error('Missing required event properties:', group);
-            return null; // Skip this event if any required property is missing
+            return []; // Skip this event if any required property is missing
           }
 
           // Convert time strings to ISO datetime strings
@@ -70,24 +94,13 @@ const VerticalResourceView = () => {
 
           if (!startDateTime || !endDateTime) {
             console.error(`Invalid time for event: ${group}`, { start, end });
-            return null; // Skip this event if time is invalid
+            return []; // Skip this event if time is invalid
           }
 
           console.log('Event data:', { title: subject, resourceId: room, start: startDateTime, end: endDateTime });
 
-          return {
-            title: subject,
-            resourceId: room.trim(),  // Ensure this matches the resources' ids
-            start: startDateTime,
-            end: endDateTime,
-            backgroundColor: getRandomColor(),
-            extendedProps: {
-              day: day,
-              interval: 1,
-              byweekday: classItem.byweekday,
-            },
-          };
-        }).filter(event => event !== null); // Filter out any null events
+          return generateRecurringEvents(startDateTime, endDateTime, day, room, subject);
+        });
       });
 
       console.log('Formatted events:', formattedEvents); // Log the formatted events
@@ -98,6 +111,8 @@ const VerticalResourceView = () => {
     fetchAndFormatData();
   }, [classes]);
 
+
+
   const handleEventClick = (info: any) => {
     setSelectedEvent(info.event);
     setOpenCard(true); // Open the sheet
@@ -105,7 +120,7 @@ const VerticalResourceView = () => {
 
   return (
     <div>
-  <FullCalendar
+ {events && ( <FullCalendar
       headerToolbar={{
         left: 'prev,next today',
         center: 'title',
@@ -147,7 +162,7 @@ const VerticalResourceView = () => {
       locale='fr'
       eventTimeFormat={{ hour: '2-digit', minute: '2-digit', hour12: false, locale: fr }} // Use French locale for time formatting
       eventClick={handleEventClick} // Add event click handler
-    />
+    />)}
       {selectedEvent && (
         <AttandenceDataModel
           open={openCard}
