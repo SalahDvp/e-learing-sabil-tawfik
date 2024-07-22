@@ -1,155 +1,161 @@
-import FullCalendar  from '@fullcalendar/react';
+import React, { useState, useEffect } from 'react';
+import FullCalendar from '@fullcalendar/react';
 import resourceDayGridPlugin from '@fullcalendar/resource-daygrid';
 import resourceTimeGridPlugin from '@fullcalendar/resource-timegrid';
-import { useMemo } from 'react';
-import { formatISO, startOfWeek, addDays, setHours, setMinutes ,addHours} from 'date-fns';
+import rrulePlugin from '@fullcalendar/rrule';
+import { AttandenceDataModel } from './attendance-sheet';
+import { useData } from '@/context/admin/fetchDataContext';
+import resourceTimelinePlugin from '@fullcalendar/resource-timeline'; // Import the resourceTimeline plugin
+import dayGridPlugin from '@fullcalendar/daygrid';
+import timeGridPlugin from '@fullcalendar/timegrid';
+import { fr } from 'date-fns/locale'; // Import French locale
+import './style.css'
+// Function to generate a random color
+const getRandomColor = () => {
+  const letters = '0123456789ABCDEF';
+  let color = '#';
+  for (let i = 0; i < 6; i++) {
+    color += letters[Math.floor(Math.random() * 16)];
+  }
+  return color;
+};
+
+// Helper function to format time strings to ISO datetime strings
+const formatTimeToDateTime = (timeString: string, date: string) => {
+  if (!timeString) return null;
+  const [hours, minutes] = timeString.split(':');
+  if (!hours || !minutes) return null;
+  const dateTime = new Date(`${date}T${hours}:${minutes}:00`);
+  return dateTime.toISOString();
+};
 
 const VerticalResourceView = () => {
-  const resources = useMemo(() => [
-    { id: '1', title: 'Room 1' },
-    { id: '2', title: 'Room 2' },
-    { id: '3', title: 'Room 3' },
-    { id: '4', title: 'Room 4' },
-    { id: '5', title: 'Room 5' },
-    { id: '6', title: 'Room 6' },
- 
-  ], []);
+  const { classes } = useData();
+  const [events, setEvents] = useState<any[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
+  const [openCard, setOpenCard] = useState(false);
 
-  const generateThisWeeksEvents = () => {
-    const now = new Date();
-    const start = startOfWeek(now, { weekStartsOn: 1 }); // Start of the week (Monday)
+  // Define resources with exact IDs
+  const resources = [
+    { id: 'room 1', title: 'Room 1' },
+    { id: 'room 2', title: 'Room 2' },
+    { id: 'room 3', title: 'Room 3' },
+    { id: 'room 4', title: 'Room 4' },
+    { id: 'room 5', title: 'Room 5' },
+    { id: 'room 6', title: 'Room 6' },
+  ];
 
-    const eventColors = {
-      same: 'blue',
-      different: 'red',
+  useEffect(() => {
+    const fetchAndFormatData = async () => {
+      console.log('Fetched classes:', classes); // Log the fetched data
+
+      // Use a default date if necessary
+      const todayDate = new Date().toISOString().split('T')[0]; // Use today's date
+
+      const formattedEvents = classes.flatMap((classItem) => {
+        // Extract groups array
+        const groups = classItem.groups || [];
+        return groups.map((group) => {
+          const { day, start, end, room, subject } = group;
+
+          // Basic validation
+          if (!start || !end || !room || !subject) {
+            console.error('Missing required event properties:', group);
+            return null; // Skip this event if any required property is missing
+          }
+
+          // Convert time strings to ISO datetime strings
+          const startDateTime = formatTimeToDateTime(start, todayDate);
+          const endDateTime = formatTimeToDateTime(end, todayDate);
+
+          if (!startDateTime || !endDateTime) {
+            console.error(`Invalid time for event: ${group}`, { start, end });
+            return null; // Skip this event if time is invalid
+          }
+
+          console.log('Event data:', { title: subject, resourceId: room, start: startDateTime, end: endDateTime });
+
+          return {
+            title: subject,
+            resourceId: room.trim(),  // Ensure this matches the resources' ids
+            start: startDateTime,
+            end: endDateTime,
+            backgroundColor: getRandomColor(),
+            extendedProps: {
+              day: day,
+              interval: 1,
+              byweekday: classItem.byweekday,
+            },
+          };
+        }).filter(event => event !== null); // Filter out any null events
+      });
+
+      console.log('Formatted events:', formattedEvents); // Log the formatted events
+
+      setEvents(formattedEvents);
     };
 
-    return [
-      {
-        resourceId: '2',
-        title: 'Long Event',
-        start: formatISO(setHours(setMinutes(addDays(start, 1), 0), 9)), // Tuesday at 09:00
-        end: formatISO(addHours(setHours(setMinutes(addDays(start, 1), 0), 9), 2)), // Tuesday at 11:00
-        backgroundColor: eventColors.same,
-      },
-      {
-        resourceId: '1',
-        title: 'Repeating Event',
-        start: formatISO(setHours(setMinutes(addDays(start, 3), 0), 16)), // Thursday at 16:00
-        end: formatISO(addHours(setHours(setMinutes(addDays(start, 3), 0), 16), 2)), // Thursday at 18:00
-        backgroundColor: eventColors.different,
-      },
-      {
-        resourceId: '1',
-        title: 'Conference',
-        start: formatISO(setHours(setMinutes(addDays(start, 0), 0), 9)), // Monday at 09:00
-        end: formatISO(addHours(setHours(setMinutes(addDays(start, 0), 0), 9), 2)), // Monday at 11:00
-        backgroundColor: eventColors.same,
-      },
-      {
-        resourceId: '1',
-        title: 'BGG',
-        start: formatISO(setHours(setMinutes(addDays(start, 2), 0), 9)), // Wednesday at 09:00
-        end: formatISO(addHours(setHours(setMinutes(addDays(start, 2), 0), 9), 2)), // Wednesday at 11:00
-        backgroundColor: eventColors.different,
-      },
-      {
-        resourceId: '1',
-        title: 'Auto',
-        start: formatISO(setHours(setMinutes(addDays(start, 6), 0), 9)), // Sunday at 09:00
-        end: formatISO(addHours(setHours(setMinutes(addDays(start, 6), 0), 9), 2)), // Sunday at 11:00
-        backgroundColor: eventColors.same,
-      },
-      {
-        resourceId: '1',
-        title: 'Fre',
-        start: formatISO(setHours(setMinutes(addDays(start, 7), 0), 9)), // Next Monday at 09:00
-        end: formatISO(addHours(setHours(setMinutes(addDays(start, 7), 0), 9), 2)), // Next Monday at 11:00
-        backgroundColor: eventColors.different,
-      },
-      {
-        resourceId: '2',
-        title: 'Meeting',
-        start: formatISO(setHours(setMinutes(addDays(start, 1), 30), 10)), // Tuesday at 10:30
-        end: formatISO(addHours(setHours(setMinutes(addDays(start, 1), 30), 10), 2)), // Tuesday at 12:30
-        backgroundColor: eventColors.same,
-      },
-      {
-        resourceId: '1',
-        title: 'Lunch',
-        start: formatISO(setHours(setMinutes(addDays(start, 1), 0), 12)), // Tuesday at 12:00
-        end: formatISO(addHours(setHours(setMinutes(addDays(start, 1), 0), 12), 2)), // Tuesday at 14:00
-        backgroundColor: eventColors.different,
-      },
-      {
-        resourceId: '2',
-        title: 'Birthday Party',
-        start: formatISO(setHours(setMinutes(addDays(start, 2), 0), 7)), // Wednesday at 07:00
-        end: formatISO(addHours(setHours(setMinutes(addDays(start, 2), 0), 7), 2)), // Wednesday at 09:00
-        backgroundColor: eventColors.same,
-      },
-      {
-        resourceId: '2',
-        title: 'Birthday Party',
-        start: formatISO(setHours(setMinutes(addDays(start, 3), 0), 7)), // Thursday at 07:00
-        end: formatISO(addHours(setHours(setMinutes(addDays(start, 3), 0), 7), 2)), // Thursday at 09:00
-        backgroundColor: eventColors.different,
-      },
-      {
-        resourceId: '2',
-        title: 'Birthday Party',
-        start: formatISO(setHours(setMinutes(addDays(start, 4), 0), 7)), // Friday at 07:00
-        end: formatISO(addHours(setHours(setMinutes(addDays(start, 4), 0), 7), 2)), // Friday at 09:00
-        backgroundColor: eventColors.same,
-      },
-      {
-        resourceId: '2',
-        title: 'Birthday Party',
-        start: formatISO(setHours(setMinutes(addDays(start, 5), 0), 7)), // Saturday at 07:00
-        end: formatISO(addHours(setHours(setMinutes(addDays(start, 5), 0), 7), 2)), // Saturday at 09:00
-        backgroundColor: eventColors.different,
-      },
-      {
-        resourceId: '2',
-        title: 'Birthday Party',
-        start: formatISO(setHours(setMinutes(addDays(start, 6), 0), 7)), // Sunday at 07:00
-        end: formatISO(addHours(setHours(setMinutes(addDays(start, 6), 0), 7), 2)), // Sunday at 09:00
-        backgroundColor: eventColors.same,
-      }
-    ];
+    fetchAndFormatData();
+  }, [classes]);
+
+  const handleEventClick = (info: any) => {
+    setSelectedEvent(info.event);
+    setOpenCard(true); // Open the sheet
   };
-  const events = useMemo(() => generateThisWeeksEvents(), []);
 
   return (
-<FullCalendar
-
-  headerToolbar={{
-    left: 'prev,next today',
-    center: 'title',
-    right: 'resourceDayGridMonth,resourceTimeGridWeek,resourceTimeGridDay',
-  }}
-  plugins={[resourceDayGridPlugin, resourceTimeGridPlugin]}
-  initialDate={new Date()}
-  initialView='resourceTimeGridWeek'
-  resources={(fetchInfo, successCallback) =>
-    successCallback(resources)
-  }
-  dayMaxEventRows={true}
-  editable={true}
-  droppable={true}
-  events={events}
-  slotMinTime="09:00:00"
-  slotMaxTime="21:00:00"
-  scrollTime="09:00:00" // Set initial scroll time
-  resourceAreaWidth="150px" // Adjust resource area width for better horizontal scrolling
-  contentHeight="auto" // Set content height to auto for flexibility
-  views={{
-    resourceTimeGridWeek: {
-      scrollable: true, // Enable horizontal scrolling for the week view
-      columnHeaderFormat: { weekday:'short', day: 'numeric' } // Custom format for day title
-    }
-  }}
-/>
+    <div>
+  <FullCalendar
+      headerToolbar={{
+        left: 'prev,next today',
+        center: 'title',
+        right: 'resourceTimelineDay,resourceTimelineWeek,resourceTimelineMonth',
+      }}
+      plugins={[resourceTimelinePlugin, dayGridPlugin, timeGridPlugin]}
+      initialDate={new Date()}
+      initialView='resourceTimelineDay'
+      resources={(fetchInfo, successCallback) =>
+        successCallback(resources)
+      }
+      dayMaxEventRows={true}
+      editable={true}
+      droppable={true}
+      events={events}
+      slotMinTime="09:00:00"
+      slotMaxTime="23:00:00"
+      scrollTime="09:00:00"
+      resourceAreaWidth="150px"
+      contentHeight='auto'
+      views={{
+        resourceTimelineWeek: {
+          columnHeaderFormat: { weekday: 'short', day: 'numeric' },
+          slotDuration: '00:30:00' // Set slot duration to 30 minutes
+        },
+        resourceTimelineDay: {
+          slotDuration: '00:30:00' // Set slot duration to 30 minutes
+        },
+        resourceTimelineMonth: {
+          slotDuration: '00:30:00' // Set slot duration to 30 minutes
+        },
+        timeGridWeek: {
+          slotDuration: '00:30:00' // Set slot duration to 30 minutes
+        },
+        timeGridDay: {
+          slotDuration: '00:30:00' // Set slot duration to 30 minutes
+        },
+      }}
+      locale='fr'
+      eventTimeFormat={{ hour: '2-digit', minute: '2-digit', hour12: false, locale: fr }} // Use French locale for time formatting
+      eventClick={handleEventClick} // Add event click handler
+    />
+      {selectedEvent && (
+        <AttandenceDataModel
+          open={openCard}
+          setOpen={setOpenCard}
+          teacher={selectedEvent.extendedProps} // Pass the extendedProps to the sheet
+        />
+      )}
+    </div>
   );
 };
 

@@ -1,8 +1,9 @@
-"use client"
+"use client";
 
-import { DailyAtandenceDataTable } from './daily-table';
-
+import { useState } from "react";
+import { DailyAtandenceDataTable } from './attendance-group';
 import { ScrollArea } from "@/components/ui/scroll-area";
+
 
 import {
   Sheet,
@@ -13,19 +14,17 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { ArchiveDataTable } from './archive-table';
 
 interface openModelProps {
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
   open: boolean; // Specify the type of setOpen
   teacher: any;
+  selectedEvent: any; // Add selectedEvent prop
 }
 
-export const AtandenceDataModel: React.FC<openModelProps> = ({ setOpen, open, teacher }) => {
-
-
-
-
+export const AttandenceDataModel: React.FC<openModelProps> = ({ setOpen, open, teacher, selectedEvent }) => {
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetContent className=" sm:max-w-[1040px]">
@@ -38,8 +37,7 @@ export const AtandenceDataModel: React.FC<openModelProps> = ({ setOpen, open, te
           </SheetHeader>
 
           <div className="bg-background text-foreground p-6 md:p-10">
-            <DailyAtandenceDataTable  teacher={teacher}/>
-            <ArchiveDataTable teacher={teacher}/> 
+            <DailyAtandenceDataTable selectedEvent={selectedEvent} /> {/* Pass selectedEvent to DailyAtandenceDataTable */}
           </div>
 
           <SheetFooter className="mt-5">
