@@ -75,9 +75,9 @@ interface DataTableDemoProps {
     const [open,setOpen]=React.useState(false)
     const [openPayment,setOpenPayment]=React.useState(false)
     const t=useTranslations()
-    const {students,setStudents}=useData()
+    const {students,setStudents,classes}=useData()
     
-    
+    const studentsData=React.useMemo(()=>students,[students])
     const [student,setStudent]=React.useState<Student>({  
       id: '123456',
       level: 'Intermediate',
@@ -109,7 +109,8 @@ interface DataTableDemoProps {
       amountLeftToPay: 500,
       class: "S",
       registrationAndInsuranceFee:"Paid",
-      feedingFee:"Paid"
+      feedingFee:"Paid",
+      classesUIDs:[]
     })
       // Define your table and set up filtering
   React.useEffect(() => {
@@ -180,11 +181,40 @@ interface DataTableDemoProps {
         id: "classes",
         header: () => <div>Classes</div>,
         cell: ({ row }) => {
-          const classes = row.original.classes;
-      
+          const classesuid = row.original.classesUIDs;
+         const result = classesuid.flatMap(cls => { 
+        // Find the class details for the current class ID
+        const classDetail = classes.find(clss => clss.id === cls.id);
+        
+        if (!classDetail) return []; // If class detail is not found, skip this entry
+        
+        // Find the student details within the class
+        const studentDetail = classDetail.students.find(std => std.id === student.id);
+       
+          
+        if (!studentDetail) return []; // If student detail is not found, skip this entry
+        
+        // Find the group details within the class
+        const groupDetail = classDetail.groups.find(grp => grp.group === cls.group);
+        
+        if (!groupDetail) return []; // If group detail is not found, skip this entry
+        // Construct the result object
+        return {
+          cs: studentDetail.cs,
+          day: groupDetail.day,
+          end: groupDetail.end,
+          start: groupDetail.start,
+          group: groupDetail.group,
+          id: cls.id,
+          index: studentDetail.index,
+          name: classDetail.teacherName,
+          subject: classDetail.subject,
+          time: `"${groupDetail.day},${groupDetail.start}-${groupDetail.end}"`
+        };
+      });
           return (
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-              {classes.map((classItem: any, index: number) => (
+              {result.map((classItem: any, index: number) => (
                 <div key={index} style={{ maxWidth: '200px', marginBottom: '5px' }}>
                   <div className="font-medium">{classItem.subject}</div>
                   <div className="text-sm ">
@@ -216,7 +246,7 @@ interface DataTableDemoProps {
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => openEditSheet(student)}>
                   {t('edit')} </DropdownMenuItem>
-                <DropdownMenuItem onClick={() =>{deleteStudent(student.id), setStudents((prevStudents:any) =>
+                <DropdownMenuItem onClick={() =>{deleteStudent(student,classes), setStudents((prevStudents:any) =>
       prevStudents.filter((std:any) => std.id !== student.id)
     )}}>
           {t('delete')} </DropdownMenuItem>
@@ -226,6 +256,7 @@ interface DataTableDemoProps {
         },
       },
     ];
+
 
   const handleExport = () => {
   
@@ -269,7 +300,7 @@ const orderedMonths = [
   const [rowSelection, setRowSelection] = React.useState({})
     
   const table = useReactTable({
-    data:students,
+    data:studentsData,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,

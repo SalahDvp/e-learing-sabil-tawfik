@@ -1,71 +1,36 @@
 "use client";
 
-import { useState } from "react";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
 import { Separator } from "@/components/ui/separator";
-import { Calendar } from "@/components/ui/calendar";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { ColumnDef, flexRender, useReactTable } from "@tanstack/react-table";
 import { Input } from "@/components/ui/input";
-import { z } from "zod";
-import { studnetRegistrationSchema } from "@/validators/studentinfo";
+;
 
-type StudentValues = z.infer<typeof studnetRegistrationSchema> & { id: string };
 
-interface DailyAtandenceDataTableProps {
-  selectedEvent?: EventInput | null;
+
+interface DailyAttandenceDataTableProps {
+  selectedEvent?: any | null;
+  selectedClasss?:any
 }
 
-export const DailyAtandenceDataTable: React.FC<DailyAtandenceDataTableProps> = ({ selectedEvent }) => {
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedSubject, setSelectedSubject] = useState<string | null>("Economics"); // Default subject
+
+export const DailyAttandenceDataTable: React.FC<DailyAttandenceDataTableProps> = ({ selectedEvent,selectedClasss }) => {
+
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(selectedClasss.subject ||   "Economics");
   const [searchTerm, setSearchTerm] = useState("");
+  const [students, setStudents] = useState<any[]>([]);
 
-  // Example data for demonstration
-  const filteredStudents: { [key: string]: StudentValues[] } = {
-    Economics: [
-      { id: "1", name: "John Smith", status: "Present" },
-      { id: "2", name: "Jane Doe", status: "Absent" },
-      { id: "3", name: "Mary Johnson", status: "Present" },
-      { id: "4", name: "James Brown", status: "Absent" },
-      { id: "5", name: "Patricia Davis", status: "Present" },
-      { id: "6", name: "Robert Wilson", status: "Absent" },
-      { id: "7", name: "Linda Martinez", status: "Present" },
-      { id: "8", name: "Michael Garcia", status: "Absent" },
-      { id: "9", name: "Elizabeth Lee", status: "Present" },
-      { id: "10", name: "William Clark", status: "Present" },
-      { id: "11", name: "Barbara Lewis", status: "Absent" },
-      { id: "12", name: "Daniel Walker", status: "Present" },
-    ],
-    "Scientific Stream": [
-      { id: "1", name: "James Brown", status: "Absent" },
-      { id: "2", name: "Patricia Davis", status: "Present" },
-      { id: "3", name: "Robert Wilson", status: "Absent" },
-    ],
-    "Mathematics and Technology": [
-      { id: "1", name: "Linda Martinez", status: "Present" },
-      { id: "2", name: "Michael Garcia", status: "Absent" },
-      { id: "3", name: "Elizabeth Lee", status: "Present" },
-    ],
-    Mathematics: [
-      { id: "1", name: "William Clark", status: "Present" },
-      { id: "2", name: "Barbara Lewis", status: "Absent" },
-      { id: "3", name: "Daniel Walker", status: "Present" },
-    ],
-  };
+  useEffect(() => {
+    // Mock data for demonstration
+    const mockStudents: any[] = [
+     
+    ];
 
-  const classSchedules = [
-    { time: "9:00 AM - 10:30 AM", subject: "Economics" },
-    { time: "11:00 AM - 12:30 PM", subject: "Scientific Stream" },
-    { time: "1:30 PM - 3:00 PM", subject: "Mathematics and Technology" },
-    { time: "3:30 PM - 5:00 PM", subject: "Mathematics" },
-  ];
+    setStudents(mockStudents);
+  }, [selectedSubject]);
 
-  // Find the schedule for the selected subject
-  const selectedSchedule = classSchedules.find(schedule => schedule.subject === selectedSubject) || { time: "", subject: "" };
-
-  const columns: ColumnDef<StudentValues>[] = [
+  const columns: ColumnDef<any>[] = [
     {
       accessorKey: "id",
       header: () => <div>ID</div>,
@@ -86,19 +51,18 @@ export const DailyAtandenceDataTable: React.FC<DailyAtandenceDataTableProps> = (
       cell: ({ row }) => <div>{getStatusIcon(row.getValue("status"))}</div>,
     },
   ];
-
   const getStatusIcon = (status) => {
     if (status === "Present") {
       return <CheckIcon className="ml-5 w-5 h-5 text-green-500" />;
     } else if (status === "Absent") {
       return <XIcon className="ml-5 w-5 h-5 text-red-500" />;
     } else {
-      return null;
+      return null; // Handle other cases if necessary
     }
   };
 
   const table = useReactTable({
-    data: selectedSubject ? filteredStudents[selectedSubject].slice(0,selectedSubject) : [],
+    data: students,
     columns,
     initialState: {
       pagination: {
@@ -108,19 +72,20 @@ export const DailyAtandenceDataTable: React.FC<DailyAtandenceDataTableProps> = (
     },
   });
 
-  const filteredData = filteredStudents[selectedSubject || ""]
-  .filter((student) => 
-    student.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const filteredData = students.filter((student) =>
+    student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.id.includes(searchTerm)
   );
+
+
 
   return (
     <div className="max-w-5xl mx-auto">
       <div className="flex flex-col md:flex-row items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold">SAID YOUCEF</h1>
-            <p className="text-muted-foreground">Math Teacher</p>
+            <h1 className="text-2xl font-bold">{selectedClasss.teacherName}</h1>
+            <p className="text-muted-foreground">{selectedClasss.year}</p>
           </div>
         </div>
         <Input
@@ -130,29 +95,18 @@ export const DailyAtandenceDataTable: React.FC<DailyAtandenceDataTableProps> = (
           className="max-w-sm"
         />
         <div className="text-muted-foreground">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="flex items-center gap-2 hover:bg-muted/50 transition-colors">
-                <CalendarDaysIcon className="w-5 h-5" />
-                {selectedDate.toLocaleDateString()}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="p-0">
-              <Calendar value={selectedDate} onChange={setSelectedDate} className="p-4" />
-            </PopoverContent>
-          </Popover>
+         
         </div>
       </div>
-      
+
       <div className="bg-card p-4 rounded-lg shadow-md transition-shadow hover:shadow-lg">
         {selectedEvent && (
           <>
-            <h2 className="text-lg font-medium mb-4">{selectedEvent.title}</h2>
+            <h2 className="text-lg font-medium mb-4">{selectedClasss.subject}</h2>
             <p className="text-muted-foreground mb-4">{selectedEvent.extendedProps?.description}</p>
           </>
         )}
-        <h2 className="text-lg font-medium mb-4">{selectedSchedule.time}</h2>
-        <p className="text-muted-foreground mb-4">{selectedSchedule.subject}</p>
+        <h2 className="text-lg font-medium mb-4">{selectedSubject}</h2>
         <Separator className="my-8" />
         <div className="overflow-auto" style={{ maxHeight: '400px' }}>
           <Table>
@@ -200,20 +154,45 @@ function CalendarDaysIcon(props) {
   );
 }
 
+
 function CheckIcon(props) {
   return (
-    <svg viewBox="0 0 24 24" {...props}>
-      <path d="M9 16.2l-3.5-3.5 1.41-1.41L9 13.38l7.09-7.09L17.5 8.3z" />
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M20 6 9 17l-5-5" />
     </svg>
   );
 }
+
 
 function XIcon(props) {
   return (
-    <svg viewBox="0 0 24 24" {...props}>
-      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
     </svg>
   );
 }
 
-export default DailyAtandenceDataTable;
+export default DailyAttandenceDataTable;

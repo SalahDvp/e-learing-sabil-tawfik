@@ -7,7 +7,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { useData } from "@/context/admin/fetchDataContext";
 import { Student } from "@/validators/auth";
-import { parse, isWithinInterval, addMinutes, subMinutes } from 'date-fns';
+import { parse, isWithinInterval, addMinutes, subMinutes, format } from 'date-fns';
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -22,12 +22,57 @@ import {
 import { Label } from "@/components/ui/label";
 import { RadioGroup,RadioGroupItem } from "@/components/ui/radio-group";
 import { writeAttendance } from "@/lib/hooks/students";
+ 
+import * as React from "react"
+import { Check, ChevronsUpDown } from "lucide-react"
+ 
+import { cn } from "@/lib/utils"
+
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { pdf } from "@react-pdf/renderer";
+import StudentInvoice from'../students/components/studentInvoice'
+const frameworks = [
+  {
+    value: "next.js",
+    label: "Next.js",
+  },
+  {
+    value: "sveltekit",
+    label: "SvelteKit",
+  },
+  {
+    value: "nuxt.js",
+    label: "Nuxt.js",
+  },
+  {
+    value: "remix",
+    label: "Remix",
+  },
+  {
+    value: "astro",
+    label: "Astro",
+  },
+]
+ 
+
 const checkClassTime = (scanTime: Date, student: any, groupClasses: any[]): any[] | null => {
   const scanDay = scanTime.toLocaleString('en-US', { weekday: 'long' });
 
 
   // Extract IDs from student classes into a Set
-  const studentClassIds = new Set(student.classes.map(cls => cls.id));
+  const studentClassIds = new Set(student.classesUIDs.map(cls => cls.id));
 
   // Filter group classes to get only those that match the student class IDs
   const relevantGroupClasses = groupClasses.filter(groupClass =>
@@ -89,8 +134,56 @@ export default function Home() {
   const processedQrCodes = useRef(new Set<string>()); // Set to track processed QR codes
   const [openAlert,setOpenAlert]=useState(false)
   const[alertText,setAlertText]=useState('')
-  console.log(currentClass);
-  
+  const [open, setOpen] = React.useState(false)
+  function generateBillIfNeeded(data: any) {
+   
+      const initialData = {
+        name: data.name,
+        subject: data.subject,
+        year: data.year,
+        date: format(new Date(), 'yyyy-MM-dd'),
+      };
+
+      const link = document.createElement('a');
+      document.body.appendChild(link);
+
+      pdf(<StudentInvoice data={initialData} />).toBlob().then(blob => {
+        const url = URL.createObjectURL(blob);
+        link.href = url;
+        link.download = 'invoice.pdf';
+        link.click();
+        URL.revokeObjectURL(url);
+        link.parentNode.removeChild(link);
+      });
+    
+  }
+  const onpressed=(id)=>{
+    const parsedData = students.find((student) => student.value === id);
+    console.log("uiddd",id);
+    
+    if (!parsedData) {
+      setAlertText("Invalid QR code");
+      setOpenAlert(true);
+      audioRefError.current?.play();
+      return;
+    }
+
+    setStudentData(parsedData);
+    const scanTime = new Date();
+    const classInfo =checkClassTime(scanTime,parsedData,classes);
+    
+    if (classInfo) {
+      audioRefSuccess.current?.play();
+    
+      setCurrentClasses(classInfo)
+      
+    } else {
+      setAlertText("No current class found for this student to attend.");
+      setOpenAlert(true);
+      audioRefError.current?.play();
+    }
+    
+  }
   const handleQrScan = (result) => {
     if (processedQrCodes.current.has(result.data)) {
       console.log("This student has already scanned their code in the past hour.");
@@ -143,6 +236,7 @@ export default function Home() {
 
   const onConfirm =async() => {
   await writeAttendance(currentClass)
+  generateBillIfNeeded({name:studentData?.name,class:studentData?.year,subject:currentClass.subject})
  const formattedDate = formatDateToYYYYMMDD(new Date()); // Format the date
 
  setClasses((prevClasses) => {
@@ -288,7 +382,7 @@ export default function Home() {
       <span>{studentData.year}</span>
     </div>
   </div>
-  <Separator />
+  {/* <Separator />
   <div className="grid gap-2">
     <span className="text-muted-foreground">Classes:</span>
     {studentData.classes.map((subject) => (
@@ -299,8 +393,10 @@ export default function Home() {
         <span>CS:{subject.cs}</span>
       </div>
     ))}
-  </div>
+  </div> */}
   <Separator />
+  <div className="grid gap-2">
+  <span className="text-muted-foreground"> availble Classes:</span>
   {Array.isArray(currentClasses) && currentClasses.length > 0 && (
   <RadioGroup defaultValue="card" className="grid grid-cols-3 gap-4">
     {currentClasses.map((classObj,index) => (
@@ -319,6 +415,7 @@ export default function Home() {
     ))}
   </RadioGroup>
 )}
+</div>
 {currentClass &&(  <div className="mt-4 flex justify-end">
     <Button
       onClick={() => {setStudentData(null);setCurrentClass(undefined);setCurrentClasses(undefined)}}
@@ -334,7 +431,9 @@ export default function Home() {
     </Button>
   </div>)}
 </div>) :(<div className="bg-muted rounded-lg p-6 flex flex-col gap-4">
+  <ComboboxDemo open={open} setOpen={setOpen} onpressed={onpressed} array={students} value={studentData?.name}/>
                 <div className="flex items-center gap-4">
+        
           <Avatar className="w-12 h-12 border">
             <AvatarImage src="/placeholder-user.jpg" />
             <AvatarFallback>JD</AvatarFallback>
@@ -372,7 +471,7 @@ export default function Home() {
                 <Separator />
                 <div className="grid gap-2">
                   <span className="text-muted-foreground">Classes:</span>
-             
+
                 </div>
               </div> ) }
   </div>
@@ -429,4 +528,51 @@ function XIcon(props) {
   );
 }
 
+export function ComboboxDemo({open,setOpen,array,onpressed,value}) {
 
+ 
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-[200px] justify-between"
+        >
+          {value
+            ? array.find((framework) => framework.value === value)?.label
+            : "Select Student..."}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[200px] p-0">
+        <Command>
+          <CommandInput placeholder="Search student..." />
+          <CommandEmpty>No student found.</CommandEmpty>
+          <CommandList>
+            <CommandGroup>
+              {array.map((framework) => (
+                <CommandItem
+                  key={framework.value}
+                  value={framework.value}
+                  onSelect={(currentValue) => {
+                    onpressed(currentValue)
+                    setOpen(false)
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      value === framework.value ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  {framework.label}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+         </Command>
+      </PopoverContent>
+    </Popover>
+)}

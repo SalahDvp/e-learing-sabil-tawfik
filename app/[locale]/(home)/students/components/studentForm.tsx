@@ -130,6 +130,7 @@ export default function StudentForm() {
   };
   const handleGroupChange = (index: number, field: 'name' | 'id' | 'subject' | 'time', value: string | number) => {
     const classes = [...getValues('classes')];
+    const classesUids=getValues('classesUIDs')?[...getValues('classesUIDs')]:[]
   
     if (field === 'subject') {
       const updatedClass = { id: '', name: '', subject: value, time: '' };
@@ -160,18 +161,25 @@ export default function StudentForm() {
         id: selectedClassId.id,
         index: selectedClassId.index,
       };
+      const updatedClassUIDs = {
+        ...classesUids[index],
+        id:selectedClassId.id,
+        group:selectedClassId.group
+      };
   
       classes[index] = updatedClass;
+      classesUids[index]=updatedClassUIDs
       setValue(`classes`, classes);
+      setValue(`classesUIDs`, classesUids);
     } else {
       classes[index][field] = value;
       setValue(`classes.${index}`, classes[index]);
     }
   };
   return (
-    <Dialog>
+    <Dialog >
       <DialogTrigger asChild>
-        <Button >Create student</Button>
+        <Button onClick={()=>{       form.setValue('classes',[]);reset()}}>Create student</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[800px]">
       <Form {...form} >

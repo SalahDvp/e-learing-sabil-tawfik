@@ -28,9 +28,22 @@ const formatTimeToDateTime = (timeString: string, date: string) => {
   const dateTime = new Date(`${date}T${hours}:${minutes}:00`);
   return dateTime.toISOString();
 };
+
+// Function to map days to RRule compatible weekdays
 const mapDayToRRule = (day: string) => {
+  const daysMap: { [key: string]: number } = {
+    'Sunday': 0,
+    'Monday': 1,
+    'Tuesday': 2,
+    'Wednesday': 3,
+    'Thursday': 4,
+    'Friday': 5,
+    'Saturday': 6,
+  };
+  return daysMap[day];
 };
-const generateRecurringEvents = (startDateTime: string, endDateTime: string, day: string, room: string, subject: string) => {
+
+const generateRecurringEvents = (startDateTime: string, endDateTime: string, day: string, room: string, subject: string, id: string) => {
   const events = [];
   const startDate = new Date(startDateTime);
   const endDate = new Date(endDateTime);
@@ -38,12 +51,19 @@ const generateRecurringEvents = (startDateTime: string, endDateTime: string, day
   const recurrenceEndDate = new Date('2025-06-20');
 
   while (startDate <= recurrenceEndDate) {
-    const event: any = {
+    const event: any  = {
       title: subject,
+      id:id,
       resourceId: room.trim(),  // Ensure this matches the resources' ids
       start: new Date(startDate),
       end: new Date(endDate),
       backgroundColor: getRandomColor(),
+      extendedProps: {
+        day,
+        room,
+        subject,
+        
+      }
     };
     events.push(event);
 
@@ -54,6 +74,7 @@ const generateRecurringEvents = (startDateTime: string, endDateTime: string, day
 
   return events;
 };
+
 const VerticalResourceView = () => {
   const { classes } = useData();
   const [events, setEvents] = useState<any[]>([]);
@@ -69,55 +90,83 @@ const VerticalResourceView = () => {
     { id: 'room 5', title: 'Room 5' },
     { id: 'room 6', title: 'Room 6' },
   ];
+
   useEffect(() => {
     const fetchAndFormatData = async () => {
       console.log('Fetched classes:', classes); // Log the fetched data
-
+  
       // Use a default date if necessary
       const todayDate = new Date().toISOString().split('T')[0]; // Use today's date
-
+  
       const formattedEvents = classes.flatMap((classItem) => {
-        // Extract groups array
+        // Extract groups array and other necessary fields
         const groups = classItem.groups || [];
+        const classId = classItem.id; // Extract the class ID from classItem
+  
         return groups.flatMap((group) => {
           const { day, start, end, room, subject } = group;
-
+  
           // Basic validation
           if (!start || !end || !room || !subject) {
             console.error('Missing required event properties:', group);
             return []; // Skip this event if any required property is missing
           }
-
+  
           // Convert time strings to ISO datetime strings
           const startDateTime = formatTimeToDateTime(start, todayDate);
           const endDateTime = formatTimeToDateTime(end, todayDate);
-
+  
           if (!startDateTime || !endDateTime) {
-            console.error(`Invalid time for event: ${group}`, { start, end });
+            console.error('Invalid time for event', `${group}, { start, end }`);
             return []; // Skip this event if time is invalid
           }
-
-          console.log('Event data:', { title: subject, resourceId: room, start: startDateTime, end: endDateTime });
-
-          return generateRecurringEvents(startDateTime, endDateTime, day, room, subject);
+  
+          console.log('Event data:', { title: subject, resourceId: room, start: startDateTime, end: endDateTime, id: classId });
+  
+          return generateRecurringEvents(startDateTime, endDateTime, day, room, subject, classId);
         });
       });
-
+  
       console.log('Formatted events:', formattedEvents); // Log the formatted events
-
+  
       setEvents(formattedEvents);
     };
-
+  
     fetchAndFormatData();
   }, [classes]);
+  
 
-
-console.log("events:",events);
-
+  const [selectedClass ,setSelectedClass] = useState()
   const handleEventClick = (info: any) => {
+    // Log the whole event object for debugging
+    console.log('Event object:', info.event);
+  
+    // Extract the event ID from extendedProps
+    const eventId = info.event.id;
+    if (!eventId) {
+      console.error('Event ID is missing from extendedProps');
+      return; // Exit the function if eventId is undefined
+    }
+  
+    console.log('Event ID:', eventId); // Debugging line
+  
+    // Find the matching class based on the ID
+    const matchingClass = classes.find((classItem) =>
+      classItem.id === eventId // Match based on the class ID
+    );
+  
+    setSelectedClass(matchingClass)
+    console.log('Selected event details:', info.event);
+    console.log('Matching class item:', matchingClass);
+  
+    // Update state to show the event details
     setSelectedEvent(info.event);
     setOpenCard(true); // Open the sheet
   };
+  
+  
+console.log('zakamo');
+
 
   return (
     <div>
@@ -168,7 +217,8 @@ console.log("events:",events);
         <AttandenceDataModel
           open={openCard}
           setOpen={setOpenCard}
-          teacher={selectedEvent.extendedProps} // Pass the extendedProps to the sheet
+          teacher={selectedEvent.extendedProps}
+          selectedClasss={selectedClass}
         />
       )}
     </div>

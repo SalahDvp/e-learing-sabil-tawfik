@@ -1,5 +1,5 @@
 import { db } from "@/firebase/firebase-config"
-import { addDoc,arrayUnion,collection, deleteDoc, doc, increment, updateDoc } from "firebase/firestore"
+import { addDoc,arrayRemove,arrayUnion,collection, deleteDoc, doc, increment, updateDoc } from "firebase/firestore"
 import { getDownloadURL, ref, uploadBytes, uploadString } from "firebase/storage";
 import { storage } from "@/firebase/firebase-config";
 import { StudentSchema,Student } from "@/validators/auth";
@@ -85,17 +85,47 @@ export const updateStudent = async(updatedstudent:Student,studentId:string,stude
         throw error; // Optionally re-throw the error to propagate it further if needed
     } 
 }
-export const deleteStudent = async(studentId:string)=>{
-    try {
-            await deleteDoc(doc(db, "Students",studentId));
-        console.log("Student deleted successfully:");
-        return true; // Assuming you want to return the ID of the added Student
-    } catch (error) {
-        console.error("Error deleting Student:", error);
-        // Handle the error here, such as displaying a message to the user or logging it for further investigation
-        throw error; // Optionally re-throw the error to propagate it further if needed
-    } 
-}
+export const deleteStudent = async ( student, classes) => {
+  try {
+    // Create an array of promises for each class update
+    const updatePromises = student.classesUIDs.map(async (cls) => {
+      // Find the specific class and student details
+      const classData = classes.find(clss => clss.id === cls.id);
+      if (!classData) {
+        throw new Error(`Class with ID ${cls.id} not found`);
+      }
+
+      const studentDetails = classData.students.find(std => std.id === student.id);
+      if (!studentDetails) {
+        throw new Error(`Student with ID ${student.id} not found in class ${cls.id}`);
+      }
+
+      const indx = studentDetails.index;
+
+      // Reference to the class document
+      const classDocRef = doc(db, 'Groups', cls.id);
+
+      // Update the class document
+      await updateDoc(classDocRef, {
+        students: arrayRemove({
+          group: cls.group,
+          id: student.id,
+          index: indx,
+          name: student.name,
+          year: student.year,
+          cs: studentDetails.cs
+        })
+      });
+    });
+
+    // Wait for all update operations to complete
+    await Promise.all(updatePromises);
+
+    console.log('Student removed from all classes successfully');
+  } catch (error) {
+    console.error('Error deleting student:', error);
+  }
+};
 const parseAndFormatDate = (dateString: string, formatString: string): Date => {
     return parse(dateString, formatString, new Date());
   };
@@ -112,6 +142,7 @@ export const formatDateToYYYYMMDD = (date: Date): string => {
       const formattedDate = formatDateToYYYYMMDD(date)
       const docRef = doc(db, 'Groups', std.id, 'Attendance', formattedDate);
       const attendanceData = {
+        cs:std.cs,
         index:std.studentIndex,
         group:std.studentGroup,
         name:std.name,
@@ -126,3 +157,49 @@ export const formatDateToYYYYMMDD = (date: Date): string => {
       console.error("Error writing attendance: ", error);
     }
   };
+  export async function addStudentToClass(student,classId,studentId) {
+    const { group, id, index, name, year,cs } = student;
+  
+    const classDocRef = doc(db, 'Groups', classId);
+    await updateDoc(classDocRef, {
+      students: arrayUnion({ group, id, index, name, year,cs })
+    });
+  
+    const studentDocRef = doc(db, 'Students', studentId);
+    await updateDoc(studentDocRef, {
+      classesUIDs: arrayUnion({ id: id, group: group })
+    });
+  
+  }
+  export async function removeStudentFromClass(student,studentId) {
+    const { id, group,index,name,year,cs } = student;
+  
+    const studentDocRef = doc(db, 'Students', studentId);  
+  console.log("dqwdqdwqwdqwd",id, group,index,name,year,cs);
+  
+      // await updateDoc(studentDocRef, {
+      //   classesUIDs: arrayRemove({ id, group })
+      // });
+  
+      const classDocRef = doc(db, 'Groups', id);
+      await updateDoc(classDocRef, {
+        students: arrayRemove({ group, id, index, name, year,cs })
+      });
+    }
+    
+     export  async function changeStudentGroup(student,classIndex,studentIndex,classId) {
+        const { id, group, } = student;
+
+        const studentDocRef = doc(db, 'students', id);  
+  
+        await updateDoc(studentDocRef, {
+          [`classesUIDs.${classIndex}.group`]: group
+        });
+    
+        const classDocRef = doc(db, 'Groups', classId);
+        await updateDoc(classDocRef, {
+          [`students.${studentIndex}.group`]: group
+        });
+
+      }
+  

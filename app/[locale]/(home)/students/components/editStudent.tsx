@@ -46,12 +46,13 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import CalendarDatePicker from './date-picker';
 import { Separator } from '@/components/ui/separator';
 import QRCode from 'qrcode'
-import { addStudent } from '@/lib/hooks/students';
+import { addStudent, addStudentToClass, changeStudentGroup, removeStudentFromClass } from '@/lib/hooks/students';
 import { LoadingButton } from '@/components/ui/loadingButton';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { UseFormReturn } from 'react-hook-form';
+import { useData } from '@/context/admin/fetchDataContext';
 
 interface FooterProps {
   formData: Student;
@@ -61,17 +62,39 @@ interface FooterProps {
   reset: UseFormReturn<any>['reset']; // Adding reset function from useForm
 }
 
-const classes = [
-  { id: "1", subject: 'Math', name: 'Nasri', time: '13:30' },
-  { id: "2", subject: 'Physique', name: 'Mahdi', time: '15:30' },
-  { id: "3", subject: 'Englais', name: 'Math', time: '17:30' },
-  { id: "4", subject: 'Math', name: 'Mahdi', time: '14:30' },
-  { id: "5", subject: 'Biology', name: 'Aisha', time: '10:00' },
-  { id: "6", subject: 'Chemistry', name: 'Omar', time: '11:30' },
-  { id: "7", subject: 'History', name: 'Fatima', time: '09:00' },
-  { id: "8", subject: 'Geography', name: 'Ali', time: '08:30' },
-  { id: "9", subject: 'Physics', name: 'Zahra', time: '12:00' },
-  { id: "10", subject: 'Computer Science', name: 'Hassan', time: '16:00' },
+
+interface openModelProps {
+  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  open: boolean; // Specify the type of setOpen
+  student:Student
+}
+const subjects =['Scientific Stream', 'Literature and Philosophy', 'Literature and Languages', 'Economics', 'Mathematics and Technology', 'Mathematics']
+const classess = [
+  "Select Option",
+  "Mathematics",
+  "Physics",
+  "Chemistry",
+  "Biology",
+  "Geography",
+  "History",
+  "Philosophy",
+  "Arabic",
+  "French",
+  "English",
+  "Islamic Education",
+  "Technology",
+  "Computer Science",
+  "Art",
+  "Physical Education",
+  "Economics",
+  "German",
+  "Spanish",
+  "Law",
+  "Business Studies",
+  "Social Sciences",
+  "Engineering",
+  "Architecture",
+  "Environmental Science"
 ];
 const steps = [
   { label: "Step 1" },
@@ -79,16 +102,20 @@ const steps = [
   { label: "Step 3" },
 
 ] satisfies StepItem[]
-interface openModelProps {
-  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  open: boolean; // Specify the type of setOpen
-  student:Student
-}
+const years=[
+  "1AM",
+  "2AM",
+  "3AM",
+  "4AM",
+  "1AS",
+  "2AS",
+  "3AS"
+]
 const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
   const camera = useRef<null | { takePhoto: () => string }>(null);
-  
-  const form = useForm<Student>({
-    resolver: zodResolver(StudentSchema),
+  const {setStudents,teachers,classes,students}=useData()
+  const form = useForm<any>({
+    
     defaultValues:student
   });
   const { reset,formState, setValue, getValues,control,watch} = form;
@@ -99,31 +126,98 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
 
   });
   React.useEffect(() => {
-    // you can do async server request and fill up form
-
-      reset(student);
+    // you can do async server request and fill up form student.classesUIDs
+    const result = student.classesUIDs.flatMap(cls => { 
+      // Find the class details for the current class ID
+      const classDetail = classes.find(clss => clss.id === cls.id);
+      
+      if (!classDetail) return []; // If class detail is not found, skip this entry
+      
+      // Find the student details within the class
+      const studentDetail = classDetail.students.find(std => std.id === student.id);
+     
+        
+      if (!studentDetail) return []; // If student detail is not found, skip this entry
+      
+      // Find the group details within the class
+      const groupDetail = classDetail.groups.find(grp => grp.group === cls.group);
+      
+      if (!groupDetail) return []; // If group detail is not found, skip this entry
+      // Construct the result object
+      return {
+        cs: studentDetail.cs,
+        day: groupDetail.day,
+        end: groupDetail.end,
+        start: groupDetail.start,
+        group: groupDetail.group,
+        id: cls.id,
+        index: studentDetail.index,
+        name: classDetail.teacherName,
+        subject: classDetail.subject,
+        time: `"${groupDetail.day},${groupDetail.start}-${groupDetail.end}"`
+      };
+    });
+      reset({...student,classes:result});
   }, [reset,student]);
-  const getClassId = (subject:string, name:string, time:string)  => {
-    const selectedClass = classes.find(cls => cls.subject === subject && cls.name === name && cls.time === time);
-    return selectedClass ? selectedClass.id : "undifined";
+  const getClassId = (subject:string, name:string,day:string,start:string,end:string)  => {
+    const selectedClass = classes.find(cls => cls.subject === subject && cls.year=== watch('year') &&   cls.groups.some(group => group.stream.includes(watch('field'))) && cls.teacherName === name )
+    const selectedGroup=selectedClass.groups.find( grp=> grp.day === day && grp.start === start && grp.end===end)
+    console.log(end);
+    
+    return selectedClass ? {id:selectedClass.id,index:selectedClass.students?selectedClass.students.length+1:1,group:selectedGroup.group}: {id:"",index:0,group:""};
   };
-
-  const handleGroupChange = (index:number, field:'name' | 'id' | 'subject' | 'time', value:string) => {
+  const handleGroupChange = (index: number, field: 'name' | 'id' | 'subject' | 'time', value: string | number) => {
     const classes = [...getValues('classes')];
-    classes[index][field] = value; 
-    setValue('classes',classes); 
-    if (classes[index].time && classes[index].subject && classes[index].name) {
-      const subject = classes[index].subject 
-      const name =classes[index].name
-      const time = classes[index].time
-      const selectedClassId = getClassId(subject, name, time);
-      setValue(`classes.${index}.id`, selectedClassId);
+    const classesUids=getValues('classesUIDs')?[...getValues('classesUIDs')]:[]
+  
+    if (field === 'subject') {
+      const updatedClass = { id: '', name: '', subject: value, time: '' };
+      classes[index] = updatedClass;
+      setValue(`classes`, classes);
+      console.log(value);
+    } else if (field === 'name') {
+      const updatedClass = { id: '', name: value, subject: classes[index].subject, time: '' };
+      classes[index] = updatedClass;
+      setValue(`classes`, classes);
+    } else if (field === 'time') {
+      const subject = classes[index].subject;
+      const name = classes[index].name;
+      const parsedString=JSON.parse(value)
+      const [dayPart, timePart] = parsedString.split(',');
+      const [start, end] = timePart.split('-');
+  
+      // Assuming getClassId is a synchronous function
+      const selectedClassId = getClassId(subject, name, dayPart, start, end);
+  
+      const updatedClass = {
+        ...classes[index],
+        group: selectedClassId.group,
+        time: value,
+        start,
+        end,
+        day: dayPart,
+        id: selectedClassId.id,
+        index: selectedClassId.index,
+      };
+      const updatedClassUIDs = {
+        ...classesUids[index],
+        id:selectedClassId.id,
+        group:selectedClassId.group
+      };
+  
+      classes[index] = updatedClass;
+      classesUids[index]=updatedClassUIDs
+      setValue(`classes`, classes);
+      setValue(`classesUIDs`, classesUids);
+    } else {
+      classes[index][field] = value;
+      setValue(`classes.${index}`, classes[index]);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen} >
-      <DialogContent className="sm:max-w-[550px]">
+ <DialogContent className="sm:max-w-[800px]">
       <Form {...form} >
       <form >
         <DialogHeader>
@@ -211,30 +305,72 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
             />
  
 
-    <FormField
-              control={control}
-              name="year"
-              render={({ field }) => (
-                <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Year</FormLabel>
-                  <FormControl><Input id="year" className="col-span-3" {...field} /></FormControl>
-                  
-                </FormItem>
-              )}
-            />
+ <FormField
+  control={control}
+  name="year"
+  render={({ field }) => (
+    <FormItem className="grid grid-cols-4 items-center gap-4">
+      <FormLabel className="text-right">Year</FormLabel>
+      <FormControl>
+      <Select
+   onValueChange={field.onChange}
+   defaultValue={field.value}
+              >
+                                 <SelectTrigger
+                              id={`year`}
+                              aria-label={`Select year`}
+                            >
+                              <SelectValue placeholder={"select year"} />
+                            </SelectTrigger>
+            <SelectContent>
+ 
+            {years.map((year) => (
+                              <SelectItem key={year} value={year}   >
+                                {year}
+                              </SelectItem>
+                            ))}
+           
+                          </SelectContent>
+              </Select>
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
 
 
-    <FormField
-              control={control}
-              name="field"
-              render={({ field }) => (
-                <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Field</FormLabel>
-                  <FormControl><Input id="field" className="col-span-3" {...field} /></FormControl>
-                  
-                </FormItem>
-              )}
-            />
+<FormField
+  control={control}
+  name="field"
+  render={({ field }) => (
+    <FormItem className="grid grid-cols-4 items-center gap-4">
+      <FormLabel className="text-right">field</FormLabel>
+      <FormControl>
+      <Select
+   onValueChange={field.onChange}
+   defaultValue={field.value}
+              >
+                                 <SelectTrigger
+                              id={`subject`}
+                              aria-label={`Select subject`}
+                            >
+                              <SelectValue placeholder={"select subject"} />
+                            </SelectTrigger>
+            <SelectContent>
+ 
+            {subjects.map((subject) => (
+                              <SelectItem key={subject} value={subject}   >
+                                {subject}
+                              </SelectItem>
+                            ))}
+           
+                          </SelectContent>
+              </Select>
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
   
 
     <FormField
@@ -297,6 +433,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
         <TableHead>Subject</TableHead>
           <TableHead >Name</TableHead>
           <TableHead>Time</TableHead>
+          <TableHead>CS</TableHead>
           <TableHead>Action</TableHead>
         </TableRow>
       </TableHeader>
@@ -304,14 +441,14 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
         {fields.map((invoice,index) => (
           <TableRow key={invoice.id}>
                         <TableCell className="font-medium"> 
-              <Select value={invoice.subject} onValueChange={(value)=>handleGroupChange(index,'subject',value)}>
+              <Select  value={invoice.subject} onValueChange={(value)=>handleGroupChange(index,'subject',value)}>
       <SelectTrigger className="">
         <SelectValue placeholder="Select a Subject" />
       </SelectTrigger>
       <SelectContent>
         <SelectGroup>
         <SelectLabel>Subjects</SelectLabel>
-                    {Array.from(new Set(classes.map(cls => cls.subject))).map(subject => (
+                    {classess.map(subject => (
                       <SelectItem key={subject} value={subject}>
                         {subject}
                       </SelectItem>
@@ -320,7 +457,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
       </SelectContent>
     </Select></TableCell>
             <TableCell className="font-medium"> 
-              <Select value={invoice.name} onValueChange={(value)=>handleGroupChange(index,'name',value)}>
+              <Select  value={invoice.name} onValueChange={(value)=>handleGroupChange(index,'name',value)}>
       <SelectTrigger className="">
         <SelectValue placeholder="Select a Group" />
       </SelectTrigger>
@@ -328,10 +465,10 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
       {invoice.subject? ( <SelectGroup>
           <SelectLabel>Groups</SelectLabel>
           {Array.from(new Set(classes
-                        .filter(cls => cls.subject === invoice.subject)
-                      )).map(name => (
-                        <SelectItem key={name.name} value={name.name}>
-                          {name.name}
+                        .filter(cls => cls.subject === invoice.subject && cls.year=== watch('year') &&   cls.groups.some(group => group.stream.includes(watch('field'))))
+                      )).map(cls => (
+                        <SelectItem key={cls.teacherName} value={cls.teacherName}>
+                          {cls.teacherName}
                         </SelectItem>
                       ))}
         </SelectGroup>):(<p className="text-sm text-muted-foreground">Select Subject first</p>)}
@@ -344,17 +481,33 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
       <SelectContent>
       {invoice.subject && invoice.name? ( <SelectGroup>
           <SelectLabel>times</SelectLabel>
-          {classes
-                        .filter(cls => cls.subject === invoice.subject && cls.name === invoice.name)
-                        .map(cls => (
-                          <SelectItem key={cls.time} value={cls.time}>
-                            {cls.time}
+          {(classes.find(cls => cls.subject === invoice.subject && cls.year=== watch('year') &&   cls.groups.some(group => group.stream.includes(watch('field'))) && cls.teacherName === invoice.name ))?.groups?.map((cls,index) => (
+                          <SelectItem key={index} value={JSON.stringify(`${cls.day},${cls.start}-${cls.end}`)}>
+                            {cls.day},{cls.start}-{cls.end}
                           </SelectItem>
                         ))}
         </SelectGroup>):(<p className="text-sm text-muted-foreground">Select Subject and name first</p>)}
       </SelectContent>
     </Select></TableCell>
-    <TableCell>    <Button  type="button" variant="destructive" onClick={()=>removeClass(index)}>remove</Button></TableCell>
+    <TableCell className="font-medium"> 
+              <Select value={invoice.cs} onValueChange={(value)=>handleGroupChange(index,'cs',value)}>
+      <SelectTrigger className="">
+        <SelectValue placeholder="Select a cs" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectGroup>
+        <SelectLabel>cs</SelectLabel>
+        <SelectItem  value={"true"}>
+                        True
+                      </SelectItem>
+                      <SelectItem  value={"false"}>
+                        False
+                      </SelectItem>
+        </SelectGroup>
+      </SelectContent>
+    </Select></TableCell>
+    <TableCell>   
+       <Button  type="button" variant="destructive" onClick={()=>removeClass(index)}>remove</Button></TableCell>
 
           </TableRow>
         ))}
@@ -367,7 +520,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
             </Step>
           )
         })}
-        <Footer formData={getValues()} form={form} isSubmitting={isSubmitting} reset={reset} student={student}/>
+        <Footer formData={getValues()} form={form} isSubmitting={isSubmitting} reset={reset} student={student} setOpen={setOpen}/>
 
       </Stepper>
 
@@ -379,7 +532,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
   )
 }
 
-const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,student}) => {
+const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,student,setOpen}) => {
   const {
     nextStep,
     prevStep,
@@ -398,7 +551,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,stud
     }
   };
   const [qrCodeUrl, setQrCodeUrl] = useState('');
-
+  const {setStudents,setClasses,students,classes}=useData()
   React.useEffect(() => {
     const fetchQrCode = async () => {
       const url = await generateQrCode(formData.id);
@@ -435,17 +588,134 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,stud
 
      
   }
-  const onSubmit = async (data: Student) => {
-    const updates: Partial<Student> = {};
+  function compareClasses(dataClasses: Class[], studentClasses: Class[]): UpdateResult {
+    const result: UpdateResult = {
+      added: [],
+      removed: [],
+      updated: []
+    };
   
-    for (const key in data) {
-      if (data[key as keyof Student] !== student[key as keyof Student]) {
-        updates[key as keyof Student] = data[key];
+    const dataClassMap = new Map(dataClasses.map(cls => [cls.id, cls]));
+    const studentClassMap = new Map(studentClasses.map(cls => [cls.id, cls]));
+  
+    // Find added and updated classes
+    for (const [id, dataClass] of dataClassMap) {
+      const studentClass = studentClassMap.get(id);
+      if (!studentClass) {
+        // Class is in dataClasses but not in studentClasses (added)
+        result.added.push(dataClass);
+      } else if (dataClass.group !== studentClass.group) {
+        // Class is in both but with different sections (updated)
+        result.updated.push(dataClass);
       }
     }
   
-   console.log("updates",updates);
-   
+    // Find removed classes
+    for (const [id, studentClass] of studentClassMap) {
+      if (!dataClassMap.has(id)) {
+        // Class is in studentClasses but not in dataClasses (removed)
+        result.removed.push(studentClass);
+      }
+    }
+  
+    return result;
+  }
+  async function processStudentChanges(result) {
+    const { added, removed, updated } = result;
+  
+    // Add students to classes
+    if (added && Array.isArray(added)) {
+      for (const cls of added) {
+        const { group, id,  name,cs } = cls;
+  const index=classes.find(cls =>
+    cls.id === id 
+  ).students.length+1
+        await addStudentToClass({...cls,index:index,year:student.year},cls.id,student.id)
+       setClasses(prevClasses => 
+          prevClasses.map(cls =>
+      cls.id === id ? {
+        ...cls,
+        students: [...cls.students, { group, id,cs, index:cls.students.length+1, name, year:student.year }]
+      } : cls
+    )
+  );
+
+  setStudents(prevStudents => 
+    prevStudents.map(std =>
+std.id === student.id ? {
+  ...std,
+  classesUIDs: [...std.classesUIDs, { id:id,group:group }]
+} : std
+)
+);
+      }
+    }
+  
+    // Remove students from classes
+    if (removed && Array.isArray(removed)) {
+      for (const cls of removed) {
+        const { id, group,index,name,year,cs} = cls;
+await removeStudentFromClass({...cls,year:student.year},student.id)
+       setClasses(prevClasses => 
+          prevClasses.map(cls =>
+      cls.id === id ? {
+        ...cls,
+        students: cls.students.filter(std => std.id !== student.id)
+      } : cls
+    )
+  );
+
+  setStudents(prevStudents => 
+    prevStudents.map(std =>
+std.id === student.id ? {
+  ...std,
+  classesUIDs:std.classesUIDs.filter(cls => cls.id !== id),
+  classes:std.classes.filter(cls => cls.id !== id),
+} : std
+))
+console.log("removed",cls);
+
+        }
+      }
+
+         // Change groups for specific students
+    if (updated && Array.isArray(updated)) {
+      for (const { id,group } of updated) {
+        //await changeStudentGroup({id,group},)
+        setClasses(prevClasses =>
+          prevClasses.map(cls =>
+            cls.id === id? {
+              ...cls,
+              students: cls.students.map(std =>
+                std.id === student.id? { ...std, group: group } : student
+              )
+            } : cls
+          )
+        );
+  
+        setStudents(prevStudents =>
+          prevStudents.map(std =>
+            std.id === student.id ? {
+              ...std,
+              classesUIDs: std?.classesUIDs?.map(cls =>
+                cls.id === id ? { ...cls, group: group } : cls
+              )
+            } : std
+          )
+        );
+      }
+    }
+    }
+  
+ 
+
+  const onSubmit = async (data: Student) => {
+ const result=compareClasses(data.classes,student.classes)
+
+ 
+ 
+ await  processStudentChanges(result)
+   setOpen(false)
   };
 
   return (
