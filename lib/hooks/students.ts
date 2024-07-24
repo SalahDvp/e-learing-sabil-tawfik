@@ -187,19 +187,19 @@ export const formatDateToYYYYMMDD = (date: Date): string => {
       });
     }
     
-     export  async function changeStudentGroup(student,classIndex,studentIndex,classId) {
-        const { id, group, } = student;
+     export  async function changeStudentGroup(classId,studentId,students,classesUIDs) {
+    
 
-        const studentDocRef = doc(db, 'students', id);  
+        const studentDocRef = doc(db, 'Students', studentId);  
   
         await updateDoc(studentDocRef, {
-          [`classesUIDs.${classIndex}.group`]: group
+         classesUIDs
         });
     
-        const classDocRef = doc(db, 'Groups', classId);
+        const classDocRef = doc(db, 'Groups',classId);
         await updateDoc(classDocRef, {
-          [`students.${studentIndex}.group`]: group
-        });
+          students
+        }); 
 
       }
   

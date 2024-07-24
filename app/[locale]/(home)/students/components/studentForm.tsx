@@ -110,7 +110,9 @@ export default function StudentForm() {
     // resolver: zodResolver(StudentSchema),
     defaultValues:{
       id:'0',
-      studentIndex: students.length + 1
+      studentIndex: students.length + 1,
+      classes:[],
+      classesUIDs:[]
     }
   });
 
@@ -538,7 +540,10 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
       }
       pdf.save('download.pdf');
       form.setValue('classes',[])
-      reset()
+      reset({  id:'0',
+        studentIndex: students.length + 1,
+        classes:[],
+        classesUIDs:[]})
 
       setQr('')
      

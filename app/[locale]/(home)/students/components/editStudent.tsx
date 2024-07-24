@@ -127,37 +127,8 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
   });
   React.useEffect(() => {
     // you can do async server request and fill up form student.classesUIDs
-    const result = student.classesUIDs.flatMap(cls => { 
-      // Find the class details for the current class ID
-      const classDetail = classes.find(clss => clss.id === cls.id);
-      
-      if (!classDetail) return []; // If class detail is not found, skip this entry
-      
-      // Find the student details within the class
-      const studentDetail = classDetail.students.find(std => std.id === student.id);
-     
-        
-      if (!studentDetail) return []; // If student detail is not found, skip this entry
-      
-      // Find the group details within the class
-      const groupDetail = classDetail.groups.find(grp => grp.group === cls.group);
-      
-      if (!groupDetail) return []; // If group detail is not found, skip this entry
-      // Construct the result object
-      return {
-        cs: studentDetail.cs,
-        day: groupDetail.day,
-        end: groupDetail.end,
-        start: groupDetail.start,
-        group: groupDetail.group,
-        id: cls.id,
-        index: studentDetail.index,
-        name: classDetail.teacherName,
-        subject: classDetail.subject,
-        time: `"${groupDetail.day},${groupDetail.start}-${groupDetail.end}"`
-      };
-    });
-      reset({...student,classes:result});
+ 
+      reset({...student});
   }, [reset,student]);
   const getClassId = (subject:string, name:string,day:string,start:string,end:string)  => {
     const selectedClass = classes.find(cls => cls.subject === subject && cls.year=== watch('year') &&   cls.groups.some(group => group.stream.includes(watch('field'))) && cls.teacherName === name )
@@ -620,7 +591,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,stud
   
     return result;
   }
-  async function processStudentChanges(result) {
+  async function processStudentChanges(result,data) {
     const { added, removed, updated } = result;
   
     // Add students to classes
@@ -681,7 +652,14 @@ console.log("removed",cls);
          // Change groups for specific students
     if (updated && Array.isArray(updated)) {
       for (const { id,group } of updated) {
-        //await changeStudentGroup({id,group},)
+ 
+   const classToUpdate = classes.find(cls => cls.id === id);
+   const updatedStudents = classToUpdate.students.map(std =>
+    std.id === student.id
+      ? { ...std, group: group }  // Update the student with the new group
+      : std
+  );
+  await changeStudentGroup(id,student.id,updatedStudents,data.classesUIDs)
         setClasses(prevClasses =>
           prevClasses.map(cls =>
             cls.id === id? {
@@ -695,12 +673,7 @@ console.log("removed",cls);
   
         setStudents(prevStudents =>
           prevStudents.map(std =>
-            std.id === student.id ? {
-              ...std,
-              classesUIDs: std?.classesUIDs?.map(cls =>
-                cls.id === id ? { ...cls, group: group } : cls
-              )
-            } : std
+            std.id === student.id ? {...data} : std
           )
         );
       }
@@ -714,7 +687,7 @@ console.log("removed",cls);
 
  
  
- await  processStudentChanges(result)
+ await  processStudentChanges(result,data)
    setOpen(false)
   };
 

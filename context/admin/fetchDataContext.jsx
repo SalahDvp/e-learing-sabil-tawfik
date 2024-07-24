@@ -28,7 +28,7 @@ export const  FetchDataProvider = ({ children }) => {
         const PayoutsSnapshot = await getDoc(doc(db, "Billing","analytics"));
         const otherPayoutsSnapShot= await getDoc(doc(db, "Billing","payouts"));
       
-        console.log("wedwe",PayoutsSnapshot.data());
+        
      
        
      
@@ -40,7 +40,7 @@ export const  FetchDataProvider = ({ children }) => {
     };
     getAnalytics()
   },[])
-  console.log("analustucsss", analytics);
+
   useEffect(() => {
     const getPayouts = async () => {
       try {
@@ -172,14 +172,54 @@ export const  FetchDataProvider = ({ children }) => {
      
            const studentSnapshot = await getDocs(collection(db, 'Students'));
       
-           const StudentsData = studentSnapshot.docs.map((doc) => ({ ...doc.data(),
+           const StudentsData = studentSnapshot.docs.map((doc) => {
+            const student = {
+              ...doc.data(),
               id: doc.id,
-              birthdate:new Date(doc.data().birthdate.toDate()),
+              birthdate: new Date(doc.data().birthdate.toDate()),
               student: `${doc.data().name}`,
-              value:`${doc.data().name}`,
+              value: `${doc.data().name}`,
               label: `${doc.data().name}`,
-             
-           }))
+            };
+          
+            // Calculate the result for each student
+            const result = student.classesUIDs.flatMap(cls => {
+              // Find the class details for the current class ID
+              const classDetail = classesData.find(clss => clss.id === cls.id);
+          
+              if (!classDetail) return []; // If class detail is not found, skip this entry
+          
+              // Find the student details within the class
+              const studentDetail = classDetail.students.find(std => std.id === student.id);
+          
+              if (!studentDetail) return []; // If student detail is not found, skip this entry
+          
+              // Find the group details within the class
+              const groupDetail = classDetail.groups.find(grp => grp.group === cls.group);
+          
+              if (!groupDetail) return []; // If group detail is not found, skip this entry
+          
+              // Construct the result object
+              return {
+                cs: studentDetail.cs,
+                day: groupDetail.day,
+                end: groupDetail.end,
+                start: groupDetail.start,
+                group: groupDetail.group,
+                id: cls.id,
+                index: studentDetail.index,
+                name: classDetail.teacherName,
+                subject: classDetail.subject,
+                time: `"${groupDetail.day},${groupDetail.start}-${groupDetail.end}"`
+              };
+            });
+          
+            // Add the result to the student object
+            return {
+              ...student,
+              classes: result
+            };
+          });
         
         setStudents(StudentsData)
         setTeachers(TeachersData)
