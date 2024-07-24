@@ -55,7 +55,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import CalendarDatePicker from '../../students/components/date-picker';
 
-import { addTeacher, updateTeacher } from '@/lib/hooks/teachers';
+import { addGroup, addTeacher, updateTeacher } from '@/lib/hooks/teachers';
 import { LoadingButton } from '@/components/ui/loadingButton';
 
 import { UseFormReturn } from 'react-hook-form';
@@ -87,7 +87,7 @@ interface openModelProps {
 }
 const EditTeacher: React.FC<openModelProps> = ({ setOpen, open,teacher }) => {
 
-  const timeOptions = generateTimeOptions("07:00","18:00", 30);
+  const timeOptions = generateTimeOptions("07:00","22:00", 30);
   const form = useForm<any>({
     defaultValues:{
       year:[]
@@ -115,7 +115,8 @@ const EditTeacher: React.FC<openModelProps> = ({ setOpen, open,teacher }) => {
     field: 'day' | 'name' | 'id' | 'subject' | 'time' | 'quota' | 'start' | 'end' | 'stream', 
     value: string | number
   ) => {
-    const classes = [...getValues('classes')]; // Get the current classes array
+    const classes = [...getValues('classes')]; 
+  
   
     if (field === 'stream') {
       if (Array.isArray(classes[index].stream)) {
@@ -583,20 +584,136 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
     isOptionalStep,
   } = useStepper()
   
-  const  {setTeachers}= useData()
-
-
-  const onSubmit = async(data:Teacher) => {
-
-    console.log(data);
+  const  {setTeachers,classes,setClasses}= useData()
+// Helper function to generate a unique key for a class
+function getClassKey(cls) {
+  // Use a combination of properties to create a unique key
+  return `${cls.classId}-${cls.group}`;
+}
+  function compareClasses(dataClasses: Class[], teacherClasses: Class[]): UpdateResult {
+    const result: UpdateResult = {
+      added: [],
+      removed: [],
+      updated: []
+    };
     
-    await updateTeacher(data,teacher.id)
-    nextStep()
-    setTeachers((prev: any[]) =>
-      prev.map((tchr) =>
-        tchr.id === teacher.id ? {...data } : tchr
-      )
-    );
+    const dataClassMap = new Map(dataClasses.map((cls,index) => [getClassKey(cls), {...cls,index}]));
+    const teacherClassMap = new Map(teacherClasses.map((cls,index) => [getClassKey(cls), {...cls,index}]));
+  
+    // Find added and updated classes
+    for (const [key, dataClass] of dataClassMap) {
+      if (!('group' in dataClass)) {
+     const classId=classes.find((cls)=>cls.teacherName===teacher.name && cls.year == dataClass.year)
+        result.added.push({...dataClass,classId:classId.id,group:dataClass.index+1,subject:classId.subject});
+      }
+      // else if (dataClass.group !== teacherClass.group) {
+      //   // Class is in both but with different sections (updated)
+      //   result.updated.push(dataClass);
+      // }
+    }
+  
+    // // Find removed classes
+    for (const [id, teacherClass] of teacherClassMap) {
+      if (!dataClassMap.has(id)) {
+        // Class is in teacherClasses but not in dataClasses (removed)
+        result.removed.push(teacherClass);
+      }
+    }
+  
+    return result
+  }
+  async function processStudentChanges(result,data) {
+    const { added, removed, updated } = result;
+  
+    // Add students to classes
+    if (added && Array.isArray(added)) {
+      for (const clss of added) {
+        await addGroup(clss)
+        setClasses(prevClasses => 
+          prevClasses.map(cls =>
+            cls.id === clss.classId ? {
+              ...cls,
+              groups: [...cls.groups, clss] // Create a new array with the existing items plus the new one
+            } : cls
+          )
+        );
+  
+  setTeachers(prevTeachers => 
+    prevTeachers.map(tchr =>
+  tchr.id === teacher.id ? {
+  ...tchr,
+  classes: [...tchr.classes, clss]
+  } : tchr
+  )
+  );
+      }
+    }
+  
+  //   // Remove students from classes
+  //   if (removed && Array.isArray(removed)) {
+  //     for (const cls of removed) {
+  //       const { id, group,index,name,year,cs} = cls;
+  // await removeStudentFromClass({...cls,year:student.year},student.id)
+  //      setClasses(prevClasses => 
+  //         prevClasses.map(cls =>
+  //     cls.id === id ? {
+  //       ...cls,
+  //       students: cls.students.filter(std => std.id !== student.id)
+  //     } : cls
+  //   )
+  // );
+  
+  // setStudents(prevStudents => 
+  //   prevStudents.map(std =>
+  // std.id === student.id ? {
+  // ...std,
+  // classesUIDs:std.classesUIDs.filter(cls => cls.id !== id),
+  // classes:std.classes.filter(cls => cls.id !== id),
+  // } : std
+  // ))
+  // console.log("removed",cls);
+  
+  //       }
+  //     }
+  
+  //        // Change groups for specific students
+  //   if (updated && Array.isArray(updated)) {
+  //     for (const { id,group } of updated) {
+  
+  //  const classToUpdate = classes.find(cls => cls.id === id);
+  //  const updatedStudents = classToUpdate.students.map(std =>
+  //   std.id === student.id
+  //     ? { ...std, group: group }  // Update the student with the new group
+  //     : std
+  // );
+  // await changeStudentGroup(id,student.id,updatedStudents,data.classesUIDs)
+  //       setClasses(prevClasses =>
+  //         prevClasses.map(cls =>
+  //           cls.id === id? {
+  //             ...cls,
+  //             students: cls.students.map(std =>
+  //               std.id === student.id? { ...std, group: group } : student
+  //             )
+  //           } : cls
+  //         )
+  //       );
+  
+  //       setStudents(prevStudents =>
+  //         prevStudents.map(std =>
+  //           std.id === student.id ? {...data} : std
+  //         )
+  //       );
+  //     }
+  //   }
+    }
+  const onSubmit = async(data:Teacher) => {
+const result=compareClasses(data.classes,teacher.classes)
+  await processStudentChanges(result,data)
+  
+    
+  nextStep()
+ 
+    
   };
 
 

@@ -1,5 +1,5 @@
 import { db } from "@/firebase/firebase-config";
-import { addDoc, collection, updateDoc, doc, deleteDoc } from "firebase/firestore";
+import { addDoc, collection, updateDoc, doc, deleteDoc, arrayUnion } from "firebase/firestore";
 import { Teacher, TeacherSchema } from '@/validators/teacher';
 interface Time {
     day: string;
@@ -16,21 +16,21 @@ interface Class {
     quota: number;
     room:string;
   }
-  
+
   export const groupClassesByYear = (classes: Class[]) => {
     return classes.reduce((acc, curr) => {
       (acc[curr.year] = acc[curr.year] || []).push(curr);
       return acc;
     }, {} as Record<string, Class[]>);
   };
-  
+
 export const addTeacher = async (teacher: Teacher) => {
     try {
         // Add the teacher document to the "Teachers" collection
         const teacherRef = await addDoc(collection(db, "Teachers"), teacher);
         console.log("Teacher added successfully:", teacherRef.id);
         const classesByYear = groupClassesByYear(teacher.classes);
-  
+
         const collectiveGroups = Object.entries(classesByYear).map(([year, classes]) => (
     {      year,
         students:[],
@@ -47,8 +47,8 @@ export const addTeacher = async (teacher: Teacher) => {
               room:cls.room,
               group:`G${index+1}`
             }))}
-       
-            
+
+
         ));
             const groupUIDs: string[] = [];
          for (const group of collectiveGroups) {
@@ -75,7 +75,7 @@ export const updateTeacher = async(updatedteacher: Teacher,teacherId:string)=>{
         console.error("Error updating Teacher:", error);
         // Handle the error here, such as displaying a message to the user or logging it for further investigation
         throw error; // Optionally re-throw the error to propagate it further if needed
-    } 
+    }
 }
 export const deleteTeacher = async(teacherId:string)=>{
     try {
@@ -86,5 +86,14 @@ export const deleteTeacher = async(teacherId:string)=>{
         console.error("Error deleting Teacher:", error);
         // Handle the error here, such as displaying a message to the user or logging it for further investigation
         throw error; // Optionally re-throw the error to propagate it further if needed
-    } 
+    }
+}
+export const addGroup=async(cls:any)=>{
+
+
+    const classDocRef = doc(db, 'Groups', cls.classId);
+    await updateDoc(classDocRef, {
+      groups: arrayUnion(cls)
+    });
+
 }

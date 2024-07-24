@@ -125,112 +125,122 @@ export const  FetchDataProvider = ({ children }) => {
   
     getInvoices();
   }, [date]);
-  useEffect(()=>{
+  useEffect(() => {
     const getClasses = async () => {
       try {
-        // Fetch the documents from the 'Groups' collection
-        const groupsSnapshot = await getDocs(collection(db, 'Groups'));
-        
-        // Create an array to store the classes data
-        const classesData = [];
-    
-        // Loop through each group document
-        for (const groupDoc of groupsSnapshot.docs) {
+        // Fetch the documents from the 'Groups' collection in parallel
+        const [groupsSnapshot, teachersSnapshot, studentsSnapshot] = await Promise.all([
+          getDocs(collection(db, 'Groups')),
+          getDocs(collection(db, 'Teachers')),
+          getDocs(collection(db, 'Students'))
+        ]);
+
+        // Process groups and attendance data
+        const groupsDataPromises = groupsSnapshot.docs.map(async (groupDoc) => {
           const groupId = groupDoc.id;
           const groupData = groupDoc.data();
-          
-          // Retrieve the attendance subcollection
           const attendanceSnapshot = await getDocs(collection(db, `Groups/${groupId}/Attendance`));
-          
-          // Create an object to store the attendance data with document ID as the key
+
           const attendanceData = attendanceSnapshot.docs.reduce((acc, doc) => {
-            acc[doc.id] = {...doc.data(),id:doc.id};
+            acc[doc.id] = { ...doc.data(), id: doc.id };
             return acc;
           }, {});
-    
-          // Add the group data and attendance data to the classesData array
-          classesData.push({
+
+          return {
             id: groupId,
             ...groupData,
             attendance: attendanceData,
-          });
+          };
+        });
+
+        const classesData = await Promise.all(groupsDataPromises);
+
+        // Process teachers data
+        const TeachersData = teachersSnapshot.docs.map((doc) => {
+        const teacher = { ...doc.data(),
+          id: doc.id,
+          birthdate: new Date(doc.data().birthdate.toDate()),
+          teacher: `${doc.data().name}`,
+          phoneNumber: doc.data().phoneNumber,
+          year: doc.data().year
         }
-        const teachersSnapshot = await getDocs(collection(db, 'Teachers'));
-      
-        const TeachersData = teachersSnapshot.docs.map((doc) => ({ ...doc.data(),
-           id: doc.id,
-           birthdate: new Date(doc.data().birthdate.toDate()),
-           teacher: `${doc.data().name}`,
+        const result = teacher.groupUIDs.flatMap(cls => {
+          const classDetail = classesData.find(clss => clss.id === cls);
+          return classDetail.groups.map(grp=>({
+            "day": grp.day,
+            "end": grp.end,
+            "group": grp.group,
+            "quota": 0,
+            "room":  grp.room,
+            "start": grp.start,
+            "stream":grp.stream,
+            "subject": grp.subject,
+            "classId":cls,
+            year:classDetail.year
+          }))
 
-           phoneNumber: doc.data().phoneNumber,
-           year: doc.data().year
-          
 
+        });
+        return {
+          ...teacher,
+          classes: result
+        };
+      });
 
-          
-           }))     
-     
-           const studentSnapshot = await getDocs(collection(db, 'Students'));
-      
-           const StudentsData = studentSnapshot.docs.map((doc) => {
-            const student = {
-              ...doc.data(),
-              id: doc.id,
-              birthdate: new Date(doc.data().birthdate.toDate()),
-              student: `${doc.data().name}`,
-              value: `${doc.data().name}`,
-              label: `${doc.data().name}`,
-            };
-          
-            // Calculate the result for each student
-            const result = student.classesUIDs.flatMap(cls => {
-              // Find the class details for the current class ID
-              const classDetail = classesData.find(clss => clss.id === cls.id);
-          
-              if (!classDetail) return []; // If class detail is not found, skip this entry
-          
-              // Find the student details within the class
-              const studentDetail = classDetail.students.find(std => std.id === student.id);
-          
-              if (!studentDetail) return []; // If student detail is not found, skip this entry
-          
-              // Find the group details within the class
-              const groupDetail = classDetail.groups.find(grp => grp.group === cls.group);
-          
-              if (!groupDetail) return []; // If group detail is not found, skip this entry
-          
-              // Construct the result object
-              return {
-                cs: studentDetail.cs,
-                day: groupDetail.day,
-                end: groupDetail.end,
-                start: groupDetail.start,
-                group: groupDetail.group,
-                id: cls.id,
-                index: studentDetail.index,
-                name: classDetail.teacherName,
-                subject: classDetail.subject,
-                time: `"${groupDetail.day},${groupDetail.start}-${groupDetail.end}"`
-              };
-            });
-          
-            // Add the result to the student object
+        // Process students data
+        const StudentsData = studentsSnapshot.docs.map((doc) => {
+          const student = {
+            ...doc.data(),
+            id: doc.id,
+            birthdate: new Date(doc.data().birthdate.toDate()),
+            student: `${doc.data().name}`,
+            value: `${doc.data().name}`,
+            label: `${doc.data().name}`,
+          };
+
+          // Calculate the result for each student
+          const result = student.classesUIDs.flatMap(cls => {
+            const classDetail = classesData.find(clss => clss.id === cls.id);
+            if (!classDetail) return [];
+
+            const studentDetail = classDetail.students.find(std => std.id === student.id);
+            if (!studentDetail) return [];
+
+            const groupDetail = classDetail.groups.find(grp => grp.group === cls.group);
+            if (!groupDetail) return [];
+
             return {
-              ...student,
-              classes: result
+              cs: studentDetail.cs,
+              day: groupDetail.day,
+              end: groupDetail.end,
+              start: groupDetail.start,
+              group: groupDetail.group,
+              id: cls.id,
+              index: studentDetail.index,
+              name: classDetail.teacherName,
+              subject: classDetail.subject,
+              time: `"${groupDetail.day},${groupDetail.start}-${groupDetail.end}"`
             };
           });
-        
-        setStudents(StudentsData)
-        setTeachers(TeachersData)
+
+          return {
+            ...student,
+            classes: result
+          };
+        });
+
+        // Set state
+        setStudents(StudentsData);
+        setTeachers(TeachersData);
         setClasses(classesData);
-    
+
       } catch (error) {
-        console.error('Error fetching Groups and Attendance:', error);
+        console.error('Error fetching data:', error);
       }
     };
-getClasses()
-  },[])
+
+    getClasses();
+  }, []);
 
 
   useEffect(() => {
