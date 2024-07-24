@@ -155,20 +155,6 @@ export const  FetchDataProvider = ({ children }) => {
             attendance: attendanceData,
           });
         }
-
-        console.log(classesData);
-        setClasses(classesData);
-    
-      } catch (error) {
-        console.error('Error fetching Groups and Attendance:', error);
-      }
-    };
-getClasses()
-  },[])
-  useEffect(()=>{
-    console.log('hamadooooooooo ');
-    const getTeachers = async () => {
-      try {
         const teachersSnapshot = await getDocs(collection(db, 'Teachers'));
       
         const TeachersData = teachersSnapshot.docs.map((doc) => ({ ...doc.data(),
@@ -184,37 +170,28 @@ getClasses()
           
            }))     
      
-    
-        setTeachers(TeachersData)
-      } catch (error) {
-        console.error('Error fetching Teachers:', error);
-      }
-    };
-    getTeachers();
-  },[])
-  useEffect(()=>{
-    const getStudents = async () => {
-      try {
-        const studentSnapshot = await getDocs(collection(db, 'Students'));
+           const studentSnapshot = await getDocs(collection(db, 'Students'));
       
-        const StudentsData = studentSnapshot.docs.map((doc) => ({ ...doc.data(),
-           id: doc.id,
-           birthdate:new Date(doc.data().birthdate.toDate()),
-           student: `${doc.data().name}`,
-           value:`${doc.data().name}`,
-           label: `${doc.data().name}`,
-          
-        }))
-        console.log("students: ",StudentsData);
-setStudents(StudentsData)
-       
+           const StudentsData = studentSnapshot.docs.map((doc) => ({ ...doc.data(),
+              id: doc.id,
+              birthdate:new Date(doc.data().birthdate.toDate()),
+              student: `${doc.data().name}`,
+              value:`${doc.data().name}`,
+              label: `${doc.data().name}`,
+             
+           }))
+        
+        setStudents(StudentsData)
+        setTeachers(TeachersData)
+        setClasses(classesData);
+    
       } catch (error) {
-        console.error('Error fetching Students:', error);
+        console.error('Error fetching Groups and Attendance:', error);
       }
     };
-    
-    getStudents(); 
+getClasses()
   },[])
+
 
   useEffect(() => {
     const getLevels = async () => {
