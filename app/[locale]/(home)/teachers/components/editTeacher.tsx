@@ -584,7 +584,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
     isOptionalStep,
   } = useStepper()
   
-  const  {setTeachers,classes,setClasses}= useData()
+  const  {setTeachers,classes,setClasses,setStudents}= useData()
 // Helper function to generate a unique key for a class
 function getClassKey(cls) {
   // Use a combination of properties to create a unique key
@@ -652,8 +652,8 @@ function getClassKey(cls) {
   //   // Remove students from classes
     if (removed && Array.isArray(removed)) {
       for (const clss of removed) {
-     
 
+        
        setClasses(prevClasses => 
           prevClasses.map(cls =>
       cls.id === clss.id ? {
@@ -663,15 +663,15 @@ function getClassKey(cls) {
       } : cls
     )
   );
-  setTeachers(prevTeachers => 
+  setTeachers(prevTeachers =>
     prevTeachers.map(tchr =>
-tchr.id === teacher.id ? {
-  ...tchr,
-  classes:tchr.classes.filter(cls => cls.grp !== clss.group && cls.classId === clss.classId)
-  //groupUIDs: tchr.groupUIDs.filter(grp => grp !== clss.group)
-} : cls
-)
-);
+      tchr.id === teacher.id
+        ? {
+           ...formData
+          }
+        : tchr
+    )
+  );
 const studentsToRemove = classes
   .find(cls => cls.id === clss.id)
   ?.students
@@ -729,7 +729,7 @@ const result=compareClasses(data.classes,teacher.classes)
   await processStudentChanges(result,data)
   
     
-  nextStep()
+  //nextStep()
  
     
   };
