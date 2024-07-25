@@ -727,7 +727,7 @@ const result=compareClasses(data.classes,teacher.classes)
   await processStudentChanges(result,data)
   
     
-  //nextStep()
+  nextStep()
  
     
   };

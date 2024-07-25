@@ -86,26 +86,8 @@ const checkClassTime = (scanTime: Date, student: any, groupClasses: any[]): any[
   for (const groupClass of relevantGroupClasses) {
     for (const groupElement of groupClass.groups) {
       const groupDay = groupElement.day;
-      // Commented out the time range check
-      // const groupStartTime = groupElement.start;
-      // const groupEndTime = groupElement.end;
-      // const [groupStartHour, groupStartMinute] = groupStartTime.split(':').map(Number);
-      // const [groupEndHour, groupEndMinute] = groupEndTime.split(':').map(Number);
 
-      // Check if the scan day matches the group class day
       if (scanDay.toLowerCase() === groupDay.toLowerCase()) {
-        // Commented out the time range calculation and check
-        // const groupStart = new Date(scanTime);
-        // groupStart.setHours(groupStartHour, groupStartMinute, 0, 0);
-
-        // const groupEnd = new Date(scanTime);
-        // groupEnd.setHours(groupEndHour, groupEndMinute, 0, 0);
-
-        // const startWindow = subMinutes(groupStart, 30);
-        // const endWindow = addMinutes(groupEnd, 30);
-
-        // if (isWithinInterval(scanTime, { start: startWindow, end: endWindow })) {
-        // Find matching student classes for this group
         const matchingClasses = student.classes.find(cls => cls.id === groupClass.id);
 
         if (matchingClasses) {
@@ -184,14 +166,14 @@ export default function Home() {
     const classInfo =checkClassTime(scanTime,parsedData,classes);
     
     if (classInfo) {
-      audioRefSuccess.current?.play();
+
     
       setCurrentClasses(classInfo)
       
     } else {
       setAlertText("No current class found for this student to attend.");
       setOpenAlert(true);
-      audioRefError.current?.play();
+
     }
     
   }
@@ -264,7 +246,15 @@ export default function Home() {
      const updatedClasses = [...classes];
      console.log(updatedClasses);
      //Get the current attendance list for the given class
-    const currentAttendanceList = updatedClasses[classIndex].Attendance[dateTimeUID]|| {start:'',end:'',attendanceList:[],group:currentClass.studentGroup,id:dateTimeUID};
+     const currentAttendanceList = (
+      updatedClasses[classIndex]?.Attendance?.[dateTimeUID] || {
+        start: '',
+        end: '',
+        attendanceList: [],
+        group: currentClass.studentGroup,
+        id: dateTimeUID
+      }
+    );
     currentAttendanceList.attendanceList.push({index:currentClass.studentIndex,
       group:currentClass.studentGroup,
       name:currentClass.name,
@@ -391,7 +381,7 @@ export default function Home() {
     </div>
     <div className="flex items-center justify-between">
       <span className="text-muted-foreground">CS:</span>
-      <span>{studentData.year}</span>
+      <span>{studentData.cs}</span>
     </div>
   </div>
   {/* <Separator />
