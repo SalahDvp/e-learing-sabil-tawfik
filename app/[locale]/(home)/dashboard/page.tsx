@@ -43,6 +43,8 @@ import {
 } from "@/components/ui/popover"
 import { pdf } from "@react-pdf/renderer";
 import StudentInvoice from'../students/components/studentInvoice'
+import { doc, setDoc } from "firebase/firestore";
+import { db } from "@/firebase/firebase-config";
 const frameworks = [
   {
     value: "next.js",
@@ -227,59 +229,88 @@ export default function Home() {
 
   };
 
-  const onConfirm =async() => {
-  //await writeAttendance(currentClass)
-  //generateBillIfNeeded({name:studentData?.name,class:studentData?.year,subject:currentClass.subject})
-  // Find the index of the class to update
- 
-  const classIndex = classes.findIndex(cls => cls.id === currentClass.id);
-    const clsid=classes[classIndex].id
-  // If class is found, update its attendanceList
-  if (classIndex !== -1) {
-
-    const currentDate = new Date();
-    const year = currentDate.getFullYear();
-    const month = String(currentDate.getMonth() + 1).padStart(2, '0'); // Months are zero-based
-    const day = String(currentDate.getDate()).padStart(2, '0');
-    const dateTimeUID = `${year}-${month}-${day}-${currentClass.studentGroup}`;
-     // Create a copy of the previous classes
-     const updatedClasses = [...classes];
-     console.log(updatedClasses);
-     //Get the current attendance list for the given class
-     const currentAttendanceList = (
-      updatedClasses[classIndex]?.Attendance?.[dateTimeUID] || {
+  const onConfirm = async () => {
+    try {
+      // Find the index of the class to update
+      const classIndex = classes.findIndex(cls => cls.id === currentClass.id);
+      if (classIndex === -1) {
+        console.error('Class not found');
+        return;
+      }
+  
+      const clsid = classes[classIndex].id;
+  
+      // Get the current date and format it for UID
+      const currentDate = new Date();
+      const year = currentDate.getFullYear();
+      const month = String(currentDate.getMonth() + 1).padStart(2, '0'); // Months are zero-based
+      const day = String(currentDate.getDate()).padStart(2, '0');
+      const dateTimeUID = `${year}-${month}-${day}-${currentClass.studentGroup}`;
+  
+      // Create a copy of the previous classes
+      const updatedClasses = [...classes];
+  
+      // Get the current attendance list for the given class
+      const currentAttendanceList = updatedClasses[classIndex]?.Attendance?.[dateTimeUID] || {
         start: '',
         end: '',
         attendanceList: [],
         group: currentClass.studentGroup,
         id: dateTimeUID
+      };
+  
+      // Check if attendance already exists
+      const exists = !!updatedClasses[classIndex]?.Attendance?.[dateTimeUID];
+  
+      // Update the attendance list
+      currentAttendanceList.attendanceList.push({
+        index: currentClass.studentIndex,
+        group: currentClass.studentGroup,
+        name: currentClass.name,
+        status: 'present'
+      });
+  
+      // Update the class with the new attendance list
+      updatedClasses[classIndex] = {
+        ...updatedClasses[classIndex],
+        Attendance: {
+          ...updatedClasses[classIndex].Attendance,
+          [dateTimeUID]: currentAttendanceList
+        }
+      };
+  
+      // Set the updated classes
+      setClasses(updatedClasses);
+  
+      // Perform the appropriate Firebase operation based on existence
+      if (exists) {
+        await markAttendance(clsid, dateTimeUID, {
+          name: studentData?.name,
+          group: currentClass.group,
+          index: currentClass.studentIndex,
+          status: 'present'
+        });
+      } else {
+        await setDoc(doc(db, 'Groups', clsid, 'Attendance', dateTimeUID), {
+          name: studentData?.name,
+          group: currentClass.group,
+          index: currentClass.studentIndex,
+          status: 'present'
+        });
       }
-    );
-    currentAttendanceList.attendanceList.push({index:currentClass.studentIndex,
-      group:currentClass.studentGroup,
-      name:currentClass.name,
-      status:'present'});
-
-    // Update the class with the new attendance list
-    updatedClasses[classIndex] = {
-      ...updatedClasses[classIndex],
-      attendanceList: currentAttendanceList
-    };
-    setClasses(updatedClasses)
-    await markAttendance(clsid,dateTimeUID,{name:studentData?.name,group:currentClass.group,index:currentClass.studentIndex,status:'present'})
-    audioRefSuccess.current?.play();
-    
-    setCurrentClass(undefined)
-    setCurrentClasses(undefined)
-    setStudentData(null)
-  }
-
- 
- setCurrentClass(undefined)
- setCurrentClasses(undefined)
- setStudentData(null)
-
-    
+  
+      // Play success audio
+      audioRefSuccess.current?.play();
+  
+      // Clear state
+      setCurrentClass(undefined);
+      setCurrentClasses(undefined);
+      setStudentData(null);
+    } catch (error) {
+      console.error('Error updating attendance:', error);
+      // Optionally, show an alert or user-friendly message
+      alert('An error occurred while updating attendance. Please try again.');
+    }
   };
   const handleButtonClick = async () => {
     videoRef.current!.hidden = false;
