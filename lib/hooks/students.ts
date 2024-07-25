@@ -41,7 +41,9 @@ export const addStudent = async (student:Student,) => {
     try {
   
         const studentRef = await addDoc(collection(db, "Students"), student);
+       if(student.photo){
         await uploadAndLinkToCollection(student.photo,'Students',studentRef.id,'photo')
+       } 
         student.classes.map(async (cls)=>{
             await updateDoc(doc(db,'Groups',cls.id),{
                 students:arrayUnion({

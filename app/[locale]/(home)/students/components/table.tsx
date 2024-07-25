@@ -137,14 +137,19 @@ interface DataTableDemoProps {
     };
     const columns: ColumnDef<any>[] = [
       {
-        accessorKey: "studentIndex",
+        accessorKey: "index",
         header: () => <div >Index</div>,
-  
-        cell: ({ row }) => (
-          <div className="capitalize" style={{ width: '10px' }}>
-             <div className="font-medium">{row.getValue("studentIndex")}</div>
-          </div>
-        ),
+     
+        cell: ({ row,table}) => {
+         (table.getSortedRowModel()?.flatRows?.findIndex((flatRow) => flatRow.id === row.id) || 0) + 1
+       return (
+        <div className="capitalize" style={{ width: '10px' }}>
+        <div className="font-medium">{row.original.studentIndex}</div>
+     </div>
+       )
+
+      
+         }
       },
       {
         accessorKey: "student",
@@ -292,6 +297,7 @@ const orderedMonths = [
         pageIndex: 0, //custom initial page index
         pageSize: 10, //custom default page size
       },
+      sorting: [{ id: 'index', desc:true }], // Sort by 'index' column in ascending order by default
     },
   })
 
@@ -384,6 +390,7 @@ const orderedMonths = [
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
+                  
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>

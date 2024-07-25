@@ -650,31 +650,49 @@ function getClassKey(cls) {
     }
   
   //   // Remove students from classes
-  //   if (removed && Array.isArray(removed)) {
-  //     for (const cls of removed) {
-  //       const { id, group,index,name,year,cs} = cls;
-  // await removeStudentFromClass({...cls,year:student.year},student.id)
-  //      setClasses(prevClasses => 
-  //         prevClasses.map(cls =>
-  //     cls.id === id ? {
-  //       ...cls,
-  //       students: cls.students.filter(std => std.id !== student.id)
-  //     } : cls
-  //   )
-  // );
-  
-  // setStudents(prevStudents => 
-  //   prevStudents.map(std =>
-  // std.id === student.id ? {
-  // ...std,
-  // classesUIDs:std.classesUIDs.filter(cls => cls.id !== id),
-  // classes:std.classes.filter(cls => cls.id !== id),
-  // } : std
-  // ))
+    if (removed && Array.isArray(removed)) {
+      for (const clss of removed) {
+     
+
+       setClasses(prevClasses => 
+          prevClasses.map(cls =>
+      cls.id === clss.id ? {
+        ...cls,
+        students: cls.students.filter(std => std.group !== clss.group),
+        groups:cls.groups.filter(grp=>grp.group===clss.group)
+      } : cls
+    )
+  );
+  setTeachers(prevTeachers => 
+    prevTeachers.map(tchr =>
+tchr.id === teacher.id ? {
+  ...tchr,
+  classes:tchr.classes.filter(cls => cls.grp !== clss.group && cls.classId === clss.classId)
+  //groupUIDs: tchr.groupUIDs.filter(grp => grp !== clss.group)
+} : cls
+)
+);
+const studentsToRemove = classes
+  .find(cls => cls.id === clss.id)
+  ?.students
+  .filter(std => std.group === clss.group) || [];
+
+  setStudents(prevStudents =>
+    prevStudents.map(std => {
+      if (studentsToRemove.some(st => st.id === std.id)) {
+        // If the student is in studentsToRemove, update their classes
+        return {
+          ...std,
+          classes: std.classes.filter(cls => cls.day !== clss.day &&  cls.start !== clss.start  && cls.end !== clss.end)
+        };
+      }
+      return std; // Return the student as is if not in studentsToRemove
+    })
+  );
   // console.log("removed",cls);
   
-  //       }
-  //     }
+        }
+      }
   
   //        // Change groups for specific students
   //   if (updated && Array.isArray(updated)) {
