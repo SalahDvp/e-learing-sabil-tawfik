@@ -1,5 +1,5 @@
 "use client";
-import { formatDateToYYYYMMDD } from "@/lib/hooks/students";
+import { formatDateToYYYYMMDD, markAttendance } from "@/lib/hooks/students";
 import Image from "next/image";
 import QrScanner from "qr-scanner";
 import { useEffect, useRef, useState } from "react";
@@ -68,8 +68,8 @@ const frameworks = [
  
 
 const checkClassTime = (scanTime: Date, student: any, groupClasses: any[]): any[] | null => {
+  // Get the day of the week for the scan time
   const scanDay = scanTime.toLocaleString('en-US', { weekday: 'long' });
-
 
   // Extract IDs from student classes into a Set
   const studentClassIds = new Set(student.classesUIDs.map(cls => cls.id));
@@ -78,6 +78,7 @@ const checkClassTime = (scanTime: Date, student: any, groupClasses: any[]): any[
   const relevantGroupClasses = groupClasses.filter(groupClass =>
     studentClassIds.has(groupClass.id)
   );
+
   // Array to store matching class objects with group class information
   const matchingClassesWithGroup: any[] = [];
 
@@ -85,30 +86,40 @@ const checkClassTime = (scanTime: Date, student: any, groupClasses: any[]): any[
   for (const groupClass of relevantGroupClasses) {
     for (const groupElement of groupClass.groups) {
       const groupDay = groupElement.day;
-      const groupStartTime = groupElement.start;
-      const groupEndTime = groupElement.end;
-      const [groupStartHour, groupStartMinute] = groupStartTime.split(':').map(Number);
-      const [groupEndHour, groupEndMinute] = groupEndTime.split(':').map(Number);
+      // Commented out the time range check
+      // const groupStartTime = groupElement.start;
+      // const groupEndTime = groupElement.end;
+      // const [groupStartHour, groupStartMinute] = groupStartTime.split(':').map(Number);
+      // const [groupEndHour, groupEndMinute] = groupEndTime.split(':').map(Number);
 
+      // Check if the scan day matches the group class day
       if (scanDay.toLowerCase() === groupDay.toLowerCase()) {
-        const groupStart = new Date(scanTime);
-        groupStart.setHours(groupStartHour, groupStartMinute, 0, 0);
+        // Commented out the time range calculation and check
+        // const groupStart = new Date(scanTime);
+        // groupStart.setHours(groupStartHour, groupStartMinute, 0, 0);
 
-        const groupEnd = new Date(scanTime);
-        groupEnd.setHours(groupEndHour, groupEndMinute, 0, 0);
+        // const groupEnd = new Date(scanTime);
+        // groupEnd.setHours(groupEndHour, groupEndMinute, 0, 0);
 
-        const startWindow = subMinutes(groupStart, 30);
-        const endWindow = addMinutes(groupEnd, 30);
+        // const startWindow = subMinutes(groupStart, 30);
+        // const endWindow = addMinutes(groupEnd, 30);
 
-        if (isWithinInterval(scanTime, { start: startWindow, end: endWindow })) {
-          // Find matching student classes for this group
-          const matchingClasses = student.classes.find(cls => cls.id === groupClass.id);
+        // if (isWithinInterval(scanTime, { start: startWindow, end: endWindow })) {
+        // Find matching student classes for this group
+        const matchingClasses = student.classes.find(cls => cls.id === groupClass.id);
 
-          if (matchingClasses) {
-            matchingClassesWithGroup.push({...groupElement,subject:matchingClasses.subject,id:matchingClasses.id,studentIndex:matchingClasses.index,studentGroup:matchingClasses.group,name:groupClass.teacherName
-            });
-          }
+        if (matchingClasses) {
+          // Add matching class with group information to the result array
+          matchingClassesWithGroup.push({
+            ...groupElement,
+            subject: matchingClasses.subject,
+            id: matchingClasses.id,
+            studentIndex: matchingClasses.index,
+            studentGroup: matchingClasses.group,
+            name: groupClass.teacherName
+          });
         }
+        // }
       }
     }
   }
@@ -235,26 +246,26 @@ export default function Home() {
   };
 
   const onConfirm =async() => {
-  await writeAttendance(currentClass)
-  generateBillIfNeeded({name:studentData?.name,class:studentData?.year,subject:currentClass.subject})
- const formattedDate = formatDateToYYYYMMDD(new Date()); // Format the date
-
- setClasses((prevClasses) => {
+  //await writeAttendance(currentClass)
+  //generateBillIfNeeded({name:studentData?.name,class:studentData?.year,subject:currentClass.subject})
   // Find the index of the class to update
-  const classIndex = prevClasses.findIndex(cls => cls.id === currentClass.id);
-
+ 
+  const classIndex = classes.findIndex(cls => cls.id === currentClass.id);
+    const clsid=classes[classIndex].id
   // If class is found, update its attendanceList
   if (classIndex !== -1) {
 
-    
+    const currentDate = new Date();
+    const year = currentDate.getFullYear();
+    const month = String(currentDate.getMonth() + 1).padStart(2, '0'); // Months are zero-based
+    const day = String(currentDate.getDate()).padStart(2, '0');
+    const dateTimeUID = `${year}-${month}-${day}-${currentClass.studentGroup}`;
      // Create a copy of the previous classes
-     const updatedClasses = [...prevClasses];
+     const updatedClasses = [...classes];
      console.log(updatedClasses);
      //Get the current attendance list for the given class
-    const currentAttendanceList = updatedClasses[classIndex].attendance|| {};
-
-    // Add new student data to the attendance list
-    currentAttendanceList[formattedDate].attendanceList.push({index:currentClass.studentIndex,
+    const currentAttendanceList = updatedClasses[classIndex].Attendance[dateTimeUID]|| {start:'',end:'',attendanceList:[],group:currentClass.studentGroup,id:dateTimeUID};
+    currentAttendanceList.attendanceList.push({index:currentClass.studentIndex,
       group:currentClass.studentGroup,
       name:currentClass.name,
       status:'present'});
@@ -264,15 +275,16 @@ export default function Home() {
       ...updatedClasses[classIndex],
       attendanceList: currentAttendanceList
     };
-
-    return updatedClasses;
+    setClasses(updatedClasses)
+    await markAttendance(clsid,dateTimeUID,{name:studentData?.name,group:currentClass.group,index:currentClass.studentIndex,status:'present'})
+    audioRefSuccess.current?.play();
+    
+    setCurrentClass(undefined)
+    setCurrentClasses(undefined)
+    setStudentData(null)
   }
 
-  // Return unchanged state if class is not found
-  return prevClasses;
-});
- audioRefSuccess.current?.play();
-    
+ 
  setCurrentClass(undefined)
  setCurrentClasses(undefined)
  setStudentData(null)

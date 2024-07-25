@@ -205,3 +205,10 @@ export const formatDateToYYYYMMDD = (date: Date): string => {
 
       }
   
+export async function markAttendance(classId,attendanceId,student){
+
+    await updateDoc(doc(db,'Groups',classId,'Attendance',attendanceId),{
+      attendanceList:arrayUnion({index:student.index,group:student.group,name:student.name,status:student.status})
+    })
+  }
+

@@ -1,6 +1,8 @@
 import { db } from "@/firebase/firebase-config";
-import { addDoc, collection, updateDoc, doc, deleteDoc, arrayUnion, arrayRemove } from "firebase/firestore";
+import { addDoc, collection, updateDoc, doc, deleteDoc, arrayUnion, arrayRemove,setDoc } from "firebase/firestore";
 import { Teacher, TeacherSchema } from '@/validators/teacher';
+
+import { format, startOfWeek, addWeeks, eachDayOfInterval, endOfWeek } from 'date-fns';
 interface Time {
     day: string;
     start: string;
@@ -16,7 +18,30 @@ interface Class {
     quota: number;
     room:string;
   }
+  function getDatesForWeek(startDate: Date): Date[] {
+    const start = startOfWeek(startDate, { weekStartsOn: 0 }); // Adjust if week starts on a different day
+    const end = endOfWeek(start);
+    return eachDayOfInterval({ start, end });
+}
 
+// Function to get the next occurrence of a specific day of the week
+function getNextDayOfWeek(dayOfWeek: string, startDate: Date): Date {
+    const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const targetDay = daysOfWeek.indexOf(dayOfWeek);
+
+    if (targetDay === -1) {
+        throw new Error(`Invalid day of the week: ${dayOfWeek}`);
+    }
+
+    const weekDates = getDatesForWeek(startDate);
+    const nextDayDate = weekDates.find(date => date.getDay() === targetDay);
+
+    if (!nextDayDate) {
+        throw new Error(`No date found for day of the week: ${dayOfWeek}`);
+    }
+
+    return nextDayDate;
+}
   export const groupClassesByYear = (classes: Class[]) => {
     return classes.reduce((acc, curr) => {
       (acc[curr.year] = acc[curr.year] || []).push(curr);
@@ -51,9 +76,44 @@ export const addTeacher = async (teacher: Teacher) => {
 
         ));
             const groupUIDs: string[] = [];
+            const currentDate = new Date();
          for (const group of collectiveGroups) {
             const groupRef= await addDoc(collection(db, "Groups"), group);
             groupUIDs.push(groupRef.id);
+            const attendanceRef = collection(groupRef, "Attendance");
+
+            for (const cls of group.groups) {
+                const thisWeekStartDate = startOfWeek(currentDate, { weekStartsOn: 0 });
+                const nextWeekStartDate = addWeeks(thisWeekStartDate, 1);
+
+                // Create attendance for this week
+                const thisWeekDate = getNextDayOfWeek(cls.day, thisWeekStartDate);
+                const formattedDateThisWeek = format(thisWeekDate, 'yyyy-MM-dd');
+                const dateTimeUIDThisWeek = `${formattedDateThisWeek}-${cls.group}`;
+
+                // Add attendance document for this week
+                await setDoc(doc(attendanceRef, dateTimeUIDThisWeek), {
+                    id: dateTimeUIDThisWeek,
+                    start: cls.start,
+                    end: cls.end,
+                    group: cls.group,
+                    attendanceList: []
+                });
+
+                // Create attendance for next week
+                const nextWeekDate = getNextDayOfWeek(cls.day, nextWeekStartDate);
+                const formattedDateNextWeek = format(nextWeekDate, 'yyyy-MM-dd');
+                const dateTimeUIDNextWeek = `${formattedDateNextWeek}-${cls.group}`;
+
+                // Add attendance document for next week
+                await setDoc(doc(attendanceRef, dateTimeUIDNextWeek), {
+                    id: dateTimeUIDNextWeek,
+                    start: cls.start,
+                    end: cls.end,
+                    group: cls.group,
+                    attendanceList: []
+                });
+            }
         }
         await updateDoc(doc(db, "Teachers", teacherRef.id), {
             groupUIDs: groupUIDs,
