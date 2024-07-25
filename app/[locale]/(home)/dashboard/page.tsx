@@ -291,12 +291,18 @@ export default function Home() {
           status: 'present'
         });
       } else {
-        await setDoc(doc(db, 'Groups', clsid, 'Attendance', dateTimeUID), {
-          name: studentData?.name,
-          group: currentClass.group,
-          index: currentClass.studentIndex,
-          status: 'present'
-        });
+        await setDoc(
+          doc(db, 'Groups', clsid, 'Attendance', dateTimeUID),
+          {
+            attendanceList: [{
+              name: studentData?.name,
+              group: currentClass.group,
+              index: currentClass.studentIndex,
+              status: 'present'
+            }]
+          },
+          { merge: true } // Merge option to combine new data with existing data
+        );
       }
   
       // Play success audio
