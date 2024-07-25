@@ -15,26 +15,15 @@ interface DailyAttandenceDataTableProps {
 }
 
 
-export const DailyAttandenceDataTable: React.FC<DailyAttandenceDataTableProps> = ({ selectedEvent,selectedClasss }) => {
-
-  const [selectedSubject, setSelectedSubject] = useState<string | null>(selectedClasss.subject ||   "Economics");
+export const DailyAttandenceDataTable: React.FC<DailyAttandenceDataTableProps> = ({ selectedEvent}) => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [students, setStudents] = useState<any[]>([]);
-
-  useEffect(() => {
-    // Mock data for demonstration
-    const mockStudents: any[] = [
-     
-    ];
-
-    setStudents(mockStudents);
-  }, [selectedSubject]);
-
+  console.log("event",selectedEvent);
+  
   const columns: ColumnDef<any>[] = [
     {
       accessorKey: "id",
       header: () => <div>ID</div>,
-      cell: ({ row }) => <div className="lowercase hidden sm:table-cell">{row.getValue("id")}</div>,
+      cell: ({ row }) => <div className="lowercase hidden sm:table-cell">{row.getValue("index")}</div>,
     },
     {
       accessorKey: "name",
@@ -52,7 +41,7 @@ export const DailyAttandenceDataTable: React.FC<DailyAttandenceDataTableProps> =
     },
   ];
   const getStatusIcon = (status) => {
-    if (status === "Present") {
+    if (status === "present") {
       return <CheckIcon className="ml-5 w-5 h-5 text-green-500" />;
     } else if (status === "Absent") {
       return <XIcon className="ml-5 w-5 h-5 text-red-500" />;
@@ -62,7 +51,7 @@ export const DailyAttandenceDataTable: React.FC<DailyAttandenceDataTableProps> =
   };
 
   const table = useReactTable({
-    data: students,
+    data: selectedEvent.attendanceList,
     columns,
     initialState: {
       pagination: {
@@ -72,10 +61,8 @@ export const DailyAttandenceDataTable: React.FC<DailyAttandenceDataTableProps> =
     },
   });
 
-  const filteredData = students.filter((student) =>
-    student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.id.includes(searchTerm)
-  );
+  const filteredData = selectedEvent.attendanceList
+
 
 
 
@@ -84,29 +71,23 @@ export const DailyAttandenceDataTable: React.FC<DailyAttandenceDataTableProps> =
       <div className="flex flex-col md:flex-row items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold">{selectedClasss.teacherName}</h1>
-            <p className="text-muted-foreground">{selectedClasss.year}</p>
+            <h1 className="text-2xl font-bold">{selectedEvent.teacher}</h1>
+            <p className="text-muted-foreground">{selectedEvent.year}</p>
+            <p className="text-muted-foreground">{selectedEvent.subject}</p>
           </div>
         </div>
-        <Input
+        {/* <Input
           placeholder="Search Student..."
           value={searchTerm}
           onChange={(event) => setSearchTerm(event.target.value)}
           className="max-w-sm"
-        />
+        /> */}
         <div className="text-muted-foreground">
          
         </div>
       </div>
 
       <div className="bg-card p-4 rounded-lg shadow-md transition-shadow hover:shadow-lg">
-        {selectedEvent && (
-          <>
-            <h2 className="text-lg font-medium mb-4">{selectedClasss.subject}</h2>
-            <p className="text-muted-foreground mb-4">{selectedEvent.extendedProps?.description}</p>
-          </>
-        )}
-        <h2 className="text-lg font-medium mb-4">{selectedSubject}</h2>
         <Separator className="my-8" />
         <div className="overflow-auto" style={{ maxHeight: '400px' }}>
           <Table>

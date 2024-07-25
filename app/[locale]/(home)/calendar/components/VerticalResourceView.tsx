@@ -90,11 +90,139 @@ setOptions({
   theme: 'ios',
   themeVariant: 'light'
 });
+const formatDateToYYYYMMDD = (date) => {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Months are 0-based, so add 1
+  const day = date.getDate().toString().padStart(2, '0'); // Pad day with leading zero if needed
 
+  return `${year}-${month}-${day}`;
+};
+const dayToWeekDay = {
+  "Sunday": "SU",
+  "Monday": "MO",
+  "Tuesday": "TU",
+  "Wednesday": "WE",
+  "Thursday": "TH",
+  "Friday": "FR",
+  "Saturday": "SA"
+};
 const now = new Date();
 const day = now.getDay();
+const month = 7; // August (0-based index)
+const year = now.getFullYear() - 1; // One year before the current year
 const monday = now.getDate() - day + (day == 0 ? -6 : 1);
+const extractRoomNumber = (room:string) => {
+  const match = room.match(/(\d+)$/); // Match the last number in the string
+  return match ? parseInt(match[1], 10) : 1; // Default to 1 if no number is found
+};
+
 const VerticalResourceView = () => {
+  const {classes}=useData()
+  const [events,setEvents]=useState<MbscCalendarEvent[]>([])
+  const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
+  const [openCard, setOpenCard] = useState(false);
+  useEffect(() => {
+    const fetchAndFormatData = async () => {
+      console.log('Fetched classes:', classes); // Log the fetched data
+      const formattedEvents = classes.flatMap((classItem) => {
+        // Extract groups array and other necessary fields
+        const groups = classItem.groups || [];
+        const classId = classItem.id; // Extract the class ID from classItem
+        const color=getRandomColor()
+        return groups.flatMap((group) => {
+          const { day, start, end, room, subject } = group;
+  
+          if (!start || !end || !room || !subject) {
+            console.error('Missing required event properties:', group);
+            return []; // Skip this event if any required property is missing
+          }
+   
+          const targetDayAbbreviation = dayToWeekDay[day];
+                       
+          if (!targetDayAbbreviation) {
+            throw new Error("Invalid day provided");
+          }
+          const firstDayOfMonth = new Date(year, month, 1);
+          let targetDate = new Date(firstDayOfMonth);
+          while (targetDate.getDay() !== Object.keys(dayToWeekDay).indexOf(day)) {
+            targetDate.setDate(targetDate.getDate() + 1);
+          }
+          const startDate = new Date(year, month, targetDate.getDate(), ...start.split(':').map(Number));
+          const endDate = new Date(year, month, targetDate.getDate(), ...end.split(':').map(Number));
+          const resourceNumber = extractRoomNumber(room);
+          return {
+            start: startDate.toISOString(),
+            end: endDate.toISOString(),
+            title: subject, // Add your event title here
+            resource: resourceNumber, // Set your resource ID if needed
+            color:color,
+            recurring: {
+              repeat: 'weekly',
+              until: '2025-07-25',
+              weekDays: targetDayAbbreviation,
+              interval: 1
+            },
+            extraInfo:{
+              classId:classItem.id,
+              group:group.group,
+              subject:classItem.subject,
+              year:classItem.year,
+              teacher:classItem.teacherName
+            }
+          }
+        });
+      });
+  
+      setEvents(formattedEvents);
+    };
+  
+    fetchAndFormatData();
+  }, [classes]);
+  const handleEventClick =(args) => {
+    try {
+      // Validate the event object
+      if (!args || !args.event || !args.event.start || !args.event.extraInfo) {
+        throw new Error('Invalid event data provided');
+      }
+  
+      // Validate extraInfo
+      const { classId, group } = args.event.extraInfo;
+      if (typeof classId !== 'string' || typeof group !== 'string') {
+        throw new Error('Invalid extraInfo data');
+      }
+  
+      // Format the date
+      const formattedDate = formatDateToYYYYMMDD(args.event.start);
+  
+      // Find the attendance object for the class
+      const attendance = classes.find((cls) => cls.id === classId);
+  
+      // Ensure attendance is defined before accessing its properties
+      if (!attendance) {
+        throw new Error(`Attendance object not found for classId: ${classId}`);
+      }
+  
+      // Use optional chaining and default value for safety
+      const attendanceDetail = attendance.attendance?.[`${formattedDate}-${group}`] || { attendanceList: [] };
+ 
+      // Update the selected event with details and extra info
+      setSelectedEvent({ ...args.event.extraInfo, ...attendanceDetail });
+  
+      // Open the event card
+      setOpenCard(true);
+  
+      
+    } catch (error) {
+      // Log the error for debugging
+      console.error('Error handling event click:', error);
+  
+      // Display a user-friendly message
+      alert(`An error occurred while processing the event. Please try again. ${error.message}`);
+  
+      // Optionally, you can also send error details to a logging service
+      // sendErrorToLoggingService(error);
+    }
+  }
   const myEvents = useMemo<MbscCalendarEvent[]>(
     () => [
       {
@@ -140,33 +268,33 @@ const VerticalResourceView = () => {
     () => [
       {
         id: 1,
-        name: 'Flatiron Room',
+        name: 'room 1',
         color: '#f7c4b4',
       },
       {
         id: 2,
-        name: 'The Capital City (locked)',
+        name: 'room 2',
         color: '#c6f1c9',
-        eventCreation: false,
+
       },
       {
         id: 3,
-        name: 'Heroes Square',
+        name: 'room 3',
         color: '#e8d0ef',
       },
       {
         id: 4,
-        name: 'Thunderdome',
+        name: 'room 4',
         color: '#edeaba',
       },
       {
         id: 5,
-        name: 'King’s Landing',
+        name: 'room 5',
         color: '#bacded',
       },
       {
         id:6,
-        name: 'King’s Landing',
+        name: 'room 6',
         color: '#bacded',
       },
     ],
@@ -180,7 +308,7 @@ const VerticalResourceView = () => {
         allDay: false,
         startDay: 1,
         endDay: 6,
-        startTime: '08:00',
+        startTime: '07:00',
         endTime: '22:00',
       },
     }),
@@ -204,17 +332,22 @@ const VerticalResourceView = () => {
   return (
     <div>
  <Eventcalendar
-      clickToCreate={true}
-      dragToCreate={true}
-      dragToMove={true}
-      dragToResize={true}
-      eventDelete={true}
       view={myView}
-      data={myEvents}
+      data={events}
       resources={myResources}
       colors={myColors}
+      onEventClick={handleEventClick}
     />
+
+        <AttandenceDataModel
+          open={openCard}
+          setOpen={setOpenCard}
+          selectedEvent={selectedEvent}
+
+        />
+
     </div>
+    
   );
 };
 

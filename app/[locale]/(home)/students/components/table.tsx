@@ -76,7 +76,15 @@ interface DataTableDemoProps {
     const [openPayment,setOpenPayment]=React.useState(false)
     const t=useTranslations()
     const {students,setStudents,classes}=useData()
-
+    const orderedStudents = React.useMemo(() => {
+      // Ensure students is defined and is an array
+      if (!students || !Array.isArray(students)) {
+        return [];
+      }
+    
+      // Sort the students array by studentIndex in ascending order
+      return [...students].sort((a, b) => a.studentIndex - b.studentIndex);
+    }, [students]);
     const [student,setStudent]=React.useState<Student>({  
       id: '123456',
       level: 'Intermediate',
@@ -276,7 +284,7 @@ const orderedMonths = [
   const [rowSelection, setRowSelection] = React.useState({})
     
   const table = useReactTable({
-    data:students,
+    data:orderedStudents,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
