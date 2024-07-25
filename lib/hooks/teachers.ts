@@ -1,5 +1,5 @@
 import { db } from "@/firebase/firebase-config";
-import { addDoc, collection, updateDoc, doc, deleteDoc, arrayUnion } from "firebase/firestore";
+import { addDoc, collection, updateDoc, doc, deleteDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { Teacher, TeacherSchema } from '@/validators/teacher';
 interface Time {
     day: string;
@@ -97,3 +97,20 @@ export const addGroup=async(cls:any)=>{
     });
 
 }
+export const removeGroupFromDoc = async (clss,studentArray) => {
+    try {
+        // Reference to the specific document in the Groups collection
+        const docRef = doc(db, 'Groups', clss.classId);
+        
+        // Update the document to remove the specified group from the groups array
+        await updateDoc(docRef, {
+            groups: arrayRemove({day:clss.day,end:clss.end,group:clss.group,quota:clss.quota,room:clss.room,start:clss.start,stream:clss.stream,subject:clss.subject})
+        });
+        studentArray.map(async(std)=>{
+            await updateDoc(doc(db,'Students',std.id),{
+                classesUIDs:arrayRemove({id:clss.classId,group:std.group})
+            })
+        })
+        console.log(`Group removed successfully from document ID: ${docId}`);
+    } catch (error) {
+    }}

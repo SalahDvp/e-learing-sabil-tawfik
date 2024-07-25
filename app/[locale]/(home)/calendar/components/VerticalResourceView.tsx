@@ -9,6 +9,18 @@ import resourceTimelinePlugin from '@fullcalendar/resource-timeline'; // Import 
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import { fr } from 'date-fns/locale'; // Import French locale
+import '@mobiscroll/react/dist/css/mobiscroll.min.css';
+
+import { useCallback,useMemo} from 'react';
+import {
+  Eventcalendar,
+  MbscCalendarColor,
+  MbscCalendarEvent,
+  MbscEventcalendarView,
+  MbscResource,
+  setOptions,
+} from '@mobiscroll/react';
+import { FC} from 'react';
 import './style.css'
 // Function to generate a random color
 const getRandomColor = () => {
@@ -74,153 +86,134 @@ const generateRecurringEvents = (startDateTime: string, endDateTime: string, day
 
   return events;
 };
+setOptions({
+  theme: 'ios',
+  themeVariant: 'light'
+});
 
+const now = new Date();
+const day = now.getDay();
+const monday = now.getDate() - day + (day == 0 ? -6 : 1);
 const VerticalResourceView = () => {
-  const { classes } = useData();
-  const [events, setEvents] = useState<any[]>([]);
-  const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
-  const [openCard, setOpenCard] = useState(false);
+  const myEvents = useMemo<MbscCalendarEvent[]>(
+    () => [
+      {
+        start: new Date(now.getFullYear(), now.getMonth(), monday + 1, 11),
+        end: new Date(now.getFullYear(), now.getMonth(), monday + 1, 12, 30),
+        title: 'Product team mtg.',
+        resource: 1,
+      },
+      {
+        start: new Date(now.getFullYear(), now.getMonth(), monday + 3, 15),
+        end: new Date(now.getFullYear(), now.getMonth(), monday + 3, 17),
+        title: 'Decision Making mtg.',
+        resource: 1,
+      },
+      {
+        start: new Date(now.getFullYear(), now.getMonth(), monday + 2, 12),
+        end: new Date(now.getFullYear(), now.getMonth(), monday + 2, 15, 30),
+        title: 'Shaping the Future',
+        resource: 2,
+      },
+      {
+        start: new Date(now.getFullYear(), now.getMonth(), monday + 3, 9),
+        end: new Date(now.getFullYear(), now.getMonth(), monday + 3, 12),
+        title: 'Innovation mtg.',
+        resource: 3,
+      },
+      {
+        start: new Date(now.getFullYear(), now.getMonth(), monday + 3, 11),
+        end: new Date(now.getFullYear(), now.getMonth(), monday + 3, 16),
+        title: 'Decision Making mtg.',
+        resource: 4,
+      },
+      {
+        start: new Date(now.getFullYear(), now.getMonth(), monday + 3, 11),
+        end: new Date(now.getFullYear(), now.getMonth(), monday + 3, 13),
+        title: 'Stakeholder mtg.',
+        resource: 5,
+      },
+    ],
+    [],
+  );
+  const myResources = useMemo<MbscResource[]>(
+    () => [
+      {
+        id: 1,
+        name: 'Flatiron Room',
+        color: '#f7c4b4',
+      },
+      {
+        id: 2,
+        name: 'The Capital City (locked)',
+        color: '#c6f1c9',
+        eventCreation: false,
+      },
+      {
+        id: 3,
+        name: 'Heroes Square',
+        color: '#e8d0ef',
+      },
+      {
+        id: 4,
+        name: 'Thunderdome',
+        color: '#edeaba',
+      },
+      {
+        id: 5,
+        name: 'King’s Landing',
+        color: '#bacded',
+      },
+      {
+        id:6,
+        name: 'King’s Landing',
+        color: '#bacded',
+      },
+    ],
+    [],
+  );
 
-  // Define resources with exact IDs
-  const resources = [
-    { id: 'room 1', title: 'Room 1' },
-    { id: 'room 2', title: 'Room 2' },
-    { id: 'room 3', title: 'Room 3' },
-    { id: 'room 4', title: 'Room 4' },
-    { id: 'room 5', title: 'Room 5' },
-    { id: 'room 6', title: 'Room 6' },
-  ];
+  const myView = useMemo<MbscEventcalendarView>(
+    () => ({
+      schedule: {
+        type: 'week',
+        allDay: false,
+        startDay: 1,
+        endDay: 6,
+        startTime: '08:00',
+        endTime: '22:00',
+      },
+    }),
+    [],
+  );
 
-  useEffect(() => {
-    const fetchAndFormatData = async () => {
-      console.log('Fetched classes:', classes); // Log the fetched data
-  
-      // Use a default date if necessary
-      const todayDate = new Date().toISOString().split('T')[0]; // Use today's date
-  
-      const formattedEvents = classes.flatMap((classItem) => {
-        // Extract groups array and other necessary fields
-        const groups = classItem.groups || [];
-        const classId = classItem.id; // Extract the class ID from classItem
-  
-        return groups.flatMap((group) => {
-          const { day, start, end, room, subject } = group;
-  
-          // Basic validation
-          if (!start || !end || !room || !subject) {
-            console.error('Missing required event properties:', group);
-            return []; // Skip this event if any required property is missing
-          }
-  
-          // Convert time strings to ISO datetime strings
-          const startDateTime = formatTimeToDateTime(start, todayDate);
-          const endDateTime = formatTimeToDateTime(end, todayDate);
-  
-          if (!startDateTime || !endDateTime) {
-            console.error('Invalid time for event', `${group}, { start, end }`);
-            return []; // Skip this event if time is invalid
-          }
-  
-          console.log('Event data:', { title: subject, resourceId: room, start: startDateTime, end: endDateTime, id: classId });
-  
-          return generateRecurringEvents(startDateTime, endDateTime, day, room, subject, classId);
-        });
-      });
-  
-      console.log('Formatted events:', formattedEvents); // Log the formatted events
-  
-      setEvents(formattedEvents);
-    };
-  
-    fetchAndFormatData();
-  }, [classes]);
-  
-
-  const [selectedClass ,setSelectedClass] = useState()
-  const handleEventClick = (info: any) => {
-    // Log the whole event object for debugging
-    console.log('Event object:', info.event);
-  
-    // Extract the event ID from extendedProps
-    const eventId = info.event.id;
-    if (!eventId) {
-      console.error('Event ID is missing from extendedProps');
-      return; // Exit the function if eventId is undefined
-    }
-  
-    console.log('Event ID:', eventId); // Debugging line
-  
-    // Find the matching class based on the ID
-    const matchingClass = classes.find((classItem) =>
-      classItem.id === eventId // Match based on the class ID
-    );
-  
-    setSelectedClass(matchingClass)
-    console.log('Selected event details:', info.event);
-    console.log('Matching class item:', matchingClass);
-  
-    // Update state to show the event details
-    setSelectedEvent(info.event);
-    setOpenCard(true); // Open the sheet
-  };
-  
-  
-console.log('zakamo');
-
-
+  const myColors = useMemo<MbscCalendarColor[]>(
+    () => [
+      {
+        start: '05:00',
+        end: '22:00',
+        recurring: {
+          repeat: 'daily',
+        },
+        resource: 2,
+        background: '#d3b9711a',
+      },
+    ],
+    [],
+  );
   return (
     <div>
- {events && ( <FullCalendar
-      headerToolbar={{
-        left: 'prev,next today',
-        center: 'title',
-        right: 'resourceTimelineDay,resourceTimelineWeek,resourceTimelineMonth',
-      }}
-      plugins={[resourceTimelinePlugin, dayGridPlugin, timeGridPlugin]}
-      initialDate={new Date()}
-      initialView='resourceTimelineDay'
-      resources={(fetchInfo, successCallback) =>
-        successCallback(resources)
-      }
-      dayMaxEventRows={true}
-      editable={true}
-      droppable={true}
-      events={events}
-      slotMinTime="07:00:00"
-      slotMaxTime="23:00:00"
-      scrollTime="09:00:00"
-      resourceAreaWidth="150px"
-      contentHeight='auto'
-      views={{
-        resourceTimelineWeek: {
-          columnHeaderFormat: { weekday: 'short', day: 'numeric' },
-          slotDuration: '00:30:00' // Set slot duration to 30 minutes
-        },
-        resourceTimelineDay: {
-          slotDuration: '00:30:00' // Set slot duration to 30 minutes
-        },
-        resourceTimelineMonth: {
-          slotDuration: '00:30:00' // Set slot duration to 30 minutes
-        },
-        timeGridWeek: {
-          slotDuration: '00:30:00' // Set slot duration to 30 minutes
-        },
-        timeGridDay: {
-          slotDuration: '00:30:00' // Set slot duration to 30 minutes
-        },
-      }}
-      locale='fr'
-      eventTimeFormat={{ hour: '2-digit', minute: '2-digit', hour12: false, locale: fr }} // Use French locale for time formatting
-      eventClick={handleEventClick} // Add event click handler
-    />)}
-      {selectedEvent && (
-        <AttandenceDataModel
-          open={openCard}
-          setOpen={setOpenCard}
-          teacher={selectedEvent.extendedProps}
-          selectedClasss={selectedClass}
-        />
-      )}
+ <Eventcalendar
+      clickToCreate={true}
+      dragToCreate={true}
+      dragToMove={true}
+      dragToResize={true}
+      eventDelete={true}
+      view={myView}
+      data={myEvents}
+      resources={myResources}
+      colors={myColors}
+    />
     </div>
   );
 };

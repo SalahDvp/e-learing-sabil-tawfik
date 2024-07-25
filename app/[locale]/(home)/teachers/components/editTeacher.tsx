@@ -55,7 +55,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import CalendarDatePicker from '../../students/components/date-picker';
 
-import { addGroup, addTeacher, updateTeacher } from '@/lib/hooks/teachers';
+import { addGroup, addTeacher, removeGroupFromDoc, updateTeacher } from '@/lib/hooks/teachers';
 import { LoadingButton } from '@/components/ui/loadingButton';
 
 import { UseFormReturn } from 'react-hook-form';
@@ -606,10 +606,6 @@ function getClassKey(cls) {
      const classId=classes.find((cls)=>cls.teacherName===teacher.name && cls.year == dataClass.year)
         result.added.push({...dataClass,classId:classId.id,group:dataClass.index+1,subject:classId.subject});
       }
-      // else if (dataClass.group !== teacherClass.group) {
-      //   // Class is in both but with different sections (updated)
-      //   result.updated.push(dataClass);
-      // }
     }
   
     // // Find removed classes
@@ -628,6 +624,7 @@ function getClassKey(cls) {
     // Add students to classes
     if (added && Array.isArray(added)) {
       for (const clss of added) {
+        
         await addGroup(clss)
         setClasses(prevClasses => 
           prevClasses.map(cls =>
@@ -642,7 +639,7 @@ function getClassKey(cls) {
     prevTeachers.map(tchr =>
   tchr.id === teacher.id ? {
   ...tchr,
-  classes: [...tchr.classes, clss]
+  classes: [...tchr.classes, {...clss}]
   } : tchr
   )
   );
@@ -652,8 +649,12 @@ function getClassKey(cls) {
   //   // Remove students from classes
     if (removed && Array.isArray(removed)) {
       for (const clss of removed) {
-
-        
+        const studentsToRemove = classes
+        .find(cls => cls.id === clss.classId)
+        ?.students
+        .filter(std => std.group === clss.group) || [];
+        await removeGroupFromDoc(clss,studentsToRemove)
+          
        setClasses(prevClasses => 
           prevClasses.map(cls =>
       cls.id === clss.id ? {
@@ -672,10 +673,7 @@ function getClassKey(cls) {
         : tchr
     )
   );
-const studentsToRemove = classes
-  .find(cls => cls.id === clss.id)
-  ?.students
-  .filter(std => std.group === clss.group) || [];
+
 
   setStudents(prevStudents =>
     prevStudents.map(std => {

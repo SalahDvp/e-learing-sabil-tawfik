@@ -9,7 +9,11 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@devexpress/dx-react-core": "^4.0.8",
+    "@devexpress/dx-react-scheduler": "^4.0.8",
     "@ducanh2912/next-pwa": "^10.2.6",
+    "@emotion/cache": "^11.13.1",
+    "@emotion/react": "^11.13.0",
     "@fullcalendar/core": "^6.1.15",
     "@fullcalendar/react": "^6.1.15",
     "@fullcalendar/resource": "^6.1.15",
@@ -17,6 +21,8 @@
     "@fullcalendar/resource-timeline": "^6.1.15",
     "@fullcalendar/rrule": "^6.1.15",
     "@hookform/resolvers": "^3.3.4",
+    "@mobiscroll/react": "npm:@mobiscroll/react-next-trial@^5.31.2",
+    "@mui/material-nextjs": "^5.16.4",
     "@radix-ui/react-accordion": "^1.1.2",
     "@radix-ui/react-alert-dialog": "^1.1.1",
     "@radix-ui/react-avatar": "^1.0.4",
