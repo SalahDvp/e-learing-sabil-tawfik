@@ -27,44 +27,6 @@ export type studentAttandance = {
   name: string;
   status: string;
 };
-
-const algebraData = 
-{
-  id: "1",
-  name: "John Doe",
-  attendance: {
-     "2023-06-01":{attendanceList:[{name:"youcef",status:"present"}]},
-     "2023-06-02":{attendanceList:[{name:"youcef",status:"present"}]},
-     "2023-06-03":{attendanceList:[{name:"youcef",status:"present"}]},
-     "2023-06-04":{attendanceList:[{name:"youcef",status:"present"}]},
-     "2023-06-05":{attendanceList:[{name:"youcef",status:"present"}]},
-     "2023-06-06":{attendanceList:[{name:"youcef",status:"present"}]},
-     "2023-06-07":{attendanceList:[{name:"youcef",status:"present"}]},
-     "2023-06-08":{attendanceList:[{name:"youcef",status:"present"}]},
-     "2023-06-09":{attendanceList:[{name:"youcef",status:"present"}]},
-     "2023-06-10":{attendanceList:[{name:"youcef",status:"present"}]},
-     "2023-06-11":{attendanceList:[{name:"youcef",status:"present"}]},
-     "2023-06-12":{attendanceList:[{name:"youcef",status:"present"}]},
-     "2023-06-13":{attendanceList:[{name:"youcef",status:"present"}]},
-     "2023-06-14":{attendanceList:[{name:"youcef",status:"present"}]},
-     "2023-06-15":{attendanceList:[{name:"youcef",status:"present"}]},
-     "2023-06-16":{attendanceList:[{name:"youcef",status:"present"}]},
-     "2023-06-17":{attendanceList:[{name:"youcef",status:"present"}]},
-     "2023-06-18":{attendanceList:[{name:"youcef",status:"present"}]},
-     "2023-06-19":{attendanceList:[{name:"youcef",status:"present"}]},
-     "2023-06-20":{attendanceList:[{name:"youcef",status:"present"}]},
-     "2023-06-21":{attendanceList:[{name:"youcef",status:"present"}]},
-     "2023-06-22":{attendanceList:[{name:"youcef",status:"present"}]},
-     "2023-06-23":{attendanceList:[{name:"youcef",status:"present"}]},
-     "2023-06-24":{attendanceList:[{name:"youcef",status:"present"}]},
-     "2023-06-25":{attendanceList:[{name:"youcef",status:"present"}]},
-     "2023-06-26":{attendanceList:[{name:"youcef",status:"present"}]},
-     "2023-06-27":{attendanceList:[{name:"youcef",status:"present"}]},
-     "2023-06-28":{attendanceList:[{name:"youcef",status:"present"}]},
-     "2023-06-29":{attendanceList:[{name:"youcef",status:"present"}]},
-     "2023-06-30":{attendanceList:[{name:"youcef",status:"present"}]},
-  },
-}
 const getStatusIcon = (status: string) => {
   // Define how you want to render the status icon
   return status === "present" ? "✔️" : "❌";
@@ -79,47 +41,71 @@ const generateDateColumns = (dates: string[]) => {
   }));
 };
 const transformData = (data: any) => {
-  if(data){
-    const { id, name, attendance } = data;
-    // Create a map to store the attendance statuses by name and date
-    const attendanceMap: { [key: string]: { [key: string]: string } } = {};
-  
+  if (data) {
+    const { id, attendance, students } = data;
+
+    // Create a map to store the attendance statuses by name, ID, and date
+    const attendanceMap: { [key: string]: { [key: string]: string; index?: number; group?: string } } = {};
+
     // Initialize the map with all dates
     for (const [date, { attendanceList }] of Object.entries(attendance)) {
-      attendanceList.forEach(({ name, status,index,group}) => {
-        if (!attendanceMap[name]) {
-          attendanceMap[name] = {};
+      // Create a set of student IDs for fast lookup
+      const studentIdsSet = new Set(students.map((student: any) => student.id));
+
+      // For each student, set their status based on whether they appear in attendanceList
+      students.forEach(student => {
+        const { id: studentId, name } = student;
+        const studentKey = `${name}-${studentId}`; // Unique key for each student by name and ID
+        
+        if (!attendanceMap[studentKey]) {
+          attendanceMap[studentKey] = {};
         }
-        attendanceMap[name][date] = status;
-        attendanceMap[name].index = index;
-        attendanceMap[name].group= group;
+
+        // Check if the student is in the attendance list
+        const studentInAttendance = attendanceList.find(({ id }) => id === studentId);
+
+        if (studentInAttendance) {
+          const { status, index, group } = studentInAttendance;
+          attendanceMap[studentKey][date] = status;
+          attendanceMap[studentKey].index = index;
+          attendanceMap[studentKey].group = group;
+        } else {
+          // Mark the student as absent if not found in the attendance list
+          attendanceMap[studentKey][date] = 'Absent';
+          attendanceMap[studentKey].index = student.index;
+          attendanceMap[studentKey].group = student.group;
+        }
       });
     }
-  
+
     // Convert the map to an array of objects
-    const rowData = Object.keys(attendanceMap).map(name => ({
-      id,
-      name,
-      ...attendanceMap[name]
-    }));
-  
+    const rowData = students.map(student => {
+      const studentKey = `${student.name}-${student.id}`; // Unique key for each student by name and ID
+      return {
+        id:student.id,
+        name: student.name,
+        ...attendanceMap[studentKey], // Use the unique key to get the data
+      };
+    });
+
     return rowData;
   }
-  
 };
 export const ArchiveDataTable = ({teacher}) => {
   const {classes}=useData()
 
-    const [filter,setFilter]=useState('1AS')
-    const transformedData = useMemo(() => transformData(classes.find((cls)=>cls.teacherUID===teacher.id &&cls.subject===teacher.subject && cls.year===filter)), [classes,filter]);
-    const tabsList=classes.filter((cls)=>cls.teacherUID===teacher.id &&cls.subject===teacher.subject )
-      console.log(transformedData);
+    const [filter,setFilter]=useState(teacher.year[0])
+    const transformedData = useMemo(() => transformData(classes.find((cls)=>cls.teacherUID===teacher.id &&cls.subject===teacher[`educational-subject`] && cls.year===filter)), [classes,filter]);
+    const tabsList=classes.filter((cls)=>cls.teacherUID===teacher.id &&cls.subject===teacher[`educational-subject`])
+     
+
       
-    const datesKeys=useMemo(() => classes.find((cls)=>cls.teacherUID===teacher.id &&cls.subject===teacher.subject && cls.year===filter), [classes,filter]);
+    const datesKeys=useMemo(() => classes.find((cls)=>cls.teacherUID===teacher.id &&cls.subject===teacher[`educational-subject`] && cls.year===filter), [classes,filter]);
 
 
-    
-    const dates = datesKeys?Object.keys(datesKeys.attendance):null;
+    console.log("srrr",transformedData);
+   const dates = datesKeys?Object.keys(datesKeys.attendance):null;
+
     const baseColumns: ColumnDef<any>[] = [
   {
     accessorKey: "index",
@@ -142,10 +128,10 @@ export const ArchiveDataTable = ({teacher}) => {
   },
 ];
 
-// Conditionally add date columns
+// // Conditionally add date columns
   const dateColumns = dates ? generateDateColumns(dates) : [];
 
-// Combine columns
+// // Combine columns
 const columns: ColumnDef<any>[] = [...baseColumns, ...dateColumns];
 
 
@@ -155,7 +141,7 @@ const columns: ColumnDef<any>[] = [...baseColumns, ...dateColumns];
   const [rowSelection, setRowSelection] = useState({});
 
   const table = useReactTable({
-    data: transformedData,
+    data: transformedData?transformedData:[],
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -208,20 +194,20 @@ const columns: ColumnDef<any>[] = [...baseColumns, ...dateColumns];
             </Tabs>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold">List</h2>
-          <Input
+          {/* <Input
           placeholder="filter"
           value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
             table.getColumn("name")?.setFilterValue(event.target.value)
           }
           className="max-w-sm "
-        />
+        /> */}
           <Button variant="outline" className="flex items-center gap-2 hover:bg-muted/50 transition-colors">
             <DownloadIcon className="w-5 h-5" />
             Export
           </Button>
         </div>
-      {dates?  (<Table>
+<Table>
         <TableHeader>
           {table.getHeaderGroups().map(headerGroup => (
             <TableRow key={headerGroup.id}>
@@ -249,11 +235,7 @@ const columns: ColumnDef<any>[] = [...baseColumns, ...dateColumns];
             </TableRow>
           ))}
         </TableBody>
-      </Table>):(
-        <div>
-          no attendance available yet 
-          </div>
-      )}
+      </Table>
       </div>
     </div>
   );

@@ -152,8 +152,9 @@ export const addGroup=async(cls:any)=>{
 
 
     const classDocRef = doc(db, 'Groups', cls.classId);
+    const {classId,year,...rest}=cls
     await updateDoc(classDocRef, {
-      groups: arrayUnion(cls)
+      groups: arrayUnion(rest)
     });
 
 }

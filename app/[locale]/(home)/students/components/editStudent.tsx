@@ -598,10 +598,8 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,stud
     if (added && Array.isArray(added)) {
       for (const cls of added) {
         const { group, id,  name,cs } = cls;
-  const index=classes.find(cls =>
-    cls.id === id 
-  ).students.length+1
-        await addStudentToClass({...cls,index:index,year:student.year},cls.id,student.id)
+  const index=classes.find(cls =>cls.id === id).students.length+1
+        
        setClasses(prevClasses => 
           prevClasses.map(cls =>
       cls.id === id ? {
@@ -615,10 +613,16 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,stud
     prevStudents.map(std =>
 std.id === student.id ? {
   ...std,
-  classesUIDs: [...std.classesUIDs, { id:id,group:group }]
+  classesUIDs: [...std.classesUIDs, { id:id,group:group }],
+  classes:[...std.classes,{...cls}]
 } : std
 )
 );
+await addStudentToClass({...cls,index:index,year:student.year,studentName:student.name,studentID:student.id},cls.id,student.id)
+  console.log({...cls,index:index,year:student.year,studentName:student.name,studentID:student.id},cls.id,student.id);
+  
+
+
       }
     }
   
@@ -683,12 +687,12 @@ console.log("removed",cls);
  
 
   const onSubmit = async (data: Student) => {
+    
  const result=compareClasses(data.classes,student.classes)
-
  
- 
- await  processStudentChanges(result,data)
-   setOpen(false)
+    
+await  processStudentChanges(result,data)
+// nextStep()
   };
 
   return (

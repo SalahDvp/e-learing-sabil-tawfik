@@ -69,8 +69,14 @@ export const DailyAtandenceDataTable = ({teacher }: {teacher:any }) => {
        
         
         return(
-        <div className="lowercase hidden sm:table-cell">{index}</div>
+        <div className="hidden sm:table-cell">{index}</div>
       ) },
+      
+    },
+    {
+      accessorKey: "cs",
+      header: () => <div>cs</div>,
+      cell: ({ row }) => <div>{row.getValue("cs")}</div>,
     },
     // Add any additional columns you might need here
   ], []);

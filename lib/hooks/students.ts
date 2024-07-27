@@ -160,11 +160,11 @@ export const formatDateToYYYYMMDD = (date: Date): string => {
     }
   };
   export async function addStudentToClass(student,classId,studentId) {
-    const { group, id, index, name, year,cs } = student;
+    const { group, id, index, name, year,cs,studentName,studentID } = student;
   
     const classDocRef = doc(db, 'Groups', classId);
     await updateDoc(classDocRef, {
-      students: arrayUnion({ group, id, index, name, year,cs })
+      students: arrayUnion({ group, id:studentID, index, name:studentName, year,cs })
     });
   
     const studentDocRef = doc(db, 'Students', studentId);
