@@ -92,18 +92,20 @@ const transformData = (data: any) => {
   }
 };
 export const ArchiveDataTable = ({teacher}) => {
-  const {classes}=useData()
+  const {classes,teachers}=useData()
 
     const [filter,setFilter]=useState(teacher.year[0])
     const transformedData = useMemo(() => transformData(classes.find((cls)=>cls.teacherUID===teacher.id &&cls.subject===teacher[`educational-subject`] && cls.year===filter)), [classes,filter]);
-    const tabsList=classes.filter((cls)=>cls.teacherUID===teacher.id &&cls.subject===teacher[`educational-subject`])
+    const tabsList = useMemo(() => {
+      return teacher.year
+    }, [classes, teacher.id, teacher['educational-subject']]);
      
 
       
     const datesKeys=useMemo(() => classes.find((cls)=>cls.teacherUID===teacher.id &&cls.subject===teacher[`educational-subject`] && cls.year===filter), [classes,filter]);
 
 
-    console.log("srrr",transformedData);
+    console.log("srrr",teacher);
    const dates = datesKeys?Object.keys(datesKeys.attendance):null;
 
     const baseColumns: ColumnDef<any>[] = [
@@ -180,12 +182,12 @@ const columns: ColumnDef<any>[] = [...baseColumns, ...dateColumns];
       </div>
       <Separator className="my-8" />
       <div>
-      <Tabs defaultValue={tabsList[0]?.year}>
+      <Tabs defaultValue={tabsList[0]}>
               <div className="flex items-center">
                 <TabsList>
                   {tabsList.map((level) => (
-                    <TabsTrigger key={level.year} value={level.year} onClick={() =>setFilter(level.year)}>
-                      {level.year}
+                    <TabsTrigger key={level} value={level} onClick={() =>setFilter(level)}>
+                      {level}
                     </TabsTrigger>
                   ))}
                 </TabsList>

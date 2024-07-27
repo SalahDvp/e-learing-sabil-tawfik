@@ -784,6 +784,24 @@ function getClassKey(cls) {
                 return cls;
               })
             );
+            const studentsToRemove = classes
+            .find(cls => cls.id === classupdate.classId)
+            ?.students
+            .filter(std => std.group === classupdate.group) || [];
+            setStudents(prevStudents =>
+              prevStudents.map(std => {
+                if (studentsToRemove.some(st => st.id === std.id)) {
+                  // If the student is in studentsToRemove, update their classes
+                  return {
+                    ...std,
+                    classes: std.classes.map(cls =>
+                      cls.id === classupdate.classId && cls.group === classupdate.group ? {...classupdate } : cls
+                    )
+                  };
+                }
+                return std; // Return the student as is if not in studentsToRemove
+              })
+            );
         }
     }
   }
