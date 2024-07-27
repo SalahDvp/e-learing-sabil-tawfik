@@ -160,12 +160,12 @@ interface DataTableDemoProps {
          }
       },
       {
-        accessorKey: "student",
-        header: () => <div >{t('student')}</div>,
+        accessorKey: "name",
+        header: () => <div >{t('name')}</div>,
   
         cell: ({ row }) => (
           <div className="capitalize">
-             <div className="font-medium">{row.getValue("student")}</div>
+             <div className="font-medium">{row.getValue("name")}</div>
           </div>
         ),
       },

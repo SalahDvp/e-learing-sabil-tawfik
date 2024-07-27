@@ -1,5 +1,5 @@
 import { db } from "@/firebase/firebase-config";
-import { addDoc, collection, updateDoc, doc, deleteDoc, arrayUnion, arrayRemove,setDoc } from "firebase/firestore";
+import { addDoc, collection, updateDoc, doc, deleteDoc, arrayUnion, arrayRemove,setDoc, writeBatch, getDoc } from "firebase/firestore";
 import { Teacher, TeacherSchema } from '@/validators/teacher';
 
 import { format, startOfWeek, addWeeks, eachDayOfInterval, endOfWeek } from 'date-fns';
@@ -148,15 +148,21 @@ export const deleteTeacher = async(teacherId:string)=>{
         throw error; // Optionally re-throw the error to propagate it further if needed
     }
 }
-export const addGroup=async(cls:any)=>{
-
-
-    const classDocRef = doc(db, 'Groups', cls.classId);
-    const {classId,year,...rest}=cls
-    await updateDoc(classDocRef, {
-      groups: arrayUnion(rest)
-    });
-
+export const addGroup=async(added:any)=>{
+        const batch = writeBatch(db); // Initialize the batch
+    
+        // Update Firestore documents in batch
+        for (const clss of added) {
+          const classDocRef = doc(db, 'Groups', clss.classId);
+          const { classId, year,index, ...rest } = clss;
+    
+          batch.update(classDocRef, {
+            groups: arrayUnion(rest)
+          })   
+        }
+    
+        // Commit the batch
+        await batch.commit();    
 }
 export const removeGroupFromDoc = async (clss,studentArray) => {
     try {
@@ -175,3 +181,32 @@ export const removeGroupFromDoc = async (clss,studentArray) => {
         console.log(`Group removed successfully from document ID: ${docId}`);
     } catch (error) {
     }}
+    export async function updateClassGroup(groupId,group, updatedGroupDetails) {
+        // Reference to the document
+        const userRef = doc(db, 'Groups',groupId);
+      
+        // Fetch the document
+        const userDoc = await getDoc(userRef);
+        
+        if (userDoc.exists()) {
+          // Get the existing array
+          const userData = userDoc.data();
+          let tasks = userData.groups || [];
+      
+          // Find the index of the task you want to update
+          const taskIndex = tasks.findIndex(task => task.group === group);
+      
+          if (taskIndex !== -1) {
+            // Update the specific task
+            tasks[taskIndex] = { ...tasks[taskIndex], ...updatedGroupDetails };
+      
+            // Write back the updated array to Firestore
+            await updateDoc(userRef, { groups: tasks });
+            console.log('Task updated successfully!');
+          } else {
+            console.log('Task not found.');
+          }
+        } else {
+          console.log('User not found.');
+        }
+      }

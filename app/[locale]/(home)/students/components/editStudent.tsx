@@ -46,7 +46,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import CalendarDatePicker from './date-picker';
 import { Separator } from '@/components/ui/separator';
 import QRCode from 'qrcode'
-import { addStudent, addStudentToClass, changeStudentGroup, removeStudentFromClass } from '@/lib/hooks/students';
+import { addStudent, addStudentToClass, changeStudentGroup, removeStudentFromClass, updateStudent } from '@/lib/hooks/students';
 import { LoadingButton } from '@/components/ui/loadingButton';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
@@ -687,12 +687,34 @@ console.log("removed",cls);
  
 
   const onSubmit = async (data: Student) => {
-    
  const result=compareClasses(data.classes,student.classes)
  
     
 await  processStudentChanges(result,data)
-// nextStep()
+const StudentInfoToUpdate = {
+  name: data.name,
+  year: data.year,
+  birthdate: data.birthdate,
+  phoneNumber: data.phoneNumber,
+  field:data.field,
+  birthplace:data.birthplace,
+  school:data.school
+};
+
+
+// Update the teacher in Firestore
+await updateStudent(StudentInfoToUpdate,student.id);
+setStudents((prev: Student[]) => 
+prev.map(t => t.id === student.id ? { ...t, ...StudentInfoToUpdate } : t)
+);
+nextStep()
+
+
+
+
+
+
+   setOpen(false)
   };
 
   return (
