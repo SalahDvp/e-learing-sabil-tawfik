@@ -116,10 +116,10 @@ export const addTeacher = async (teacher: Teacher) => {
             }
         }
         await updateDoc(doc(db, "Teachers", teacherRef.id), {
-            groupUIDs: groupUIDs,
+            groupUIDs:arrayUnion( groupUIDs),
         });
         console.log("Groups added successfully");
-        return {id:teacherRef.id,groupUIDs:groupUIDs};
+        return {id:teacherRef.id,groupUIDs:arrayUnion( groupUIDs)};
     } catch (error) {
         console.error("Error adding Teacher:", error);
         throw error; // Optionally re-throw the error to propagate it further if needed
@@ -253,7 +253,7 @@ export const removeGroupFromDoc = async (clss,studentArray) => {
                 }
             
             await updateDoc(doc(db, "Teachers", teacherId), {
-                groupUIDs: groupUIDs,
+                groupUIDs: arrayUnion(groupUIDs),
             });
             return {...clss,classId:groupRef.id};
         } catch (error) {

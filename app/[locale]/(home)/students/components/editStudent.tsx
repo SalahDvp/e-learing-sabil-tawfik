@@ -1,5 +1,7 @@
 "use client"
 import React, { useState, useRef } from 'react';
+import { useToast } from "@/components/ui/use-toast"
+
 import {
   Dialog,
   DialogClose,
@@ -685,7 +687,7 @@ console.log("removed",cls);
     }
   
  
-
+    const {toast}=useToast()
   const onSubmit = async (data: Student) => {
  const result=compareClasses(data.classes,student.classes)
  
@@ -711,7 +713,10 @@ nextStep()
 
 
 
-
+toast({
+  title: "Student Updated!",
+  description: `The student, ${data.name} info are updated `,
+});
 
 
    setOpen(false)

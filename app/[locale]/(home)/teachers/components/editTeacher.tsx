@@ -3,6 +3,8 @@ import React from 'react';
 import {
   ChevronDownIcon,
 } from "@radix-ui/react-icons"
+import { useToast } from "@/components/ui/use-toast"
+
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -870,6 +872,7 @@ function getClassKey(cls) {
      
     }
   }
+  const {toast}=useToast()
   const onSubmit = async(data:Teacher) => {
 const result=compareClasses(data.classes,teacher.classes)
 
@@ -884,7 +887,10 @@ const result=compareClasses(data.classes,teacher.classes)
     phoneNumber: teacherData.phoneNumber,
   };
 
-  
+  toast({
+    title: "Teacher Updated!",
+    description: `The Teacher, ${data.name} info are updated `,
+  });
   // Update the teacher in Firestore
   await updateTeacher(teacherInfoToUpdate,teacher.id);
   setTeachers((prev: Teacher[]) => 
@@ -892,6 +898,8 @@ const result=compareClasses(data.classes,teacher.classes)
 );
   nextStep()
  
+
+  
     
   };
 

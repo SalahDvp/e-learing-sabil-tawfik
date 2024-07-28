@@ -5,6 +5,8 @@ import {
   ChevronDownIcon,
   DotsHorizontalIcon,
 } from "@radix-ui/react-icons"
+import { useToast } from "@/components/ui/use-toast"
+
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -143,6 +145,9 @@ interface DataTableDemoProps {
       const yearAbbreviation = date.getFullYear().toString().substr(-2);
       return `${monthAbbreviation}${yearAbbreviation}`;
     };
+
+    const {toast}=useToast()
+    
     const columns: ColumnDef<any>[] = [
       {
         accessorKey: "index",
@@ -232,7 +237,16 @@ interface DataTableDemoProps {
                   {t('edit')} </DropdownMenuItem>
                 <DropdownMenuItem onClick={() =>{deleteStudent(student,classes), setStudents((prevStudents:any) =>
       prevStudents.filter((std:any) => std.id !== student.id)
-    )}}>
+
+    
+
+
+    )
+    toast({
+      title: "Student Deleted!",
+      description: `The student, ${student.name} Has been Deleted`,
+    });
+    }}>
           {t('delete')} </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
