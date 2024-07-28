@@ -1,5 +1,5 @@
 import { db } from "@/firebase/firebase-config";
-import { addDoc, collection, updateDoc, doc, deleteDoc, arrayUnion, arrayRemove,setDoc } from "firebase/firestore";
+import { addDoc, collection, updateDoc, doc, deleteDoc, arrayUnion, arrayRemove,setDoc, writeBatch, getDoc } from "firebase/firestore";
 import { Teacher, TeacherSchema } from '@/validators/teacher';
 
 import { format, startOfWeek, addWeeks, eachDayOfInterval, endOfWeek } from 'date-fns';
@@ -114,16 +114,19 @@ export const addTeacher = async (teacher: Teacher) => {
                     attendanceList: []
                 });
             }
-        }
+        
         await updateDoc(doc(db, "Teachers", teacherRef.id), {
-            groupUIDs: groupUIDs,
+            groupUIDs: arrayUnion( groupRef.id),
         });
         console.log("Groups added successfully");
-        return {id:teacherRef.id,groupUIDs:groupUIDs};
+        console.log('1st groupUIDs',groupUIDs);
+    }
+        return {id:teacherRef.id,groupUIDs:arrayUnion( groupUIDs)};
     } catch (error) {
         console.error("Error adding Teacher:", error);
         throw error; // Optionally re-throw the error to propagate it further if needed
     }
+
 };
 
 export const updateTeacher = async(updatedteacher: Teacher,teacherId:string)=>{
@@ -148,14 +151,21 @@ export const deleteTeacher = async(teacherId:string)=>{
         throw error; // Optionally re-throw the error to propagate it further if needed
     }
 }
-export const addGroup=async(cls:any)=>{
-
-
-    const classDocRef = doc(db, 'Groups', cls.classId);
-    await updateDoc(classDocRef, {
-      groups: arrayUnion(cls)
-    });
-
+export const addGroup=async(added:any)=>{
+        const batch = writeBatch(db); // Initialize the batch
+    
+        // Update Firestore documents in batch
+        for (const clss of added) {
+          const classDocRef = doc(db, 'Groups', clss.classId);
+          const { classId, year,index, ...rest } = clss;
+    
+          batch.update(classDocRef, {
+            groups: arrayUnion(rest)
+          })   
+        }
+    
+        // Commit the batch
+        await batch.commit();    
 }
 export const removeGroupFromDoc = async (clss,studentArray) => {
     try {
@@ -174,3 +184,87 @@ export const removeGroupFromDoc = async (clss,studentArray) => {
         console.log(`Group removed successfully from document ID: ${docId}`);
     } catch (error) {
     }}
+    export async function updateClassGroup(groupId,group, updatedGroupDetails) {
+        // Reference to the document
+        const userRef = doc(db, 'Groups',groupId);
+      
+        // Fetch the document
+        const userDoc = await getDoc(userRef);
+        
+        if (userDoc.exists()) {
+          // Get the existing array
+          const userData = userDoc.data();
+          let tasks = userData.groups || [];
+      
+          // Find the index of the task you want to update
+          const taskIndex = tasks.findIndex(task => task.group === group);
+      
+          if (taskIndex !== -1) {
+            // Update the specific task
+            tasks[taskIndex] = { ...tasks[taskIndex], ...updatedGroupDetails };
+      
+            // Write back the updated array to Firestore
+            await updateDoc(userRef, { groups: tasks });
+            console.log('Task updated successfully!');
+          } else {
+            console.log('Task not found.');
+          }
+        } else {
+          console.log('User not found.');
+        }
+      }
+      export const addNewClasses = async (clss:any,teacherId:string) => {
+        try {
+    
+                const groupUIDs: string[] = [];
+                const currentDate = new Date();
+                const groupRef= await addDoc(collection(db, "Groups"), clss);
+                groupUIDs.push(groupRef.id);
+                const attendanceRef = collection(groupRef, "Attendance");
+    
+                for (const cls of clss.groups) {
+                    const thisWeekStartDate = startOfWeek(currentDate, { weekStartsOn: 0 });
+                    const nextWeekStartDate = addWeeks(thisWeekStartDate, 1);
+    
+                    // Create attendance for this week
+                    const thisWeekDate = getNextDayOfWeek(cls.day, thisWeekStartDate);
+                    const formattedDateThisWeek = format(thisWeekDate, 'yyyy-MM-dd');
+                    const dateTimeUIDThisWeek = `${formattedDateThisWeek}-${cls.group}`;
+    
+                    // Add attendance document for this week
+                    await setDoc(doc(attendanceRef, dateTimeUIDThisWeek), {
+                        id: dateTimeUIDThisWeek,
+                        start: cls.start,
+                        end: cls.end,
+                        group: cls.group,
+                        attendanceList: []
+                    });
+    
+                    // Create attendance for next week
+                    const nextWeekDate = getNextDayOfWeek(cls.day, nextWeekStartDate);
+                    const formattedDateNextWeek = format(nextWeekDate, 'yyyy-MM-dd');
+                    const dateTimeUIDNextWeek = `${formattedDateNextWeek}-${cls.group}`;
+    
+                    // Add attendance document for next week
+                    await setDoc(doc(attendanceRef, dateTimeUIDNextWeek), {
+                        id: dateTimeUIDNextWeek,
+                        start: cls.start,
+                        end: cls.end,
+                        group: cls.group,
+                        attendanceList: []
+                    });
+                }
+            
+            await updateDoc(doc(db, "Teachers", teacherId), {
+                groupUIDs: arrayUnion(groupRef.id),
+              
+                
+            });
+            console.log('groupRef.id',groupRef.id);
+            console.log('groupUIDs',groupUIDs)
+            return {...clss,classId:groupRef.id};
+        } catch (error) {
+            console.error("Error adding Teacher:", error);
+            throw error; // Optionally re-throw the error to propagate it further if needed
+        }
+    };

@@ -3,6 +3,8 @@ import React from 'react';
 import {
   ChevronDownIcon,
 } from "@radix-ui/react-icons"
+import { useToast } from "@/components/ui/use-toast"
+
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -578,7 +580,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
   
   const  {setTeachers,setClasses}= useData()
 
-
+  const {toast}=useToast()
   const onSubmit = async(data:Teacher) => {
 
     
@@ -611,6 +613,12 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
     nextStep()
     setTeachers((prev: Teacher[]) => [...prev, {...data,id:teacherId.id,groupUIDs:teacherId.groupUIDs,teacher:data.name}]);
     setClasses((prev: any[]) => [...prev, ...updatedCollectiveGroups]);
+
+
+    toast({
+      title: "Teacher Added!",
+      description: `The Teacher, ${data.name} added successfully`,
+    });
   };
 
 

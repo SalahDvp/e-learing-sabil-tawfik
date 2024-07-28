@@ -147,8 +147,12 @@ const VerticalResourceView = () => {
           while (targetDate.getDay() !== Object.keys(dayToWeekDay).indexOf(day)) {
             targetDate.setDate(targetDate.getDate() + 1);
           }
+          const offset = new Date().getTimezoneOffset() * 60000; // Offset in milliseconds
           const startDate = new Date(year, month, targetDate.getDate(), ...start.split(':').map(Number));
+          startDate.setTime(startDate.getTime() - offset); // Adjust for timezone offset
+          
           const endDate = new Date(year, month, targetDate.getDate(), ...end.split(':').map(Number));
+          endDate.setTime(endDate.getTime() - offset); // Adjust for timezone offset
           const resourceNumber = extractRoomNumber(room);
           return {
             start: startDate.toISOString(),
@@ -223,47 +227,7 @@ const VerticalResourceView = () => {
       // sendErrorToLoggingService(error);
     }
   }
-  const myEvents = useMemo<MbscCalendarEvent[]>(
-    () => [
-      {
-        start: new Date(now.getFullYear(), now.getMonth(), monday + 1, 11),
-        end: new Date(now.getFullYear(), now.getMonth(), monday + 1, 12, 30),
-        title: 'Product team mtg.',
-        resource: 1,
-      },
-      {
-        start: new Date(now.getFullYear(), now.getMonth(), monday + 3, 15),
-        end: new Date(now.getFullYear(), now.getMonth(), monday + 3, 17),
-        title: 'Decision Making mtg.',
-        resource: 1,
-      },
-      {
-        start: new Date(now.getFullYear(), now.getMonth(), monday + 2, 12),
-        end: new Date(now.getFullYear(), now.getMonth(), monday + 2, 15, 30),
-        title: 'Shaping the Future',
-        resource: 2,
-      },
-      {
-        start: new Date(now.getFullYear(), now.getMonth(), monday + 3, 9),
-        end: new Date(now.getFullYear(), now.getMonth(), monday + 3, 12),
-        title: 'Innovation mtg.',
-        resource: 3,
-      },
-      {
-        start: new Date(now.getFullYear(), now.getMonth(), monday + 3, 11),
-        end: new Date(now.getFullYear(), now.getMonth(), monday + 3, 16),
-        title: 'Decision Making mtg.',
-        resource: 4,
-      },
-      {
-        start: new Date(now.getFullYear(), now.getMonth(), monday + 3, 11),
-        end: new Date(now.getFullYear(), now.getMonth(), monday + 3, 13),
-        title: 'Stakeholder mtg.',
-        resource: 5,
-      },
-    ],
-    [],
-  );
+
   const myResources = useMemo<MbscResource[]>(
     () => [
       {
@@ -306,7 +270,7 @@ const VerticalResourceView = () => {
       schedule: {
         type: 'week',
         allDay: false,
-        startDay: 1,
+        startDay: 0,
         endDay: 6,
         startTime: '07:00',
         endTime: '22:00',
@@ -337,6 +301,7 @@ const VerticalResourceView = () => {
       resources={myResources}
       colors={myColors}
       onEventClick={handleEventClick}
+      groupBy='date'
     />
 
         <AttandenceDataModel

@@ -5,6 +5,8 @@ import {
   ChevronDownIcon,
   DotsHorizontalIcon,
 } from "@radix-ui/react-icons"
+import { useToast } from "@/components/ui/use-toast"
+
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -100,7 +102,7 @@ interface DataTableDemoProps {
     };
 
 
-  
+    const {toast}=useToast()
     
     const columns: ColumnDef<any>[] = [
       {
@@ -187,7 +189,11 @@ interface DataTableDemoProps {
 
                 <DropdownMenuItem onClick={() =>{deleteTeacher(teacherss.id), setTeachers((prevTeachers:any) =>
       prevTeachers.filter((std:any) => std.id !== teacherss.id)
-    )}}>
+    )
+    toast({
+      title: "Teacher Deleted!",
+      description: `The Teacher, ${teacherss.name} Has been Deleted`,
+    });}}>
           {t('delete')} </DropdownMenuItem>
          
 

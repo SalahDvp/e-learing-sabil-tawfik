@@ -68,7 +68,26 @@ const frameworks = [
   },
 ]
  
+function parseDateTimeRange(dateTimeRange) {
+    // Split the string into components
+    const parts = dateTimeRange.split('-');
+  
+    // Ensure we have the correct number of parts
 
+    
+    const [year, month, day, startTime, endTime] = parts;
+    
+    // Create a date string in the format YYYY-MM-DD
+    const date = `${year}-${month}-${day}`;
+    
+    // Create Date objects for the start and end times
+    const startDateTime = new Date(`${date}T${startTime}:00`);
+    const endDateTime = new Date(`${date}T${endTime}:00`);
+  return {
+    startDateTime,
+    endDateTime
+  };
+}
 const checkClassTime = (scanTime: Date, student: any, groupClasses: any[]): any[] | null => {
   // Get the day of the week for the scan time
   const scanDay = scanTime.toLocaleString('en-US', { weekday: 'long' });
@@ -281,27 +300,44 @@ export default function Home() {
   
       // Set the updated classes
       setClasses(updatedClasses);
-  
-      // Perform the appropriate Firebase operation based on existence
+ 
+      
+      //Perform the appropriate Firebase operation based on existence
       if (exists) {
         await markAttendance(clsid, dateTimeUID, {
           name: studentData?.name,
           group: currentClass.group,
           index: currentClass.studentIndex,
-          status: 'present'
+          status: 'present',
+          id:studentData?.id
         });
+
       } else {
-        await setDoc(doc(db, 'Groups', clsid, 'Attendance', dateTimeUID), {
-          name: studentData?.name,
-          group: currentClass.group,
-          index: currentClass.studentIndex,
-          status: 'present'
-        });
+
+        const date=parseDateTimeRange(`${year}-${month}-${day}-${currentClass.start}-${currentClass.end}`)
+        await setDoc(
+          doc(db, 'Groups', clsid, 'Attendance', dateTimeUID),
+          {
+            group: "G1",
+            end: date.endDateTime,
+            id: dateTimeUID,
+            start: date.startDateTime,
+            attendanceList: [{
+              name: studentData?.name,
+              group: currentClass.group,
+              index: currentClass.studentIndex,
+              status: 'present',
+              id:studentData?.id
+            }]
+          },
+          { merge: true } // Merge option to combine new data with existing data
+        );
+
       }
-  
+      
       // Play success audio
       audioRefSuccess.current?.play();
-  
+      generateBillIfNeeded({name:studentData?.name,subject:currentClass.subject,year:currentClass.year})
       // Clear state
       setCurrentClass(undefined);
       setCurrentClasses(undefined);

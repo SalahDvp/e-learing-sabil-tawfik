@@ -10,6 +10,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { useToast } from "@/components/ui/use-toast"
 import { Input } from "@/components/ui/input"
 import {
   Step,
@@ -549,6 +550,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
      
   }
   const {setStudents,setClasses,students}=useData()
+  const {toast}=useToast()
   const onSubmit = async(data:Student) => {
     
     
@@ -577,6 +579,11 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
     );
   
     nextStep()
+    toast({
+      title: "Student Added!",
+      description: `The student, ${data.name} added successfully`,
+    });
+    
   };
 
   return (

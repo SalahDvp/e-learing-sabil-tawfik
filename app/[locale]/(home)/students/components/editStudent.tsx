@@ -1,5 +1,7 @@
 "use client"
 import React, { useState, useRef } from 'react';
+import { useToast } from "@/components/ui/use-toast"
+
 import {
   Dialog,
   DialogClose,
@@ -46,7 +48,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import CalendarDatePicker from './date-picker';
 import { Separator } from '@/components/ui/separator';
 import QRCode from 'qrcode'
-import { addStudent, addStudentToClass, changeStudentGroup, removeStudentFromClass } from '@/lib/hooks/students';
+import { addStudent, addStudentToClass, changeStudentGroup, removeStudentFromClass, updateStudent } from '@/lib/hooks/students';
 import { LoadingButton } from '@/components/ui/loadingButton';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
@@ -598,10 +600,8 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,stud
     if (added && Array.isArray(added)) {
       for (const cls of added) {
         const { group, id,  name,cs } = cls;
-  const index=classes.find(cls =>
-    cls.id === id 
-  ).students.length+1
-        await addStudentToClass({...cls,index:index,year:student.year},cls.id,student.id)
+  const index=classes.find(cls =>cls.id === id).students.length+1
+        
        setClasses(prevClasses => 
           prevClasses.map(cls =>
       cls.id === id ? {
@@ -615,10 +615,16 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,stud
     prevStudents.map(std =>
 std.id === student.id ? {
   ...std,
-  classesUIDs: [...std.classesUIDs, { id:id,group:group }]
+  classesUIDs: [...std.classesUIDs, { id:id,group:group }],
+  classes:[...std.classes,{...cls}]
 } : std
 )
 );
+await addStudentToClass({...cls,index:index,year:student.year,studentName:student.name,studentID:student.id},cls.id,student.id)
+  console.log({...cls,index:index,year:student.year,studentName:student.name,studentID:student.id},cls.id,student.id);
+  
+
+
       }
     }
   
@@ -681,13 +687,38 @@ console.log("removed",cls);
     }
   
  
-
+    const {toast}=useToast()
   const onSubmit = async (data: Student) => {
  const result=compareClasses(data.classes,student.classes)
+ 
+    
+await  processStudentChanges(result,data)
+const StudentInfoToUpdate = {
+  name: data.name,
+  year: data.year,
+  birthdate: data.birthdate,
+  phoneNumber: data.phoneNumber,
+  field:data.field,
+  birthplace:data.birthplace,
+  school:data.school
+};
 
- 
- 
- await  processStudentChanges(result,data)
+
+// Update the teacher in Firestore
+await updateStudent(StudentInfoToUpdate,student.id);
+setStudents((prev: Student[]) => 
+prev.map(t => t.id === student.id ? { ...t, ...StudentInfoToUpdate } : t)
+);
+nextStep()
+
+
+
+toast({
+  title: "Student Updated!",
+  description: `The student, ${data.name} info are updated `,
+});
+
+
    setOpen(false)
   };
 
