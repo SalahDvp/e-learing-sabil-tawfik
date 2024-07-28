@@ -26,7 +26,8 @@ export type studentAttandance = {
 };
 const getStatusIcon = (status: string) => {
   // Define how you want to render the status icon
-  return status === "present" ? "✔️" : "❌";
+  return status === "present" ? <CheckIcon className="ml-5 w-5 h-5 text-green-500" />:
+  <XIcon className="ml-5 w-5 h-5 text-red-500" />;
 };
 
 // Generate date columns dynamically
