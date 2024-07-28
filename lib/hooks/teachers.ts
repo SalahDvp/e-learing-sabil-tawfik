@@ -210,3 +210,54 @@ export const removeGroupFromDoc = async (clss,studentArray) => {
           console.log('User not found.');
         }
       }
+      export const addNewClasses = async (clss:any,teacherId:string) => {
+        try {
+    
+                const groupUIDs: string[] = [];
+                const currentDate = new Date();
+                const groupRef= await addDoc(collection(db, "Groups"), clss);
+                groupUIDs.push(groupRef.id);
+                const attendanceRef = collection(groupRef, "Attendance");
+    
+                for (const cls of clss.groups) {
+                    const thisWeekStartDate = startOfWeek(currentDate, { weekStartsOn: 0 });
+                    const nextWeekStartDate = addWeeks(thisWeekStartDate, 1);
+    
+                    // Create attendance for this week
+                    const thisWeekDate = getNextDayOfWeek(cls.day, thisWeekStartDate);
+                    const formattedDateThisWeek = format(thisWeekDate, 'yyyy-MM-dd');
+                    const dateTimeUIDThisWeek = `${formattedDateThisWeek}-${cls.group}`;
+    
+                    // Add attendance document for this week
+                    await setDoc(doc(attendanceRef, dateTimeUIDThisWeek), {
+                        id: dateTimeUIDThisWeek,
+                        start: cls.start,
+                        end: cls.end,
+                        group: cls.group,
+                        attendanceList: []
+                    });
+    
+                    // Create attendance for next week
+                    const nextWeekDate = getNextDayOfWeek(cls.day, nextWeekStartDate);
+                    const formattedDateNextWeek = format(nextWeekDate, 'yyyy-MM-dd');
+                    const dateTimeUIDNextWeek = `${formattedDateNextWeek}-${cls.group}`;
+    
+                    // Add attendance document for next week
+                    await setDoc(doc(attendanceRef, dateTimeUIDNextWeek), {
+                        id: dateTimeUIDNextWeek,
+                        start: cls.start,
+                        end: cls.end,
+                        group: cls.group,
+                        attendanceList: []
+                    });
+                }
+            
+            await updateDoc(doc(db, "Teachers", teacherId), {
+                groupUIDs: groupUIDs,
+            });
+            return {...clss,classId:groupRef.id};
+        } catch (error) {
+            console.error("Error adding Teacher:", error);
+            throw error; // Optionally re-throw the error to propagate it further if needed
+        }
+    };

@@ -55,7 +55,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import CalendarDatePicker from '../../students/components/date-picker';
 
-import { addGroup, addTeacher, removeGroupFromDoc, updateClassGroup, updateTeacher } from '@/lib/hooks/teachers';
+import { addGroup, addNewClasses, addTeacher, removeGroupFromDoc, updateClassGroup, updateTeacher } from '@/lib/hooks/teachers';
 import { LoadingButton } from '@/components/ui/loadingButton';
 
 import { UseFormReturn } from 'react-hook-form';
@@ -63,6 +63,7 @@ import { UseFormReturn } from 'react-hook-form';
 import { useData } from "@/context/admin/fetchDataContext";
 
 import { generateTimeOptions } from '../../settings/components/open-days-table';
+import { ScrollArea } from '@/components/ui/scroll-area';
  
 interface FooterProps {
   formData: Teacher;
@@ -340,7 +341,9 @@ const years=[
   </div>
 
 ) : (
+
   <div className="w-full h-full">
+      <ScrollArea className="h-[400px]">
    <Table>
   <TableCaption>
   <Button type='button' size="sm" variant="ghost" className="gap-1 w-full" onClick={() => appendClass({ day: '', start: '', end: '', quota: 0, stream: [] })}>
@@ -553,9 +556,10 @@ const years=[
     ))}
   </TableBody>
 </Table>
-
+</ScrollArea>
 
 </div>
+
 )}
               </div>
             </Step>
@@ -594,7 +598,8 @@ function getClassKey(cls) {
   const result: UpdateResult = {
     added: [],
     removed: [],
-    updated: []
+    updated: [],
+    newAdded:[]
   };
 
   const dataClassMap = new Map(dataClasses.map((cls, index) => [index, { ...cls, index }]));
@@ -625,13 +630,16 @@ function getClassKey(cls) {
   });
 
 
+
   // Find added and updated classes
   for (const [key, dataClass] of dataClassMap) {
 
     if (!('group' in dataClass)) {
       const classId = classes.find(cls => cls.teacherName === teacher.name && cls.year === dataClass.year);
-      highestGroupNumber++;
+      
     
+      if (classId) {
+      highestGroupNumber++;
       result.added.push({
         ...dataClass,
         classId: classId.id,
@@ -639,7 +647,14 @@ function getClassKey(cls) {
         subject: classId.subject
       });
     }
-    else {
+    const yearExists = result.newAdded.some((item) => item.year === dataClass.year);
+    if (!yearExists) {
+      result.newAdded.push(dataClass);
+      console.log('guess what', result.newAdded);
+      
+    }
+  }
+    else  {
       const teacherClass = teacherClasses.find(cls => cls.group === dataClass.group && cls.year === dataClass.year);
 
       
@@ -679,7 +694,7 @@ function getClassKey(cls) {
 }
 
   async function processStudentChanges(result,data) {
-    const { added, removed, updated } = result;
+    const { added, removed, updated,newAdded } = result;
   
     // Add students to classes
     if (added && Array.isArray(added)) {
@@ -803,6 +818,56 @@ function getClassKey(cls) {
               })
             );
         }
+    }
+    if (newAdded && Array.isArray(newAdded)) {
+      const finalResult=[]
+      const groupedClasses = newAdded.reduce((acc, current) => {
+        if (!acc[current.year]) {
+          acc[current.year] = [];
+        }
+        // Add the `group` field with the value 'G' followed by the index + 1
+        const index = acc[current.year].length;
+        acc[current.year].push({
+          ...current,
+          group: `G${index + 1}`,
+          quota:0,
+          subject:formData['educational-subject']
+        });
+        return acc;
+      }, {});
+      for (const [year, classesArray] of Object.entries(groupedClasses)) {
+        try {
+//addtodatabase
+ const classesReturned=await addNewClasses({groups:classesArray,students:[],subject:formData['educational-subject'],teacherName:formData.name,teacherUID:teacher.id,year:year},teacher.id)
+
+ setClasses((prevClasses:any[])=>[...prevClasses,classesReturned])
+ setTeachers(prevTeachers =>
+  prevTeachers.map(tchr =>
+    tchr.id === teacher.id
+      ? {
+          ...tchr,
+          classes: [
+            ...tchr.classes,
+            ...classesReturned.groups.map((item, index) => ({
+              ...item,
+              classId: classesReturned.classId  // Add classId to each item
+            }))
+          ],
+          groupUIDs: [
+            ...tchr.groupUIDs,
+            ...classesReturned.classId  // Append ids to groupUIDs
+          ]
+        }
+      : tchr
+  )
+);
+//add to classes and teahcers forn ends
+          console.log(`Document for year ${year} successfully written!`);
+        } catch (error) {
+          console.error(`Error writing document for year ${year}:`, error);
+        }
+      }
+     
     }
   }
   const onSubmit = async(data:Teacher) => {

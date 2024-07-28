@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Calendar } from "@/components/ui/calendar";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import {
   ColumnDef,
@@ -16,8 +15,6 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { z } from "zod";
-import { Input } from "@/components/ui/input";
 import { useData } from "@/context/admin/fetchDataContext";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -93,15 +90,13 @@ const transformData = (data: any) => {
 };
 export const ArchiveDataTable = ({teacher}) => {
   const {classes,teachers}=useData()
-
-    const [filter,setFilter]=useState(teacher.year[0])
-    const transformedData = useMemo(() => transformData(classes.find((cls)=>cls.teacherUID===teacher.id &&cls.subject===teacher[`educational-subject`] && cls.year===filter)), [classes,filter]);
-    const tabsList = useMemo(() => {
+  const [filter,setFilter]=useState(teacher.year[0])
+  const transformedData = useMemo(() => transformData(classes.find((cls)=>cls.teacherUID===teacher.id &&cls.subject===teacher[`educational-subject`] && cls.year===filter)), [classes,filter]);
+  
+  const tabsList = useMemo(() => {
       return teacher.year
     }, [classes, teacher.id, teacher['educational-subject']]);
      
-
-      
     const datesKeys=useMemo(() => classes.find((cls)=>cls.teacherUID===teacher.id &&cls.subject===teacher[`educational-subject`] && cls.year===filter), [classes,filter]);
 
 
@@ -192,7 +187,6 @@ const columns: ColumnDef<any>[] = [...baseColumns, ...dateColumns];
                   ))}
                 </TabsList>
               </div>
-    
             </Tabs>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold">List</h2>
