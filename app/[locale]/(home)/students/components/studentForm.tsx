@@ -54,13 +54,25 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { UseFormReturn } from 'react-hook-form';
 import { useData } from '@/context/admin/fetchDataContext';
-
+import QrScanner from "qr-scanner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Label } from "@/components/ui/label";
 interface FooterProps {
   formData: Student;
   form: UseFormReturn<any>; // Use the specific form type if available
   isSubmitting: boolean;
   reset: UseFormReturn<any>['reset']; // Adding reset function from useForm
 }
+
 const subjects =['Scientific Stream', 'Literature and Philosophy', 'Literature and Languages', 'Economics', 'Mathematics and Technology', 'Mathematics']
 const classess = [
   "Select Option",
@@ -93,6 +105,7 @@ const steps = [
   { label: "Step 1" },
   { label: "Step 2" },
   { label: "Step 3" },
+  { label: "Step 4" },
 
 ] satisfies StepItem[]
 const years=[
@@ -104,13 +117,25 @@ const years=[
   "2AS",
   "3AS"
 ]
+const isFirestoreId = (id) => {
+  // Check if id is a string and has a length of 20 characters
+  if (typeof id !== 'string' || id.length !== 20) {
+    return false;
+  }
+
+  // Regular expression to match Firestore-like IDs: 20 characters of a-z, A-Z, 0-9
+  const firestoreIdRegex = /^[a-zA-Z0-9]{20}$/;
+
+  // Test the id against the regular expression
+  return firestoreIdRegex.test(id);
+};
 export default function StudentForm() {
   const camera = useRef<null | { takePhoto: () => string }>(null);
   const {setStudents,teachers,classes,students}=useData()
   const form = useForm<any>({
     // resolver: zodResolver(StudentSchema),
     defaultValues:{
-      id:'0',
+      id:null,
       studentIndex: students.length + 1,
       classes:[],
       classesUIDs:[]
@@ -179,6 +204,63 @@ export default function StudentForm() {
       setValue(`classes.${index}`, classes[index]);
     }
   };
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const highlightCodeOutlineRef = useRef<HTMLDivElement>(null);
+  const qrScanner = useRef<QrScanner | null>(null);
+  const [showingQrScanner, setShowingQrScanner] = useState(false);
+  const [studentData, setStudentData] = useState<Student | null>(null);
+  const [currentClass, setCurrentClass] = useState<String| any>();
+  const [currentClasses, setCurrentClasses] = useState<String| any[]>();
+  const audioRefSuccess = useRef(null);
+  const audioRefError = useRef(null);
+  const processedQrCodes = useRef(new Set<string>()); // Set to track processed QR codes
+  const [openAlert,setOpenAlert]=useState(false)
+  const[alertText,setAlertText]=useState('')
+  const [open, setOpen] = React.useState(false)
+  const handleQrScan = (result) => {
+     
+    if (!isFirestoreId(result.data)) {//less than 20
+      setAlertText("Invalid Qr Code");
+      setOpenAlert(true);
+      audioRefError.current?.play();
+      return;
+    }
+    
+    const parsedData = students.find((student) =>  result.data === student.id || result.data=== student.newId);
+
+    
+    if (parsedData!=undefined) {
+      setAlertText("Qr code already used");
+      setOpenAlert(true);
+      audioRefError.current?.play();
+      return;
+    }
+    setValue("id",parsedData)
+    stopScanner();
+  };
+
+  const stopScanner = () => {
+    qrScanner.current?.stop();
+    qrScanner.current = null; // Reset the qrScanner to null
+    videoRef.current!.hidden = true; // Hide the video element
+    processedQrCodes.current.clear(); // Clear processed QR codes
+    setShowingQrScanner(false); // Update state to hide QR scanner
+    setStudentData(null); // Clear student data
+    setCurrentClass(undefined)
+    setCurrentClasses(undefined)
+
+
+  };
+  const handleButtonClick = async () => {
+    videoRef.current!.hidden = false;
+    qrScanner.current = new QrScanner(videoRef.current!, handleQrScan, {
+      highlightScanRegion: true,
+      overlay: highlightCodeOutlineRef.current!,
+      maxScansPerSecond:0.5,
+    });
+    await qrScanner.current.start();
+    setShowingQrScanner(true);
+  };
   return (
     <Dialog >
       <DialogTrigger asChild>
@@ -204,6 +286,50 @@ export default function StudentForm() {
               <div className="h-[450px] flex items-center justify-center my-4 border bg-secondary  rounded-md">
               {index === 0 ? (
  
+
+ <div className="bg-muted rounded-lg p-6 flex flex-col gap-4">
+      <AlertDialog open={openAlert} onOpenChange={setOpenAlert}>
+  <AlertDialogContent>
+    <AlertDialogHeader>
+      <AlertDialogTitle>Heads up!</AlertDialogTitle>
+      <AlertDialogDescription>
+ {alertText}
+      </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+      <AlertDialogCancel>Cancel</AlertDialogCancel>
+      <AlertDialogAction>Continue</AlertDialogAction>
+    </AlertDialogFooter>
+  </AlertDialogContent>
+</AlertDialog>
+      <audio id="qr-scan-sound-success"  ref={audioRefSuccess}  src="/success.mp3" ></audio>
+      <audio id="qr-scan-sound-error"  ref={audioRefError}  src="/error.mp3" ></audio>
+   <div className="aspect-square bg-background rounded-md overflow-hidden relative h-[300px]">
+     <video hidden={!showingQrScanner} ref={videoRef} className="absolute inset-0 w-full h-full object-cover"></video>
+
+   </div>
+   {showingQrScanner ? (
+   
+       <button
+     onClick={stopScanner}
+         className="mt-4 text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-red-600 dark:hover:bg-red-700 focus:outline-none dark:focus:ring-red-800"
+       >
+         Stop QR Scanner
+       </button>
+
+   ) : (
+     <button
+     onClick={handleButtonClick}
+     type='button'
+     className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
+   >
+     Start QR Scanner
+   </button>
+   )}
+ </div>
+
+
+) : index === 1 ? (
   <div className="grid gap-4 py-4">
 
     <FormField
@@ -272,9 +398,6 @@ export default function StudentForm() {
             />
  
 
-
-
-
  <FormField
   control={control}
   name="year"
@@ -308,7 +431,8 @@ export default function StudentForm() {
   )}
 />
 
- <FormField
+
+<FormField
   control={control}
   name="field"
   render={({ field }) => (
@@ -356,7 +480,7 @@ export default function StudentForm() {
     
   </div>
 
-) : index === 1 ? (
+) : index === 2 ? (
   <div className="flex flex-col items-center gap-4 py-4">
 
  {!watch('photo') ? (
@@ -390,7 +514,6 @@ export default function StudentForm() {
 
 
 </div>
-
 ) : (
   <div className="w-full h-full">
     <Table>
@@ -410,7 +533,7 @@ export default function StudentForm() {
         {fields.map((invoice,index) => (
           <TableRow key={invoice.id}>
                         <TableCell className="font-medium"> 
-              <Select value={invoice.subject} onValueChange={(value)=>handleGroupChange(index,'subject',value)}>
+              <Select  value={invoice.subject} onValueChange={(value)=>handleGroupChange(index,'subject',value)}>
       <SelectTrigger className="">
         <SelectValue placeholder="Select a Subject" />
       </SelectTrigger>
@@ -426,7 +549,7 @@ export default function StudentForm() {
       </SelectContent>
     </Select></TableCell>
             <TableCell className="font-medium"> 
-              <Select value={invoice.name} onValueChange={(value)=>handleGroupChange(index,'name',value)}>
+              <Select  value={invoice.name} onValueChange={(value)=>handleGroupChange(index,'name',value)}>
       <SelectTrigger className="">
         <SelectValue placeholder="Select a Group" />
       </SelectTrigger>
@@ -510,6 +633,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
     hasCompletedAllSteps,
     isLastStep,
     isOptionalStep,
+    currentStep
   } = useStepper()
   const [qr,setQr]=useState<string>()
   const generateQrCode=(data:string)=>{
@@ -551,12 +675,12 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
   }
   const {setStudents,setClasses,students}=useData()
   const {toast}=useToast()
-  const onSubmit = async(data:Student) => {
+  const onSubmit = async(data:any) => {
     
     
-    const studentId=await addStudent({...data,studentIndex:students.length+1})
-    generateQrCode(studentId);
-    setStudents((prev: Student[]) => [...prev, {...data,id:studentId,student:data.name,studentIndex:prev.length+1}]);
+    await addStudent({...data,studentIndex:students.length+1})
+    generateQrCode(data.id);
+    setStudents((prev: Student[]) => [...prev, {...data,id:data.id,student:data.name,studentIndex:prev.length+1}]);
     setClasses((prev: any[]) =>
       prev.map((cls) => {
         const matchingClass = data.classes.find((sls) => sls.id === cls.id);
@@ -566,7 +690,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
             students: [
               ...cls.students,
               {
-                id: studentId,
+                id: data.id,
                 name: data.name,
                 index: matchingClass.index,
                 year:data.year,group:cls.group
@@ -650,7 +774,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
             </Button>
             {isLastStep?(        <LoadingButton size="sm"    loading={isSubmitting}        type={'button'}   onClick={form.handleSubmit(onSubmit)}>
               Finish
-            </LoadingButton>):(        <Button size="sm"            type={"button"}    onClick={nextStep}>
+            </LoadingButton>):(        <Button size="sm"   disabled={formData.id === null}        type={"button"}    onClick={nextStep}>
               {isLastStep ? "Finish" : isOptionalStep ? "Skip" : "Next"}
             </Button>)}
     
@@ -659,4 +783,33 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
       </div>
     </>
   )
+}
+function QrCodeIcon(props) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect width="5" height="5" x="3" y="3" rx="1" />
+      <rect width="5" height="5" x="16" y="3" rx="1" />
+      <rect width="5" height="5" x="3" y="16" rx="1" />
+      <path d="M21 16h-3a2 2 0 0 0-2 2v3" />
+      <path d="M21 21v.01" />
+      <path d="M12 7v3a2 2 0 0 1-2 2H7" />
+      <path d="M3 12h.01" />
+      <path d="M12 3h.01" />
+      <path d="M12 16v.01" />
+      <path d="M16 12h1" />
+      <path d="M21 12v.01" />
+      <path d="M12 21v-1" />
+    </svg>
+  );
 }

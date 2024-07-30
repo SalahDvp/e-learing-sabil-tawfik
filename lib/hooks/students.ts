@@ -1,5 +1,5 @@
 import { db } from "@/firebase/firebase-config"
-import { addDoc,arrayRemove,arrayUnion,collection, deleteDoc, doc, increment, updateDoc } from "firebase/firestore"
+import { addDoc,arrayRemove,arrayUnion,collection, deleteDoc, doc, increment, setDoc, updateDoc } from "firebase/firestore"
 import { getDownloadURL, ref, uploadBytes, uploadString } from "firebase/storage";
 import { storage } from "@/firebase/firebase-config";
 import { StudentSchema,Student } from "@/validators/auth";
@@ -37,21 +37,21 @@ export async function uploadAndLinkToCollection(
     // Assuming you want to return an array of objects with metadata
     return downloadUrl
   }
-export const addStudent = async (student:Student,) => {
+export const addStudent = async (student:Student) => {
     try {
   
-        const studentRef = await addDoc(collection(db, "Students"), student);
+        await setDoc(doc(db, "Students",student.id), student);
        if(student.photo){
-        await uploadAndLinkToCollection(student.photo,'Students',studentRef.id,'photo')
+        await uploadAndLinkToCollection(student.photo,'Students',student.id,'photo')
        } 
         student.classes.map(async (cls)=>{
             await updateDoc(doc(db,'Groups',cls.id),{
                 students:arrayUnion({
-                    id:studentRef.id,name:student.name,index:cls.index,year:student.year,group:cls.group
+                    id:student.id,name:student.name,index:cls.index,year:student.year,group:cls.group
                 })
             })
         })
-        return studentRef.id; // Assuming you want to return the ID of the added Student
+        return student.id; // Assuming you want to return the ID of the added Student
     } catch (error) {
         console.error("Error adding Student:", error);
         // Handle the error here, such as displaying a message to the user or logging it for further investigation
@@ -195,3 +195,9 @@ export async function markAttendance(classId,attendanceId,student){
     })
   }
 
+  export async function changeStudentCard(studentId:string,newId:string){
+
+    await updateDoc(doc(db,'Students',studentId),{
+      newId:newId
+    })
+  }

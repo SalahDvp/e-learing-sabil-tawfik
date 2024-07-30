@@ -254,35 +254,6 @@ const years=[
     
    
 
-<FormField
-  control={control}
-  name="year"
-  render={({ field }) => (
-    <FormItem className="grid grid-cols-4 items-center gap-4">
-      <FormLabel className="text-right">Year</FormLabel>
-      <FormControl>
-      <DropdownMenu >
-      <DropdownMenuTrigger asChild     >
-        <Button variant="outline" >Year</Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56">
-        <DropdownMenuLabel>Years</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {years.map((year:string, index) => (
-  <DropdownMenuCheckboxItem key={index}       
-   checked={getValues('year')?.includes(year)}
-  onCheckedChange={()=>handleYearToggle(year)}>
-    {year}
-  </DropdownMenuCheckboxItem>
-))}
-
-      </DropdownMenuContent>
-    </DropdownMenu>
-      </FormControl>
-      <FormMessage />
-    </FormItem>
-  )}
-/>
 
 
 

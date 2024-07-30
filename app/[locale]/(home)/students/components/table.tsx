@@ -60,6 +60,7 @@ import { deleteStudent } from "@/lib/hooks/students"
 import StudentForm from "./studentForm"
 import StudentPaymentSheet from "./studentPaymentSheet"
 import EditStudent from "./editStudent"
+import ChangeCard from "./change-card"
 type Status = 'accepted' | 'pending' | 'rejected';
 export type StudentSummary = {
   id: string;
@@ -75,7 +76,7 @@ interface DataTableDemoProps {
 }
   export const DataTableDemo: React.FC<DataTableDemoProps> = ({ filter }) => {
     const [open,setOpen]=React.useState(false)
-    const [openPayment,setOpenPayment]=React.useState(false)
+    const [openCard,setOpenCard]=React.useState(false)
     const t=useTranslations()
     const {students,setStudents,classes}=useData()
     const orderedStudents = React.useMemo(() => {
@@ -134,19 +135,13 @@ interface DataTableDemoProps {
       setStudent(student)
       setOpen(true); // Open the sheet after setting the level
     };
-    const openPaymentSheet = (student:Student) => {
+    const openCardSheet = (student:Student) => {
       setStudent(student)
-      setOpenPayment(true); // Open the sheet after setting the level
-    };
-    const getMonthAbbreviation = (monthIndex: number) => {
-      const startDate = new Date(2024, 8); // September 2023 (month index 8)
-      const date = new Date(startDate.getFullYear(), startDate.getMonth() + monthIndex);
-      const monthAbbreviation = date.toLocaleString('en-GB', { month: "short" });
-      const yearAbbreviation = date.getFullYear().toString().substr(-2);
-      return `${monthAbbreviation}${yearAbbreviation}`;
+      setOpenCard(true); // Open the sheet after setting the level
     };
 
-    const {toast}=useToast()
+
+   const {toast}=useToast()
     
     const columns: ColumnDef<any>[] = [
       {
@@ -235,6 +230,8 @@ interface DataTableDemoProps {
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => openEditSheet(student)}>
                   {t('edit')} </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => openCardSheet(student)}>
+                 New Card </DropdownMenuItem>
                 <DropdownMenuItem onClick={() =>{deleteStudent(student,classes), setStudents((prevStudents:any) =>
       prevStudents.filter((std:any) => std.id !== student.id)
 
@@ -460,6 +457,7 @@ const orderedMonths = [
         </div>
       </div>
       <EditStudent open={open} setOpen={setOpen}  student={student}/>
+      <ChangeCard open={openCard} setOpen={setOpenCard}  student={student}/>
     </CardContent>
   </Card>
 

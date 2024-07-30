@@ -209,7 +209,6 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
             <Step key={label} label={label}>
               <div className="h-[450px] flex items-center justify-center my-4 border bg-secondary  rounded-md">
               {index === 0 ? (
- 
   <div className="grid gap-4 py-4">
 
     <FormField
@@ -359,7 +358,6 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
             />
     
   </div>
-
 ) : index === 1 ? (
   <div className="flex flex-col items-center gap-4 py-4">
 
@@ -394,7 +392,6 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
 
 
 </div>
-
 ) : (
   <div className="w-full h-full">
     <Table>

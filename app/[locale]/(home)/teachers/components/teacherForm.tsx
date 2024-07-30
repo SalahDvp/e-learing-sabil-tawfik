@@ -82,6 +82,12 @@ const steps = [
   { label: "Step 2" },
 
 ] satisfies StepItem[]
+
+
+
+const middleSchoolYears = ["1AM", "2AM", "3AM", "4AM"];
+const highSchoolYears = ["1AS", "2AS", "3AS"];
+
 export default function TeacherForm() {
 
   const timeOptions = generateTimeOptions("07:00","22:00", 30);
@@ -166,7 +172,7 @@ const subjects = [
   "Architecture",
   "Environmental Science"
 ];
-const years=[
+/*const years=[
   "1AM",
   "2AM",
   "3AM",
@@ -175,6 +181,18 @@ const years=[
   "2AS",
   "3AS"
 ]
+*/
+
+
+
+const [schoolType, setSchoolType] = React.useState('');
+
+  const handleSchoolTypeChange = (type) => {
+    setSchoolType(type);
+    const years = type === 'middle' ? middleSchoolYears : highSchoolYears;
+    setValue('year', years);
+  };
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -246,36 +264,32 @@ const years=[
    
 
 <FormField
-  control={control}
-  name="year"
-  render={({ field }) => (
-    <FormItem className="grid grid-cols-4 items-center gap-4">
-      <FormLabel className="text-right">Year</FormLabel>
-      <FormControl>
-      <DropdownMenu >
-      <DropdownMenuTrigger asChild     >
-        <Button variant="outline" >Year</Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56">
-        <DropdownMenuLabel>Years</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {years.map((year:string, index) => (
-  <DropdownMenuCheckboxItem key={index}       
-   checked={getValues('year')?.includes(year)}
-  onCheckedChange={()=>handleYearToggle(year)}>
-    {year}
-  </DropdownMenuCheckboxItem>
-))}
-
-      </DropdownMenuContent>
-    </DropdownMenu>
-      </FormControl>
-      <FormMessage />
-    </FormItem>
-  )}
-/>
-
-
+        control={control}
+        name="year"
+        render={({ field }) => (
+          <FormItem className="grid grid-cols-4 items-center gap-4">
+            <FormLabel className="text-right">School Type</FormLabel>
+            <FormControl>
+              <Select
+                onValueChange={(value) => handleSchoolTypeChange(value)}
+                defaultValue={schoolType}
+              >
+                <SelectTrigger
+                  id={`schoolType`}
+                  aria-label={`Select School Type`}
+                >
+                  <SelectValue placeholder={"Select School Type"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="middle">Middle School</SelectItem>
+                  <SelectItem value="high">High School</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
 
 
 <FormField
