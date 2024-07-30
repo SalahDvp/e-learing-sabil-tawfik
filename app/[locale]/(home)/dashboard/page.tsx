@@ -172,7 +172,7 @@ export default function Home() {
     
   }
   const onpressed=(id)=>{
-    const parsedData = students.find((student) => student.value === id);
+    const parsedData = students.find((student) => student.value === id || student.newId===id);
     console.log("uiddd",id);
     
     if (!parsedData) {
@@ -210,7 +210,7 @@ export default function Home() {
 
     processedQrCodes.current.add(result.data);
 
-    const parsedData = students.find((student) => student.id === result.data);
+    const parsedData = students.find((student) => student.id === result.data || student.newId===result.data);
 
     if (!parsedData) {
       setAlertText("Invalid QR code");

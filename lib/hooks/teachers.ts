@@ -52,7 +52,7 @@ function getNextDayOfWeek(dayOfWeek: string, startDate: Date): Date {
 export const addTeacher = async (teacher: Teacher) => {
     try {
         // Add the teacher document to the "Teachers" collection
-        const teacherRef = await addDoc(collection(db, "Teachers"), teacher);
+        const teacherRef = await addDoc(collection(db, "Teachers"), {...teacher,groupUIDs:[]});
         console.log("Teacher added successfully:", teacherRef.id);
         const classesByYear = groupClassesByYear(teacher.classes);
 
@@ -121,7 +121,7 @@ export const addTeacher = async (teacher: Teacher) => {
         console.log("Groups added successfully");
         console.log('1st groupUIDs',groupUIDs);
     }
-        return {id:teacherRef.id,groupUIDs:arrayUnion( groupUIDs)};
+        return {id:teacherRef.id,groupUIDs:groupUIDs};
     } catch (error) {
         console.error("Error adding Teacher:", error);
         throw error; // Optionally re-throw the error to propagate it further if needed

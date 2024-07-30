@@ -628,7 +628,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
     setTeachers((prev: Teacher[]) => [...prev, {...data,id:teacherId.id,groupUIDs:teacherId.groupUIDs,teacher:data.name}]);
     setClasses((prev: any[]) => [...prev, ...updatedCollectiveGroups]);
 
-
+    
     toast({
       title: "Teacher Added!",
       description: `The Teacher, ${data.name} added successfully`,
