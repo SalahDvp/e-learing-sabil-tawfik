@@ -235,7 +235,10 @@ export default function StudentForm() {
       audioRefError.current?.play();
       return;
     }
-    setValue("id",parsedData)
+    console.log("eqewqwe",parsedData)
+
+    setValue("id",result.data)
+    audioRefSuccess.current?.play();
     stopScanner();
   };
 
@@ -676,7 +679,8 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
   const {setStudents,setClasses,students}=useData()
   const {toast}=useToast()
   const onSubmit = async(data:any) => {
-    
+
+      
     
     await addStudent({...data,studentIndex:students.length+1})
     generateQrCode(data.id);

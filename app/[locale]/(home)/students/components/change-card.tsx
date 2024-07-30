@@ -127,7 +127,7 @@ const [newId,setNewId]=useState(null)
       audioRefError.current?.play();
       return;
     }
-    setNewId(parsedData)
+    setNewId(result.data)
     stopScanner();
   };
 
