@@ -146,6 +146,7 @@ const [newId,setNewId]=useState(null)
       highlightScanRegion: true,
       overlay: highlightCodeOutlineRef.current!,
       maxScansPerSecond:0.5,
+      preferredCamera:'user',
     });
     await qrScanner.current.start();
     setShowingQrScanner(true);

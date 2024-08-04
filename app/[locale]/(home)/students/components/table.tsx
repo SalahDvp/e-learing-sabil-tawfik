@@ -69,6 +69,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import VerifyStudent from "./VerifyStudent"
 type Status = 'accepted' | 'pending' | 'rejected';
 export type StudentSummary = {
   id: string;
@@ -341,6 +342,7 @@ const orderedMonths = [
         />
           <div className=" ml-auto space-y-4 ">
             <StudentForm/>
+            <VerifyStudent/>
     <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="ml-auto">

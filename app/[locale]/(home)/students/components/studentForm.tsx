@@ -265,7 +265,7 @@ export default function StudentForm() {
   };
   return (
     <Dialog >
-      <DialogTrigger asChild>
+      <DialogTrigger asChild className='mr-3'>
         <Button onClick={()=>{       form.setValue('classes',[]);reset()}}>{t('Add student')}</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[800px]">
