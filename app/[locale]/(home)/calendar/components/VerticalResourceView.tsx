@@ -19,6 +19,7 @@ import {
   MbscEventcalendarView,
   MbscResource,
   setOptions,
+  locale,
 } from '@mobiscroll/react';
 import { FC} from 'react';
 import './style.css'
@@ -138,8 +139,10 @@ const VerticalResourceView = () => {
           }
    
           const targetDayAbbreviation = dayToWeekDay[day];
+                      
                        
           if (!targetDayAbbreviation) {
+            console.log("dddddd",classId);
             throw new Error("Invalid day provided");
           }
           const firstDayOfMonth = new Date(year, month, 1);
@@ -261,6 +264,16 @@ const VerticalResourceView = () => {
         name: 'room 6',
         color: '#bacded',
       },
+      {
+        id:7,
+        name: 'room 7',
+        color: '#bacded',
+      },
+      {
+        id:8,
+        name: 'room 8',
+        color: '#bacded',
+      },
     ],
     [],
   );
@@ -302,6 +315,7 @@ const VerticalResourceView = () => {
       colors={myColors}
       onEventClick={handleEventClick}
       groupBy='date'
+      locale={locale['fr']}
     />
 
         <AttandenceDataModel

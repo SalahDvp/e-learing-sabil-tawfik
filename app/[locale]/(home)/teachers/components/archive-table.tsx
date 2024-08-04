@@ -101,7 +101,7 @@ export const ArchiveDataTable = ({teacher}) => {
     const datesKeys=useMemo(() => classes.find((cls)=>cls.teacherUID===teacher.id &&cls.subject===teacher[`educational-subject`] && cls.year===filter), [classes,filter]);
 
 
-    console.log("srrr",teacher);
+
    const dates = datesKeys?Object.keys(datesKeys.attendance):null;
 
     const baseColumns: ColumnDef<any>[] = [

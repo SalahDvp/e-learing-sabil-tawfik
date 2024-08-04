@@ -66,6 +66,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { useTranslations } from 'next-intl';
 interface FooterProps {
   formData: Student;
   student: Student;
@@ -98,7 +99,7 @@ const isFirestoreId = (id) => {
   };
 const ChangeCard: React.FC<openModelProps> = ({ setOpen, open,student }) => {
     const {setStudents,teachers,classes,students}=useData()
-
+const t=useTranslations()
   const videoRef = useRef<HTMLVideoElement>(null);
   const highlightCodeOutlineRef = useRef<HTMLDivElement>(null);
   const qrScanner = useRef<QrScanner | null>(null);
@@ -155,7 +156,7 @@ const [newId,setNewId]=useState(null)
  <DialogContent className="sm:max-w-[800px]">
 
         <DialogHeader>
-          <DialogTitle>Add New Card</DialogTitle>
+          <DialogTitle>{t('Add New Card')}</DialogTitle>
           <DialogDescription>
             Add your New Card here. Click save when you're done.
           </DialogDescription>
@@ -179,8 +180,8 @@ const [newId,setNewId]=useState(null)
       </AlertDialogDescription>
     </AlertDialogHeader>
     <AlertDialogFooter>
-      <AlertDialogCancel>Cancel</AlertDialogCancel>
-      <AlertDialogAction>Continue</AlertDialogAction>
+      <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
+      <AlertDialogAction>{t('Continue')}</AlertDialogAction>
     </AlertDialogFooter>
   </AlertDialogContent>
 </AlertDialog>
@@ -196,7 +197,7 @@ const [newId,setNewId]=useState(null)
      onClick={stopScanner}
          className="mt-4 text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-red-600 dark:hover:bg-red-700 focus:outline-none dark:focus:ring-red-800"
        >
-         Stop QR Scanner
+         {t('Stop QR Scanner')}
        </button>
 
    ) : (
@@ -205,7 +206,7 @@ const [newId,setNewId]=useState(null)
      type='button'
      className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
    >
-     Start QR Scanner
+     {t('Start QR Scanner')}
    </button>
    )}
  </div>
@@ -269,7 +270,7 @@ toast({
 
    setOpen(false)
   };
-
+const t=useTranslations()
   return (
     <>
       {hasCompletedAllSteps && (
@@ -316,7 +317,7 @@ toast({
                  <DialogFooter>
                      <DialogClose asChild>
           <LoadingButton size="sm"            type='submit'  onClick={()=>onSubmit()}>
-            Save changes
+            {t('Save changes')}
           </LoadingButton>
           
           </DialogClose>
@@ -330,10 +331,10 @@ toast({
               variant="secondary"
               type='button'
             >
-              Prev
+              {t('Prev')}
             </Button>
             <Button size="sm"         disabled={newId === null}        type={"button"}    onClick={nextStep}>
-              {"Next"}
+              {t('Next')}
             </Button>
     
           </>

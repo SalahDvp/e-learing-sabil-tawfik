@@ -1,10 +1,10 @@
 "use client"
-import React from 'react';
+import React, { useMemo,useCallback } from 'react';
 import {
   ChevronDownIcon,
 } from "@radix-ui/react-icons"
 import { useToast } from "@/components/ui/use-toast"
-
+import { useTranslations } from "next-intl"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -66,7 +66,8 @@ import { useData } from "@/context/admin/fetchDataContext";
 
 import { generateTimeOptions } from '../../settings/components/open-days-table';
 import { ScrollArea } from '@/components/ui/scroll-area';
- 
+import { parse, isBefore, isAfter, isEqual, startOfMinute } from 'date-fns';
+const parseTime = (timeString) => parse(timeString, 'HH:mm', new Date());
 interface FooterProps {
   formData: Teacher;
   teacher:any;
@@ -89,7 +90,7 @@ interface openModelProps {
   teacher:any
 }
 const EditTeacher: React.FC<openModelProps> = ({ setOpen, open,teacher }) => {
-
+  const t=useTranslations()
   const timeOptions = generateTimeOptions("07:00","22:00", 30);
   const form = useForm<any>({
     defaultValues:{
@@ -108,7 +109,7 @@ const EditTeacher: React.FC<openModelProps> = ({ setOpen, open,teacher }) => {
     // you can do async server request and fill up form
 
       reset(teacher);
-      console.log("teacher",teacher);
+
       
   }, [reset,teacher]); 
 
@@ -151,32 +152,72 @@ const handleYearToggle = (field:string) => {
   }
 };
 
+const truncateToMinutes = (date: Date) => startOfMinute(date);
+
+const {classes}=useData()
+// const checkRoomAvailability = useCallback((newGroup: Group, allRooms: string[]): string[] => {
+//   const { day, start, end, classId, room: newGroupRoom } = newGroup;
+//   // Check if any of the required fields are missing
+//   if (!day || !start || !end) {
+//     return [];
+//   }
+
+//   const newGroupStart = truncateToMinutes(parseTime(start));
+//   const newGroupEnd = truncateToMinutes(parseTime(end));
+
+//   // Filter rooms based on time availability
+//   const availableRooms = allRooms.filter((room) => {
+//     return !classes.some((classItem) =>
+//       classItem.groups.some((group) => {
+//         const groupStart = truncateToMinutes(parseTime(group.start));
+//         const groupEnd = truncateToMinutes(parseTime(group.end));
+
+//         const isOverlapping = group.day === day &&
+//           group.room === room &&
+//           ((isBefore(newGroupStart, groupEnd) && isAfter(newGroupEnd, groupStart)) ||
+//            isEqual(newGroupStart, groupStart) || 
+//            isEqual(newGroupEnd, groupEnd) ||
+//            (isBefore(newGroupStart, groupEnd) && isEqual(newGroupEnd, groupEnd))
+//           );
+
+//         // Exclude the room if it is overlapping
+//         return isOverlapping;
+//       })
+//     );
+//   });
+
+//   // Include the specified room if classId exists
+//   if (classId && allRooms.includes(newGroupRoom)) {
+//     return [...availableRooms, newGroupRoom];
+//   }
+
+//   // Return only the available rooms
+//   return availableRooms;
+// }, [watch("classes")]);
+
 const subjects = [
   "Select Option",
-  "Mathematics",
-  "Physics",
-  "Chemistry",
-  "Biology",
-  "Geography",
-  "History",
-  "Philosophy",
-  "Arabic",
-  "French",
-  "English",
-  "Islamic Education",
-  "Technology",
-  "Computer Science",
-  "Art",
-  "Physical Education",
-  "Economics",
-  "German",
-  "Spanish",
-  "Law",
-  "Business Studies",
-  "Social Sciences",
-  "Engineering",
-  "Architecture",
-  "Environmental Science"
+  "رياضيات",
+  "علوم",
+  "فيزياء",
+  "فلسفة",
+  "العربية",
+  "الإنجليزية",
+  "الفرنسية",
+  "اسبانية",
+  "المانية",
+  "ايطالية",
+  "محاسبة",
+  "هندسة مدنية",
+  "هندسة ميكانيكية",
+  "هندسة الطرائق",
+  "الهندسة الكهربائية",
+  "قانون",
+  "اقتصاد",
+  "العلوم الاسلامية",
+  "تاريخ وجغرافيا",
+  
+
 ];
 const years=[
   "1AM",
@@ -189,13 +230,13 @@ const years=[
 ]
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-[1100px]">
+      <DialogContent className="sm:max-w-[1400px]">
       <Form {...form} >
       <form >
         <DialogHeader>
-          <DialogTitle>Add Teacher</DialogTitle>
+          <DialogTitle>{t('edit-teacher')}</DialogTitle>
           <DialogDescription>
-            Add your Teacher here. Click save when you're done.
+          {t('edit-your-teacher-here-click-save-when-youre-done')}
           </DialogDescription>
         </DialogHeader>
 
@@ -217,7 +258,7 @@ const years=[
                   name="name"
                   render={({ field }) => (
                     <FormItem className="grid grid-cols-4 items-center gap-4">
-                      <FormLabel className="text-right">Name</FormLabel>
+                      <FormLabel className="text-right">{t('name')}</FormLabel>
                       <FormControl><Input id="name"  className="col-span-3"  {...field}/></FormControl>
 
                       <FormMessage />
@@ -231,7 +272,7 @@ const years=[
               name="birthdate"
               render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Birthdate</FormLabel>
+                  <FormLabel className="text-right">{t('birth-date')}</FormLabel>
                   <FormControl>  
                     <CalendarDatePicker
             {...field}
@@ -263,7 +304,7 @@ const years=[
   name="educational-subject"
   render={({ field }) => (
     <FormItem className="grid grid-cols-4 items-center gap-4">
-      <FormLabel className="text-right">Educational Subject</FormLabel>
+    <FormLabel className="text-right">{t('educational-subject')}</FormLabel>
       <FormControl>
       <Select
    onValueChange={field.onChange}
@@ -273,7 +314,7 @@ const years=[
                               id={`subject`}
                               aria-label={`Select subject`}
                             >
-                              <SelectValue placeholder={"select subject"} />
+                              <SelectValue placeholder={t('select-subject')} />
                             </SelectTrigger>
             <SelectContent>
  
@@ -300,7 +341,7 @@ const years=[
               name="phoneNumber"
               render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Phone Number</FormLabel>
+                  <FormLabel className="text-right">{t('phone-number')}</FormLabel>
                   <FormControl><Input id="phoneNumber" className="col-span-3" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
@@ -321,18 +362,18 @@ const years=[
   <TableCaption>
   <Button type='button' size="sm" variant="ghost" className="gap-1 w-full" onClick={() => appendClass({ day: '', start: '', end: '', quota: 0, stream: [] })}>
       <PlusCircle className="h-3.5 w-3.5" />
-      Add Group
+      {t('add-group')}
     </Button>
   </TableCaption>
   <TableHeader>
     <TableRow>
-      <TableHead>Day</TableHead>
-      <TableHead>Start Time</TableHead>
-      <TableHead>End Time</TableHead>
-      <TableHead>Room</TableHead>
-      <TableHead>Field</TableHead>
-      <TableHead>Year</TableHead>
-      <TableHead>Action</TableHead>
+    <TableHead>{t('day')}</TableHead>
+      <TableHead>{t('start-time')}</TableHead>
+      <TableHead>{t('end-time')}</TableHead>
+      <TableHead>{t('room')}</TableHead>
+      <TableHead>{t('field')}</TableHead>
+      <TableHead>{t('year')}</TableHead>
+      <TableHead>{t('action')}</TableHead>
     </TableRow>
   </TableHeader>
   <TableBody>
@@ -354,14 +395,14 @@ const years=[
                               id={`end-${index}`}
                               aria-label={`Select day`}
                             >
-                              <SelectValue placeholder="Select day" />
+                              <SelectValue placeholder={t('select-day')} />
                             </SelectTrigger>
                           </FormControl>
 
                           <SelectContent>
                             {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => (
                               <SelectItem key={day} value={day}>
-                                {day}
+                                {t(`${day}`)}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -386,7 +427,7 @@ const years=[
                               id={`end-${index}`}
                               aria-label={`Select end time`}
                             >
-                              <SelectValue placeholder="Select End time" />
+                              <SelectValue placeholder={t('select-end-time')} />
                             </SelectTrigger>
                           </FormControl>
 
@@ -418,7 +459,7 @@ const years=[
                               id={`end-${index}`}
                               aria-label={`Select end time`}
                             >
-                              <SelectValue placeholder="Select End time" />
+                              <SelectValue placeholder={t('select-end-time')}/>
                             </SelectTrigger>
                           </FormControl>
 
@@ -445,18 +486,19 @@ const years=[
                         <Select
                           onValueChange={field.onChange}
                           defaultValue={field.value}
+                        
                         >
                           <FormControl>
                             <SelectTrigger
                               id={`room-${index}`}
                               aria-label={`Select room`}
                             >
-                              <SelectValue placeholder="Select room" />
+                              <SelectValue placeholder={t('select-room')}/>
                             </SelectTrigger>
                           </FormControl>
 
                           <SelectContent>
-                            {['room 1','room 2','room 3','room 4','room 5','room 6'].map((room) => (
+                          {['room 1','room 2','room 3','room 4','room 5','room 6','room 7','room 8'].map((room) => (
                               <SelectItem key={room} value={room}>
                                 {room}
                               </SelectItem>
@@ -471,11 +513,11 @@ const years=[
         <DropdownMenu>
     <DropdownMenuTrigger asChild>
       <Button variant="outline" className="ml-auto">
-        Select Fields <ChevronDownIcon className="ml-2 h-4 w-4" />
+      {t('select-field')}<ChevronDownIcon className="ml-2 h-4 w-4" />
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end">
-      {['Scientific Stream', 'Literature and Philosophy', 'Literature and Languages', 'Economics', 'Mathematics and Technology', 'Mathematics'].map(e => (
+      {['متوسط','علوم تجريبية', 'تقني رياضي', 'رياضيات', 'تسيير واقتصاد ', 'لغات اجنبية ', 'اداب وفلسفة'].map(e => (
         <DropdownMenuItem
           key={e}
           value={e}
@@ -506,7 +548,7 @@ const years=[
                               id={`year-${index}`}
                               aria-label={`Select year`}
                             >
-                              <SelectValue placeholder="Select room" />
+                              <SelectValue placeholder={t('select-year')}  />
                             </SelectTrigger>
                           </FormControl>
 
@@ -523,7 +565,7 @@ const years=[
                   />
                   </TableCell>
         <TableCell>
-          <Button type="button" variant="destructive" onClick={() => removeClass(index)}>Remove</Button>
+          <Button type="button" variant="destructive" onClick={() => removeClass(index)}>{t('remove')}</Button>
         </TableCell>
       </TableRow>
     ))}
@@ -551,6 +593,7 @@ const years=[
 }
 export default EditTeacher;
 const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teacher}) => {
+  const t=useTranslations()
   const {
     nextStep,
     prevStep,
@@ -577,7 +620,7 @@ function getClassKey(cls) {
 
   const dataClassMap = new Map(dataClasses.map((cls, index) => [index, { ...cls, index }]));
   const teacherClassMap = new Map(teacherClasses.map((cls, index) => [index, { ...cls, index }]));
-  console.log("dataclass",dataClassMap);
+
   // Collect all existing groups to find the highest group number
   const existingGroups = new Set<string>();
   teacherClasses.forEach(cls => {
@@ -606,27 +649,33 @@ function getClassKey(cls) {
 
   // Find added and updated classes
   for (const [key, dataClass] of dataClassMap) {
-
+     
+      
     if (!('group' in dataClass)) {
       const classId = classes.find(cls => cls.teacherName === teacher.name && cls.year === dataClass.year);
-      
     
       if (classId) {
-      highestGroupNumber++;
-      result.added.push({
-        ...dataClass,
-        classId: classId.id,
-        group: `G${highestGroupNumber}`,
-        subject: classId.subject
-      });
+        highestGroupNumber++;
+        result.added.push({
+          ...dataClass,
+          classId: classId.id,
+          group: `G${highestGroupNumber}`,
+          subject: classId.subject
+        });
+        
+        // Ensure that newAdded is not updated with the same dataClass
+        const yearExistsInAdded = result.added.some(item => item.year === dataClass.year);
+        if (!yearExistsInAdded) {
+          result.newAdded.push(dataClass);
+        }
+      } else {
+        // If no classId is found, only add to newAdded
+        const yearExists = result.newAdded.some(item => item.year === dataClass.year);
+        if (!yearExists) {
+          result.newAdded.push(dataClass);
+        }
+      }
     }
-    const yearExists = result.newAdded.some((item) => item.year === dataClass.year);
-    if (!yearExists) {
-      result.newAdded.push(dataClass);
-      console.log('guess what', result.newAdded);
-      
-    }
-  }
     else  {
       const teacherClass = teacherClasses.find(cls => cls.group === dataClass.group && cls.year === dataClass.year);
 
@@ -648,7 +697,6 @@ function getClassKey(cls) {
             day: dataClass.day,
             room: dataClass.room
           });
-          console.log('updated',result);
           
         }
       }
@@ -736,7 +784,7 @@ function getClassKey(cls) {
       return std; // Return the student as is if not in studentsToRemove
     })
   );
-  // console.log("removed",cls);
+
   
         }
       }
@@ -834,8 +882,7 @@ function getClassKey(cls) {
       : tchr
   )
 );
-//add to classes and teahcers forn ends
-          console.log(`Document for year ${year} successfully written!`);
+
         } catch (error) {
           console.error(`Error writing document for year ${year}:`, error);
         }
@@ -846,6 +893,7 @@ function getClassKey(cls) {
   const {toast}=useToast()
   const onSubmit = async(data:Teacher) => {
 const result=compareClasses(data.classes,teacher.classes)
+console.log(result);
 
   await processStudentChanges(result,data)
   const { classes, ...teacherData } = data;
@@ -885,7 +933,7 @@ const result=compareClasses(data.classes,teacher.classes)
             <CircleCheckIcon className="h-7 w-7 text-green-400" />
           </div>
           <div className="ml-4">
-            <h3 className="text-lg font-medium text-green-800">Teacher Edited Successfully</h3>
+            <h3 className="text-lg font-medium text-green-800">{t('teacher-edited-successfully')}</h3>
           
           </div>
         </div>
@@ -910,10 +958,10 @@ const result=compareClasses(data.classes,teacher.classes)
               variant="secondary"
               type='button'
             >
-              Prev
+              {t('prev')}
             </Button>
             {isLastStep?(        <LoadingButton size="sm"    loading={isSubmitting}        type={'submit'}   onClick={form.handleSubmit(onSubmit)}>
-              Finish
+            {t('finish')}
             </LoadingButton>):(        <Button size="sm"            type={"button"}    onClick={nextStep}>
               {isLastStep ? "Finish" : isOptionalStep ? "Skip" : "Next"}
             </Button>)}

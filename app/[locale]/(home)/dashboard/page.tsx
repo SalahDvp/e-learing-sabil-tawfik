@@ -1,13 +1,13 @@
 "use client";
-import { formatDateToYYYYMMDD, markAttendance } from "@/lib/hooks/students";
+import { markAttendance } from "@/lib/hooks/students";
 import Image from "next/image";
 import QrScanner from "qr-scanner";
-import { useEffect, useRef, useState } from "react";
+import {  useRef, useState } from "react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { useData } from "@/context/admin/fetchDataContext";
 import { Student } from "@/validators/auth";
-import { parse, isWithinInterval, addMinutes, subMinutes, format } from 'date-fns';
+import { format } from 'date-fns';
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Label } from "@/components/ui/label";
 import { RadioGroup,RadioGroupItem } from "@/components/ui/radio-group";
-import { writeAttendance } from "@/lib/hooks/students";
+import { useTranslations } from 'next-intl';
  
 import * as React from "react"
 import { Check, ChevronsUpDown } from "lucide-react"
@@ -45,6 +45,7 @@ import { pdf } from "@react-pdf/renderer";
 import StudentInvoice from'../students/components/studentInvoice'
 import { doc, setDoc } from "firebase/firestore";
 import { db } from "@/firebase/firebase-config";
+import { AutoComplete } from "@/components/ui/autocomplete";
 const frameworks = [
   {
     value: "next.js",
@@ -135,6 +136,7 @@ const checkClassTime = (scanTime: Date, student: any, groupClasses: any[]): any[
   }
 };
 export default function Home() {
+  const t=useTranslations()
   const videoRef = useRef<HTMLVideoElement>(null);
   const highlightCodeOutlineRef = useRef<HTMLDivElement>(null);
   const qrScanner = useRef<QrScanner | null>(null);
@@ -363,18 +365,18 @@ export default function Home() {
   return (
     <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto p-4 md:p-8">
     <div className="flex flex-col gap-6">
-      <h1 className="text-3xl font-bold">QR Code Scanner</h1>
+      <h1 className="text-3xl font-bold">{t('qr-code-scanner')}</h1>
       <AlertDialog open={openAlert} onOpenChange={setOpenAlert}>
   <AlertDialogContent>
     <AlertDialogHeader>
-      <AlertDialogTitle>Heads up!</AlertDialogTitle>
+      <AlertDialogTitle>{t('heads-up')}</AlertDialogTitle>
       <AlertDialogDescription>
  {alertText}
       </AlertDialogDescription>
     </AlertDialogHeader>
     <AlertDialogFooter>
-      <AlertDialogCancel>Cancel</AlertDialogCancel>
-      <AlertDialogAction>Continue</AlertDialogAction>
+      <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+      <AlertDialogAction>{t('Continue')}</AlertDialogAction>
     </AlertDialogFooter>
   </AlertDialogContent>
 </AlertDialog>
@@ -383,10 +385,10 @@ export default function Home() {
       <div className="bg-muted rounded-lg p-6 flex flex-col gap-4">
         <div className="flex items-center gap-4">
           <QrCodeIcon className="w-8 h-8 text-primary" />
-          <h2 className="text-xl font-semibold">Scan a QR Code</h2>
+          <h2 className="text-xl font-semibold">{t('scan-a-qr-code')}</h2>
         </div>
         <p className="text-muted-foreground">
-          Point your camera at a QR code to view the associated details.
+          {t('point-your-camera-at-qr-code')}
         </p>
         <div className="aspect-square bg-background rounded-md overflow-hidden relative">
           <video hidden={!showingQrScanner} ref={videoRef} className="absolute inset-0 w-full h-full object-cover"></video>
@@ -398,7 +400,7 @@ export default function Home() {
           onClick={stopScanner}
               className="mt-4 text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-red-600 dark:hover:bg-red-700 focus:outline-none dark:focus:ring-red-800"
             >
-              Stop QR Scanner
+              {t('stop-qr-scanner')}
             </button>
  
         ) : (
@@ -406,7 +408,7 @@ export default function Home() {
           onClick={handleButtonClick}
           className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
         >
-          Start QR Scanner
+          {t('start-qr-scanner')}
         </button>
         )}
       </div>
@@ -425,29 +427,29 @@ export default function Home() {
   <Separator />
   <div className="grid gap-2">
     <div className="flex items-center justify-between">
-      <span className="text-muted-foreground">Phone:</span>
+      <span className="text-muted-foreground">{t('phone')}:</span>
       <a href={`tel:${studentData.phoneNumber}`} className="text-primary">
         {studentData.phoneNumber}
       </a>
     </div>
     <div className="flex items-center justify-between">
-      <span className="text-muted-foreground">Birthdate:</span>
+      <span className="text-muted-foreground">{t('birth-date')}:</span>
       <span>{new Date(studentData.birthdate).toLocaleDateString()}</span>
     </div>
     <div className="flex items-center justify-between">
-      <span className="text-muted-foreground">Birthplace:</span>
+      <span className="text-muted-foreground">{t('birth-place')}:</span>
       <span>{studentData.birthplace}</span>
     </div>
     <div className="flex items-center justify-between">
-      <span className="text-muted-foreground">School:</span>
+      <span className="text-muted-foreground">{t('school')}:</span>
       <span>{studentData.school}</span>
     </div>
     <div className="flex items-center justify-between">
-      <span className="text-muted-foreground">Year:</span>
+      <span className="text-muted-foreground">{t('year')}:</span>
       <span>{studentData.year}</span>
     </div>
     <div className="flex items-center justify-between">
-      <span className="text-muted-foreground">CS:</span>
+      <span className="text-muted-foreground">{t('cs')}:</span>
       <span>{studentData.cs}</span>
     </div>
   </div>
@@ -465,7 +467,7 @@ export default function Home() {
   </div> */}
   <Separator />
   <div className="grid gap-2">
-  <span className="text-muted-foreground"> availble Classes:</span>
+  <span className="text-muted-foreground"> {t('avaliable-classes')}:</span>
   {Array.isArray(currentClasses) && currentClasses.length > 0 && (
   <RadioGroup defaultValue="card" className="grid grid-cols-3 gap-4">
     {currentClasses.map((classObj,index) => (
@@ -485,22 +487,41 @@ export default function Home() {
   </RadioGroup>
 )}
 </div>
-{currentClass &&(  <div className="mt-4 flex justify-end">
+{currentClass ?(  <div className="mt-4 flex justify-end">
     <Button
       onClick={() => {setStudentData(null);setCurrentClass(undefined);setCurrentClasses(undefined)}}
       variant='outline'
     >
-      Reset
+      {t('reset')}
     </Button>
     <Button
       onClick={() => onConfirm()}
       variant='default'
     >
-      Confirm
+      {t('confirm')}
     </Button>
-  </div>)}
+  </div>):(
+     <div className="mt-4 flex justify-end">
+     <Button
+       onClick={() => {setStudentData(null);setCurrentClass(undefined);setCurrentClasses(undefined)}}
+       variant='outline'
+     >
+        {t('reset')}
+     </Button>
+
+   </div>
+  )}
 </div>) :(<div className="bg-muted rounded-lg p-6 flex flex-col gap-4">
-  <ComboboxDemo open={open} setOpen={setOpen} onpressed={onpressed} array={students} value={studentData?.name}/>
+  <AutoComplete
+        options={students}
+        emptyMessage="No resulsts."
+        placeholder="Find something"
+
+        onpressed={onpressed}
+        value={studentData?.name}
+
+      />
+
                 <div className="flex items-center gap-4">
         
           <Avatar className="w-12 h-12 border">
@@ -515,33 +536,41 @@ export default function Home() {
                 <Separator />
                 <div className="grid gap-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Phone:</span>
+                    <span className="text-muted-foreground">{t('phone')}:</span>
                     <a  className="text-primary">
              
                     </a>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Birthdate:</span>
+                    <span className="text-muted-foreground">{t('birth-date')}:</span>
                     <span></span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Birthplace:</span>
+                    <span className="text-muted-foreground">{t('birth-place')}:</span>
                     <span></span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">School:</span>
+                    <span className="text-muted-foreground">{t('school')}:</span>
                     <span></span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Year:</span>
+                    <span className="text-muted-foreground">{t('year')}:</span>
                     <span></span>
                   </div>
                 </div>
                 <Separator />
                 <div className="grid gap-2">
-                  <span className="text-muted-foreground">Classes:</span>
+                  <span className="text-muted-foreground">{t('classes')}:</span>
 
                 </div>
+                <div className="mt-4 flex justify-end">
+    <Button
+      onClick={() => {setStudentData(null);setCurrentClass(undefined);setCurrentClasses(undefined)}}
+      variant='outline'
+    >
+      {t('reset')}
+    </Button>
+    </div>
               </div> ) }
   </div>
   );

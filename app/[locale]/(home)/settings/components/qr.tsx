@@ -9,6 +9,23 @@ import { useEffect, useState } from "react"
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import QRCode from 'qrcode'
+import { PDFDocument, PDFName, PDFPage, rgb } from 'pdf-lib';
+import fs from 'fs';
+import path from 'path';
+import { decode } from 'base64-arraybuffer';
+import { addDoc, collection } from "firebase/firestore"
+import { db } from "@/firebase/firebase-config"
+const copyPage = (originalPage) => {
+  const cloneNode = originalPage.node.clone();
+
+  const { Contents } = originalPage.node.normalizedEntries();
+  if (Contents) cloneNode.set(PDFName.of('Contents'), Contents.clone());
+
+  const cloneRef = originalPage.doc.context.register(cloneNode);
+  const clonePage = PDFPage.of(cloneNode, cloneRef, originalPage.doc);
+  return clonePage;
+};
+
 const generateQrCode = async (data: string) => {
     return QRCode.toDataURL(data);
   };
@@ -43,8 +60,59 @@ const generateQrCode = async (data: string) => {
     
     return Promise.all(idsAndQRCodesPromises);
   };
+  const addQRCodesToPDF = async (pdfBytes, qrCodeTexts) => {
+    try {
+
+  
+      // Generate QR codes as data URLs
+      const qrCodeDataUrls = await Promise.all(
+        qrCodeTexts.map(text => QRCode.toDataURL(text, { margin: 0 }))
+      );
+  
+      // Convert data URLs to Uint8Array
+      const qrCodeBytesArray = qrCodeDataUrls.map(url => 
+        Uint8Array.from(atob(url.split(',')[1]), c => c.charCodeAt(0))
+      );
+  
+      // Load the original PDF
+      const donorDoc = await PDFDocument.load(pdfBytes);
+  
+      // Create a new PDF document
+      const pdfDoc = await PDFDocument.create();
+  
+      // Copy the original page
+      const [originalPage] = await donorDoc.copyPages(donorDoc, [0]);
+  
+      // Add three pages to the new PDF, each containing the original page's content
+      const pages = [];
+      for (let i = 0; i < qrCodeBytesArray.length; i++) {
+        const [copiedPage] = await pdfDoc.copyPages(donorDoc, [0]); // Copy the original page content
+    
+        const newPage = copyPage(copiedPage);
+        pdfDoc.addPage(newPage);
+
+        const qrCodeImage = await pdfDoc.embedPng(qrCodeBytesArray[i]);
+        const qrCodeDims = qrCodeImage.scale(0.5); // Adjust size as needed
+  
+        newPage.drawImage(qrCodeImage, {
+          x: 173.5, // X position in points (adjust as needed)
+          y: newPage.getHeight() - qrCodeDims.height - 53, // Y position in points (adjust as needed)
+          width: qrCodeDims.width,
+          height: qrCodeDims.height,
+        });
+      }
+   
+      // Save the updated PDF
+      const updatedPdfBytes = await pdfDoc.save();
+      return updatedPdfBytes;
+    } catch (error) {
+      console.error('Error adding QR codes to PDF:', error);
+      throw error;
+    }
+  };
 export const Component = ()   => {
   const [selectedQrCode, setSelectedQrCode] = useState(null)
+  const [qrs,setQrs]=useState()
   const handleQrCodeClick = (qrCodeText) => {
     setSelectedQrCode(qrCodeText)
   }
@@ -63,10 +131,36 @@ export const Component = ()   => {
     fetchData();
   }, []);
   
-
+    const handleDownload = async () => {
+      // Fetch the existing PDF from the public folder
+      const response = await fetch('/Carte-Metidja.pdf');
+      const pdfBytes = await response.arrayBuffer();
+  
+      const uniqueIds = generateUniqueIds(500);
+await addDoc(collection(db,'Qrs'),{
+qrs:uniqueIds
+})
+      const updatedPdfBytes = await addQRCodesToPDF(pdfBytes,uniqueIds);
+  
+      // Create a Blob and generate a URL for the PDF
+      const blob = new Blob([updatedPdfBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+  
+      // Create a temporary link element and trigger a download
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'updated-card.pdf';
+      link.click();
+  
+      // Clean up the URL object
+      URL.revokeObjectURL(url);
+    };
+  
   return (
    <div className="max-w-6xl mx-auto border rounded-lg shadow-lg">
-   
+      <button onClick={handleDownload}>
+      Download PDF with QR Code
+    </button>
        
    <div className="max-h-[500px] overflow-auto">
   

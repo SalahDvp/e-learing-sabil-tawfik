@@ -6,7 +6,6 @@ import {
   DotsHorizontalIcon,
 } from "@radix-ui/react-icons"
 import { useToast } from "@/components/ui/use-toast"
-
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -117,12 +116,12 @@ interface DataTableDemoProps {
       },
       {
         accessorKey: "year",
-        header: () => <div style={{ whiteSpace: 'pre-wrap' }}>year</div>,
+        header: () => <div style={{ whiteSpace: 'pre-wrap' }}>{t('year')}</div>,
         cell: ({ row }) => <div>{row.getValue("year")}</div>,
       },
       {
         accessorKey: "field",
-        header: () => <div>Field</div>,
+        header: () => <div>{t('field')}</div>,
         cell: ({ row }) => {
           const classes = row.original.classes || [];
           const streams = classes.flatMap((classItem: any) => classItem.stream || []);
@@ -137,20 +136,19 @@ interface DataTableDemoProps {
       },
       {
         accessorKey: "phone",
-        header: () => <div >Phone</div>,
+        header: () => <div >{t('phone-number')}</div>,
         cell: ({ row }) => <div>{row.original.phoneNumber}</div>,
       },
       {
         accessorKey: "educational-subject",
-        header: () => <div >Educational Subject</div>,
+        header: () => <div >{t('educational-subject')}</div>,
         cell: ({ row }) => <div>{row.getValue("educational-subject")}</div>,
       },
       {
         id: "classes",
-        header: () => <div>Classes</div>,
+        header: () => <div>{t('classes')}</div>,
         cell: ({ row }) => {
           const classes = row.original.classes;
-          console.log(classes);
           
       return (
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
@@ -158,7 +156,7 @@ interface DataTableDemoProps {
     <div key={index} style={{ maxWidth: '200px', marginBottom: '5px' }}>
       <div className="font-medium">{classItem.subject}</div>
       <div className="text-sm text-muted-foreground">
-        <div>{classItem.day}</div>
+        <div>{t(`${classItem.day}`)}</div>
         <div>{`${classItem.start} -> ${classItem.end}`}</div>
       </div>
     </div>
@@ -184,7 +182,7 @@ interface DataTableDemoProps {
                 <DropdownMenuItem onClick={() => openEditSheet(teacherss)}>
                   {t('edit')} </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => openAttendanceCard(teacherss)}>
-                  {t('Attandance')} </DropdownMenuItem>
+                  {t('details')} </DropdownMenuItem>
 
 
                 <DropdownMenuItem onClick={() =>{deleteTeacher(teacherss.id), setTeachers((prevTeachers:any) =>

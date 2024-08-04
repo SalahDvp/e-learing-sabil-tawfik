@@ -19,31 +19,40 @@ import { Input } from "@/components/ui/input";
 import { useData } from "@/context/admin/fetchDataContext";
 import React from "react";
 import { Tabs,TabsList,TabsTrigger } from '@/components/ui/tabs';
+import { Button } from "@/components/ui/button";
+import { useTranslations } from "next-intl";
 
 
 
 export const DailyAtandenceDataTable = ({teacher }: {teacher:any }) => {
   const [searchTerm, setSearchTerm] = useState("");
 
-  const { students, setStudents } = useData();
+  const { classes } = useData();
 
   const [filter,setFilter]=useState("All")
 
-  const selectedStudents = useMemo(() => 
-    students.filter((std) =>
-      std.classes.some((cls) => teacher.groupUIDs.includes(cls.id))
-    ), [students]);
+  const selectedStudents = useMemo(() => {
+    // First, filter the classes based on teacher.groupUIDs
+    const filteredClasses = classes.filter((cls) =>
+      teacher.groupUIDs.includes(cls.id)
+    );
+  
+    // Then, combine all students from the filtered classes
+    const students = filteredClasses.flatMap(cls => cls.students);
+  
+    return students;
+  }, [classes, teacher]);
 
   const columns = useMemo(() => [
     {
-      accessorKey: "id",
+      accessorKey: "index",
       header: () => <div>Index</div>,
       cell: ({ row }) =>{
-        const index=row.original.classes.find((cls:any) => teacher.groupUIDs.includes(cls.id)).index
+        
        
         
         return(
-        <div className="lowercase hidden sm:table-cell">{index}</div>
+        <div className="lowercase hidden sm:table-cell">{row.getValue("index")}</div>
       ) },
     },
     {
@@ -65,11 +74,11 @@ export const DailyAtandenceDataTable = ({teacher }: {teacher:any }) => {
       accessorKey: "group",
       header: () => <div>group</div>,
       cell: ({ row }) =>{
-        const index=row.original.classes.find((cls:any) => teacher.groupUIDs.includes(cls.id)).group
+      
        
         
         return(
-        <div className="hidden sm:table-cell">{index}</div>
+        <div className="hidden sm:table-cell">{row.getValue("group")}</div>
       ) },
       
     },
@@ -80,6 +89,7 @@ export const DailyAtandenceDataTable = ({teacher }: {teacher:any }) => {
     },
     // Add any additional columns you might need here
   ], []);
+const t=useTranslations()
 
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -106,7 +116,7 @@ export const DailyAtandenceDataTable = ({teacher }: {teacher:any }) => {
     initialState: {
       pagination: {
         pageIndex: 0,
-        pageSize: 3,
+        pageSize:10,
       },
     },
   });
@@ -126,18 +136,22 @@ export const DailyAtandenceDataTable = ({teacher }: {teacher:any }) => {
           </div>
         </div>
         <Input
-          placeholder="Search by Name or ID..."
-          value={searchTerm}
-          onChange={(event) => setSearchTerm(event.target.value)}
+          placeholder={t('filter-student')}
+          value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+          onChange={(event) =>
+            table.getColumn("name")?.setFilterValue(event.target.value)
+          }
           className="max-w-sm"
         />
               <div className="text-muted-foreground">
         </div>
       </div>
-      <Tabs defaultValue={teacher.year[0]}>
+      <Tabs defaultValue={"All"}>
               <div className="flex items-center">
                 <TabsList>
-               
+                <TabsTrigger   value={"All"} onClick={() =>    table.resetColumnFilters()}>
+                      Tout
+                    </TabsTrigger>
                   {teacher.year.map((level) => (
                     <TabsTrigger key={level} value={level} onClick={() =>    table.getColumn("year")?.setFilterValue(level)}>
                       {level}
@@ -176,6 +190,28 @@ export const DailyAtandenceDataTable = ({teacher }: {teacher:any }) => {
           ))}
         </TableBody>
       </Table>
+      <div className="flex items-center justify-end space-x-2 py-4">
+        <div className="flex-1 text-sm text-muted-foreground">
+
+          {table.getFilteredRowModel().rows.length} Etudiants
+        </div>
+        <div className="space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+          >
+            {t('previous')} </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+          >
+            {t('next')} </Button>
+        </div>
+      </div>
     </div>
   );
 };

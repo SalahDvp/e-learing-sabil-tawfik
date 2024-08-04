@@ -1,5 +1,3 @@
-
-
 import * as React from "react"
 import {
   ChevronDownIcon,
@@ -27,7 +25,7 @@ import {
     CardHeader,
     CardTitle,
   } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
@@ -61,6 +59,16 @@ import StudentForm from "./studentForm"
 import StudentPaymentSheet from "./studentPaymentSheet"
 import EditStudent from "./editStudent"
 import ChangeCard from "./change-card"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 type Status = 'accepted' | 'pending' | 'rejected';
 export type StudentSummary = {
   id: string;
@@ -142,23 +150,23 @@ interface DataTableDemoProps {
 
 
    const {toast}=useToast()
-    
+   const [openAlert,setOpenAlert]=React.useState(false)
     const columns: ColumnDef<any>[] = [
-      {
-        accessorKey: "index",
-        header: () => <div >Index</div>,
+    //   {
+    //     accessorKey: "index",
+    //     header: () => <div >Index</div>,
      
-        cell: ({ row,table}) => {
-         (table.getSortedRowModel()?.flatRows?.findIndex((flatRow) => flatRow.id === row.id) || 0) + 1
-       return (
-        <div className="capitalize" style={{ width: '10px' }}>
-        <div className="font-medium">{row.original.studentIndex}</div>
-     </div>
-       )
+    //     cell: ({ row,table}) => {
+    //      (table.getSortedRowModel()?.flatRows?.findIndex((flatRow) => flatRow.id === row.id) || 0) + 1
+    //    return (
+    //     <div className="capitalize" style={{ width: '10px' }}>
+    //     <div className="font-medium">{row.original.studentIndex}</div>
+    //  </div>
+    //    )
 
       
-         }
-      },
+    //      }
+    //   },
       {
         accessorKey: "name",
         header: () => <div >{t('name')}</div>,
@@ -171,27 +179,27 @@ interface DataTableDemoProps {
       },
       {
         accessorKey: "year",
-        header: () => <div style={{ whiteSpace: 'pre-wrap' }}>year</div>,
+        header: () => <div style={{ whiteSpace: 'pre-wrap' }}>{t('year')}</div>,
         cell: ({ row }) => <div>{row.getValue("year")}</div>,
       },
       {
         accessorKey: "field",
-        header: () => <div >field</div>,
+        header: () => <div >{t('field')}</div>,
         cell: ({ row }) => <div>{row.getValue("field")}</div>,
       },
       {
         accessorKey: "phone",
-        header: () => <div >Phone</div>,
+        header: () => <div >{t('Phone')}</div>,
         cell: ({ row }) => <div>{row.original.phoneNumber}</div>,
       },
       {
         accessorKey: "school",
-        header: () => <div >school</div>,
+        header: () => <div >{t('school')}</div>,
         cell: ({ row }) => <div>{row.getValue("school")}</div>,
       },
       {
         id: "classes",
-        header: () => <div>Classes</div>,
+        header: () => <div>{t('Classes')}</div>,
         cell: ({ row }) => {
           const classesuid = row.original.classes;
 
@@ -231,19 +239,8 @@ interface DataTableDemoProps {
                 <DropdownMenuItem onClick={() => openEditSheet(student)}>
                   {t('edit')} </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => openCardSheet(student)}>
-                 New Card </DropdownMenuItem>
-                <DropdownMenuItem onClick={() =>{deleteStudent(student,classes), setStudents((prevStudents:any) =>
-      prevStudents.filter((std:any) => std.id !== student.id)
-
-    
-
-
-    )
-    toast({
-      title: "Student Deleted!",
-      description: `The student, ${student.name} Has been Deleted`,
-    });
-    }}>
+                 {t('New Card')} </DropdownMenuItem>
+                 <DropdownMenuItem onClick={() =>{setOpenAlert(true);setStudent(student)}}>
           {t('delete')} </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -336,9 +333,9 @@ const orderedMonths = [
     
     <Input
           placeholder={t('filter-student')}
-          value={(table.getColumn("student")?.getFilterValue() as string) ?? ""}
+          value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
-            table.getColumn("student")?.setFilterValue(event.target.value)
+            table.getColumn("name")?.setFilterValue(event.target.value)
           }
           className="max-w-sm mt-4"
         />
@@ -458,6 +455,33 @@ const orderedMonths = [
       </div>
       <EditStudent open={open} setOpen={setOpen}  student={student}/>
       <ChangeCard open={openCard} setOpen={setOpenCard}  student={student}/>
+      <AlertDialog open={openAlert} onOpenChange={setOpenAlert}>
+  <AlertDialogContent>
+    <AlertDialogHeader>
+      <AlertDialogTitle>{t('heads-up')}</AlertDialogTitle>
+      <AlertDialogDescription>
+{t('are-you-sure-you-want-to-delete-student')} </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+      <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+      <AlertDialogAction className={buttonVariants({ variant: "destructive" })}  onClick={async() =>{await deleteStudent(student,classes); setStudents((prevStudents:any) =>
+      prevStudents.filter((std:any) => std.id !== student.id)
+
+    
+
+
+    )
+    toast({
+      title: "Student Deleted!",
+      description: `The student, ${student.name} Has been Deleted`,
+    });
+    }}> 
+        
+        
+        {t('Delete')}</AlertDialogAction>
+    </AlertDialogFooter>
+  </AlertDialogContent>
+</AlertDialog>
     </CardContent>
   </Card>
 
