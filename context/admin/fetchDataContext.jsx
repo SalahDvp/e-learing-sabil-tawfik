@@ -149,7 +149,7 @@ export const  FetchDataProvider = ({ children }) => {
           return {
             id: groupId,
             ...groupData,
-            attendance: attendanceData,
+            Attendance: attendanceData,
           };
         });
 

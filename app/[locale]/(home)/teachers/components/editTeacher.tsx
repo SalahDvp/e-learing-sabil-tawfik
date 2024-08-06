@@ -607,9 +607,36 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
   const  {setTeachers,classes,setClasses,setStudents}= useData()
 // Helper function to generate a unique key for a class
 function getClassKey(cls) {
-  // Use a combination of properties to create a unique key
+    // Use a combination of properties to create a unique key
   return `${cls.classId}-${cls.group}`;
 }
+const arraysEqual = (arr1, arr2) => {
+  // Check if arrays have the same length
+  if (arr1.length !== arr2.length) return false;
+
+  // Sort arrays to ensure order doesn't matter
+  const sortedArr1 = [...arr1].sort();
+  const sortedArr2 = [...arr2].sort();
+
+  // Check if each element in sorted arrays is equal
+  return sortedArr1.every((value, index) => value === sortedArr2[index]);
+};
+
+const compareObjects = (obj1, obj2) => {
+  // List of keys to compare
+  const keys = ['day', 'end', 'group', 'quota', 'room', 'start', 'year'];
+
+  // Compare each key
+  return keys.every(key => {
+    if (Array.isArray(obj1[key]) && Array.isArray(obj2[key])) {
+      return arraysEqual(obj1[key], obj2[key]);
+    }
+    return String(obj1[key]) === String(obj2[key]);
+  });
+};
+
+
+
   function compareClasses(dataClasses: Class[], teacherClasses: Class[]): UpdateResult {
   const result: UpdateResult = {
     added: [],
@@ -703,14 +730,13 @@ function getClassKey(cls) {
     }
   }
 
-  // Find removed classes
-  for (const [id, teacherClass] of teacherClassMap) {
-    if (!dataClassMap.has(id)) {
-      // Class is in teacherClasses but not in dataClasses (removed)
+
+  teacherClasses.forEach(teacherClass => {
+    const exists = dataClasses.some(dataClass => dataClass.classId ===teacherClass.classId && dataClass.group === teacherClass.group);
+    if (!exists) {
       result.removed.push(teacherClass);
     }
-  }
-
+  });
   return result;
 }
 
@@ -892,9 +918,7 @@ function getClassKey(cls) {
   }
   const {toast}=useToast()
   const onSubmit = async(data:Teacher) => {
-const result=compareClasses(data.classes,teacher.classes)
-console.log(result);
-
+  const result=compareClasses(data.classes,teacher.classes)
   await processStudentChanges(result,data)
   const { classes, ...teacherData } = data;
 
@@ -916,9 +940,6 @@ console.log(result);
   prev.map(t => t.id === teacher.id ? { ...t, ...teacherInfoToUpdate } : t)
 );
   nextStep()
- 
-
-  
     
   };
 

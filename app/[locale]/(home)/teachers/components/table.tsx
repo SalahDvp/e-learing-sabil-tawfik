@@ -26,7 +26,7 @@ import {
     CardHeader,
     CardTitle,
   } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
@@ -59,6 +59,16 @@ import TeacherForm from "./teacherForm"
 
 import EditTeacher from "./editTeacher"
 import {AtandenceDataModel} from './attendance-report'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 type Status = 'accepted' | 'pending' | 'rejected';
 export type TeacherSummary = {
   id: string;
@@ -77,8 +87,8 @@ interface DataTableDemoProps {
     const [openCard, setOpenCard] = React.useState(false)
     const [openPayment,setOpenPayment]=React.useState(false)
     const t=useTranslations()
-    const {teachers,setTeachers}=useData()
-
+    const {teachers,setTeachers,classes}=useData()
+    const [openAlert,setOpenAlert]=React.useState(false)
     
 
     
@@ -179,20 +189,13 @@ interface DataTableDemoProps {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => openEditSheet(teacherss)}>
-                  {t('edit')} </DropdownMenuItem>
+                
                   <DropdownMenuItem onClick={() => openAttendanceCard(teacherss)}>
                   {t('details')} </DropdownMenuItem>
 
 
-                <DropdownMenuItem onClick={() =>{deleteTeacher(teacherss.id), setTeachers((prevTeachers:any) =>
-      prevTeachers.filter((std:any) => std.id !== teacherss.id)
-    )
-    toast({
-      title: "Teacher Deleted!",
-      description: `The Teacher, ${teacherss.name} Has been Deleted`,
-    });}}>
-          {t('delete')} </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() =>{setOpenAlert(true);setTeacher(teacherss)}}>
+                  {t('delete')} </DropdownMenuItem>
          
 
               </DropdownMenuContent>
@@ -405,6 +408,33 @@ const orderedMonths = [
       </div>
       <EditTeacher open={open} setOpen={setOpen}  teacher={teacher}/>
       <AtandenceDataModel open={openCard} setOpen={setOpenCard}  teacher={teacher}/>
+      <AlertDialog open={openAlert} onOpenChange={setOpenAlert}>
+  <AlertDialogContent>
+    <AlertDialogHeader>
+      <AlertDialogTitle>{t('heads-up')}</AlertDialogTitle>
+      <AlertDialogDescription>
+{t('are-you-sure-you-want-to-delete-student')} </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+      <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+      <AlertDialogAction className={buttonVariants({ variant: "destructive" })}  onClick={async() =>{await deleteTeacher(teacher.id); setTeachers((prevStudents:any) =>
+      prevStudents.filter((std:any) => std.id !==teacher.id)
+
+    
+
+
+    )
+    toast({
+      title: "Student Deleted!",
+      description: `The student, ${teacher.name} Has been Deleted`,
+    });
+    }}> 
+        
+        
+        {t('Delete')}</AlertDialogAction>
+    </AlertDialogFooter>
+  </AlertDialogContent>
+</AlertDialog>
     </CardContent>
   </Card>
 

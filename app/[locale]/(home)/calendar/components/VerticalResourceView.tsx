@@ -203,6 +203,7 @@ const VerticalResourceView = () => {
   
       // Find the attendance object for the class
       const attendance = classes.find((cls) => cls.id === classId);
+  console.log("attendaaacne",attendance);
   
       // Ensure attendance is defined before accessing its properties
       if (!attendance) {
@@ -210,7 +211,7 @@ const VerticalResourceView = () => {
       }
   
       // Use optional chaining and default value for safety
-      const attendanceDetail = attendance.attendance?.[`${formattedDate}-${group}`] || { attendanceList: [] };
+      const attendanceDetail = attendance.Attendance?.[`${formattedDate}-${group}`] || { attendanceList: [] };
  
       // Update the selected event with details and extra info
       setSelectedEvent({ ...args.event.extraInfo, ...attendanceDetail });

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -38,61 +38,65 @@ const generateDateColumns = (dates: string[]) => {
     cell: ({ row }) => <div>{getStatusIcon(row.getValue(date))}</div>,
   }));
 };
-const transformData = (data: any) => {
-  if (data) {
-    const { id, attendance, students } = data;
 
-    // Create a map to store the attendance statuses by name, ID, and date
-    const attendanceMap: { [key: string]: { [key: string]: string; index?: number; group?: string } } = {};
-
-    // Initialize the map with all dates
-    for (const [date, { attendanceList }] of Object.entries(attendance)) {
-      // Create a set of student IDs for fast lookup
-      const studentIdsSet = new Set(students.map((student: any) => student.id));
-
-      // For each student, set their status based on whether they appear in attendanceList
-      students.forEach(student => {
-        const { id: studentId, name } = student;
-        const studentKey = `${name}-${studentId}`; // Unique key for each student by name and ID
-        
-        if (!attendanceMap[studentKey]) {
-          attendanceMap[studentKey] = {};
-        }
-
-        // Check if the student is in the attendance list
-        const studentInAttendance = attendanceList.find(({ id }) => id === studentId);
-
-        if (studentInAttendance) {
-          const { status, index, group } = studentInAttendance;
-          attendanceMap[studentKey][date] = status;
-          attendanceMap[studentKey].index = index;
-          attendanceMap[studentKey].group = group;
-        } else {
-          // Mark the student as absent if not found in the attendance list
-          attendanceMap[studentKey][date] = 'Absent';
-          attendanceMap[studentKey].index = student.index;
-          attendanceMap[studentKey].group = student.group;
-        }
-      });
-    }
-
-    // Convert the map to an array of objects
-    const rowData = students.map(student => {
-      const studentKey = `${student.name}-${student.id}`; // Unique key for each student by name and ID
-      return {
-        id:student.id,
-        name: student.name,
-        ...attendanceMap[studentKey], // Use the unique key to get the data
-      };
-    });
-
-    return rowData;
-  }
-};
 export const ArchiveDataTable = ({teacher}) => {
   const {classes,teachers}=useData()
   const [filter,setFilter]=useState(teacher.year[0])
-  const transformedData = useMemo(() => transformData(classes.find((cls)=>cls.teacherUID===teacher.id &&cls.subject===teacher[`educational-subject`] && cls.year===filter)), [classes,filter]);
+  const transformData = useCallback((data: any) => {
+    if (data) {
+      const { id, Attendance, students } = data;
+  
+      // Create a map to store the attendance statuses by name, ID, and date
+      const attendanceMap: { [key: string]: { [key: string]: string; index?: number; group?: string } } = {};
+  
+      // Initialize the map with all dates
+      for (const [date, { attendanceList }] of Object.entries(Attendance)) {
+        // Create a set of student IDs for fast lookup
+        const studentIdsSet = new Set(students.map((student: any) => student.id));
+  
+        // For each student, set their status based on whether they appear in attendanceList
+        students.forEach(student => {
+          const { id: studentId, name } = student;
+          const studentKey = `${name}-${studentId}`; // Unique key for each student by name and ID
+          
+          if (!attendanceMap[studentKey]) {
+            attendanceMap[studentKey] = {};
+          }
+  
+          // Check if the student is in the attendance list
+          const studentInAttendance = attendanceList.find(({ id }) => id === studentId);
+  
+          if (studentInAttendance) {
+            const { status, index, group } = studentInAttendance;
+            attendanceMap[studentKey][date] = status;
+            attendanceMap[studentKey].index = index;
+            attendanceMap[studentKey].group = group;
+          } else {
+            // Mark the student as absent if not found in the attendance list
+            attendanceMap[studentKey][date] = 'Absent';
+            attendanceMap[studentKey].index = student.index;
+            attendanceMap[studentKey].group = student.group;
+          }
+        });
+      }
+  
+      // Convert the map to an array of objects
+      const rowData = students.map(student => {
+        const studentKey = `${student.name}-${student.id}`; // Unique key for each student by name and ID
+        return {
+          id: student.id,
+          name: student.name,
+          ...attendanceMap[studentKey], // Use the unique key to get the data
+        };
+      });
+  
+      return rowData;
+    }
+  }, []); // Add dependencies if necessary
+  const transformedData = useMemo(() => {
+    const classData = classes.find((cls) => cls.teacherUID === teacher.id && cls.subject === teacher['educational-subject'] && cls.year === filter);
+    return transformData(classData);
+  }, [classes, filter, teacher, transformData]); // Ensure dependencies are correctly set
   
   const tabsList = useMemo(() => {
       return teacher.year
@@ -102,7 +106,7 @@ export const ArchiveDataTable = ({teacher}) => {
 
 
 
-   const dates = datesKeys?Object.keys(datesKeys.attendance):null;
+   const dates = datesKeys?Object.keys(datesKeys.Attendance):null;
 
     const baseColumns: ColumnDef<any>[] = [
   {
@@ -162,7 +166,10 @@ const columns: ColumnDef<any>[] = [...baseColumns, ...dateColumns];
       },
     },
   });
+  const headerGroups = useMemo(() => table.getHeaderGroups(), [table]);
 
+  // Memoize the rows
+  const rows = useMemo(() => table.getRowModel().rows, [table]);
   return (
     <div className="max-w-4xl mx-auto">
       <div className="flex flex-col md:flex-row items-center justify-between mb-6">
@@ -204,35 +211,32 @@ const columns: ColumnDef<any>[] = [...baseColumns, ...dateColumns];
             Export
           </Button>
         </div>
-<Table>
-        <TableHeader>
-          {table.getHeaderGroups().map(headerGroup => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map(header => (
-                <TableHead key={header.id}>
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                </TableHead>
-              ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {table.getRowModel().rows.map(row => (
-            <TableRow key={row.id}>
-              {row.getVisibleCells().map(cell => (
-                <TableCell key={cell.id}>
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </TableCell>
-              ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+        <Table>
+      <TableHeader>
+        {headerGroups.map(headerGroup => (
+          <TableRow key={headerGroup.id}>
+            {headerGroup.headers.map(header => (
+              <TableHead key={header.id}>
+                {header.isPlaceholder
+                  ? null
+                  : flexRender(header.column.columnDef.header, header.getContext())}
+              </TableHead>
+            ))}
+          </TableRow>
+        ))}
+      </TableHeader>
+      <TableBody>
+        {rows.map(row => (
+          <TableRow key={row.id}>
+            {row.getVisibleCells().map(cell => (
+              <TableCell key={cell.id}>
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              </TableCell>
+            ))}
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
       </div>
     </div>
   );

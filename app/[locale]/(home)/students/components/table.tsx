@@ -70,6 +70,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import VerifyStudent from "./VerifyStudent"
+import QrSeach from "./Qr-search"
 type Status = 'accepted' | 'pending' | 'rejected';
 export type StudentSummary = {
   id: string;
@@ -317,7 +318,24 @@ const orderedMonths = [
       sorting: [{ id: 'index', desc:true }], // Sort by 'index' column in ascending order by default
     },
   })
+  const subjects = ['متوسط', 'علوم تجريبية', 'تقني رياضي', 'رياضيات', 'تسيير واقتصاد ', 'لغات اجنبية ', 'اداب وفلسفة'];
+  const countStudentsByStream = React.useCallback(() => {
+    // Initialize counts for each subject
+    const counts = subjects.reduce((acc, subject) => {
+      acc[subject] = 0;
+      return acc;
+    }, {});
 
+    // Count students in each stream
+    orderedStudents.forEach(student => {
+      if (counts[student.field] !== undefined) {
+        counts[student.field] += 1;
+      }
+    });
+
+    return counts;
+  }, [orderedStudents]);
+  const studentCounts = countStudentsByStream(students, subjects);
   return (
     <>
 
@@ -331,15 +349,18 @@ const orderedMonths = [
       
       <div className="flex items-center justify-between">
        
-    
-    <Input
+  
+      <Input
           placeholder={t('filter-student')}
           value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
             table.getColumn("name")?.setFilterValue(event.target.value)
           }
-          className="max-w-sm mt-4"
+          className="max-w-sm font-medium"
         />
+              <QrSeach onStudentScanned={(name) => {
+        table.getColumn("name")?.setFilterValue(name);
+      }} />
           <div className=" ml-auto space-y-4 ">
             <StudentForm/>
             <VerifyStudent/>
@@ -434,10 +455,22 @@ const orderedMonths = [
         <ScrollBar orientation="horizontal" />
         </ScrollArea>
       <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="flex-1 text-sm text-muted-foreground">
+        <div className="flex-1 text-sm ">
           {table.getFilteredSelectedRowModel().rows.length} of{" "}
           {table.getFilteredRowModel().rows.length} {t('row-s-selected')}
+          <div className="mt-2">
+        <h3 className="text-lg font-medium">Students Count</h3>
+        <ul>
+        {subjects.map(subject => (
+            <li key={subject} className="flex">
+              <span className="text-lg font-medium">{subject}:</span>
+              <span className="text-lg font-medium">{" "} {studentCounts[subject] || 0}</span> {/* Display 0 if no students found */}
+            </li>
+          ))}
+        </ul>
+      </div>
         </div>
+        
         <div className="space-x-2">
           <Button
             variant="outline"

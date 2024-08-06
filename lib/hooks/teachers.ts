@@ -76,45 +76,9 @@ export const addTeacher = async (teacher: Teacher) => {
 
         ));
             const groupUIDs: string[] = [];
-            const currentDate = new Date();
          for (const group of collectiveGroups) {
             const groupRef= await addDoc(collection(db, "Groups"), group);
             groupUIDs.push(groupRef.id);
-            const attendanceRef = collection(groupRef, "Attendance");
-
-            for (const cls of group.groups) {
-                const thisWeekStartDate = startOfWeek(currentDate, { weekStartsOn: 0 });
-                const nextWeekStartDate = addWeeks(thisWeekStartDate, 1);
-
-                // Create attendance for this week
-                const thisWeekDate = getNextDayOfWeek(cls.day, thisWeekStartDate);
-                const formattedDateThisWeek = format(thisWeekDate, 'yyyy-MM-dd');
-                const dateTimeUIDThisWeek = `${formattedDateThisWeek}-${cls.group}`;
-
-                // Add attendance document for this week
-                await setDoc(doc(attendanceRef, dateTimeUIDThisWeek), {
-                    id: dateTimeUIDThisWeek,
-                    start: cls.start,
-                    end: cls.end,
-                    group: cls.group,
-                    attendanceList: []
-                });
-
-                // Create attendance for next week
-                const nextWeekDate = getNextDayOfWeek(cls.day, nextWeekStartDate);
-                const formattedDateNextWeek = format(nextWeekDate, 'yyyy-MM-dd');
-                const dateTimeUIDNextWeek = `${formattedDateNextWeek}-${cls.group}`;
-
-                // Add attendance document for next week
-                await setDoc(doc(attendanceRef, dateTimeUIDNextWeek), {
-                    id: dateTimeUIDNextWeek,
-                    start: cls.start,
-                    end: cls.end,
-                    group: cls.group,
-                    attendanceList: []
-                });
-            }
-        
         await updateDoc(doc(db, "Teachers", teacherRef.id), {
             groupUIDs: arrayUnion( groupRef.id),
         });
@@ -185,6 +149,8 @@ export const removeGroupFromDoc = async (clss,studentArray) => {
     } catch (error) {
     }}
     export async function updateClassGroup(groupId,group, updatedGroupDetails) {
+        console.log("updated",updatedGroupDetails);
+        
         // Reference to the document
         const userRef = doc(db, 'Groups',groupId);
       
@@ -200,8 +166,10 @@ export const removeGroupFromDoc = async (clss,studentArray) => {
           const taskIndex = tasks.findIndex(task => task.group === group);
       
           if (taskIndex !== -1) {
+            const { classId, year, ...filteredDetails } = updatedGroupDetails;
+      
             // Update the specific task
-            tasks[taskIndex] = { ...tasks[taskIndex], ...updatedGroupDetails };
+            tasks[taskIndex] = {...filteredDetails };
       
             // Write back the updated array to Firestore
             await updateDoc(userRef, { groups: tasks });
@@ -217,51 +185,14 @@ export const removeGroupFromDoc = async (clss,studentArray) => {
         try {
     
                 const groupUIDs: string[] = [];
-                const currentDate = new Date();
+    
                 const groupRef= await addDoc(collection(db, "Groups"), clss);
                 groupUIDs.push(groupRef.id);
-                const attendanceRef = collection(groupRef, "Attendance");
     
-                for (const cls of clss.groups) {
-                    const thisWeekStartDate = startOfWeek(currentDate, { weekStartsOn: 0 });
-                    const nextWeekStartDate = addWeeks(thisWeekStartDate, 1);
-    
-                    // Create attendance for this week
-                    const thisWeekDate = getNextDayOfWeek(cls.day, thisWeekStartDate);
-                    const formattedDateThisWeek = format(thisWeekDate, 'yyyy-MM-dd');
-                    const dateTimeUIDThisWeek = `${formattedDateThisWeek}-${cls.group}`;
-    
-                    // Add attendance document for this week
-                    await setDoc(doc(attendanceRef, dateTimeUIDThisWeek), {
-                        id: dateTimeUIDThisWeek,
-                        start: cls.start,
-                        end: cls.end,
-                        group: cls.group,
-                        attendanceList: []
-                    });
-    
-                    // Create attendance for next week
-                    const nextWeekDate = getNextDayOfWeek(cls.day, nextWeekStartDate);
-                    const formattedDateNextWeek = format(nextWeekDate, 'yyyy-MM-dd');
-                    const dateTimeUIDNextWeek = `${formattedDateNextWeek}-${cls.group}`;
-    
-                    // Add attendance document for next week
-                    await setDoc(doc(attendanceRef, dateTimeUIDNextWeek), {
-                        id: dateTimeUIDNextWeek,
-                        start: cls.start,
-                        end: cls.end,
-                        group: cls.group,
-                        attendanceList: []
-                    });
-                }
-            
             await updateDoc(doc(db, "Teachers", teacherId), {
                 groupUIDs: arrayUnion(groupRef.id),
-              
                 
             });
-            console.log('groupRef.id',groupRef.id);
-            console.log('groupUIDs',groupUIDs)
             return {...clss,classId:groupRef.id};
         } catch (error) {
             console.error("Error adding Teacher:", error);

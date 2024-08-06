@@ -22,12 +22,9 @@ import {
 import { Label } from "@/components/ui/label";
 import { RadioGroup,RadioGroupItem } from "@/components/ui/radio-group";
 import { useTranslations } from 'next-intl';
- 
 import * as React from "react"
 import { Check, ChevronsUpDown } from "lucide-react"
- 
 import { cn } from "@/lib/utils"
-
 import {
   Command,
   CommandEmpty,
@@ -46,28 +43,6 @@ import StudentInvoice from'../students/components/studentInvoice'
 import { doc, setDoc } from "firebase/firestore";
 import { db } from "@/firebase/firebase-config";
 import { AutoComplete } from "@/components/ui/autocomplete";
-const frameworks = [
-  {
-    value: "next.js",
-    label: "Next.js",
-  },
-  {
-    value: "sveltekit",
-    label: "SvelteKit",
-  },
-  {
-    value: "nuxt.js",
-    label: "Nuxt.js",
-  },
-  {
-    value: "remix",
-    label: "Remix",
-  },
-  {
-    value: "astro",
-    label: "Astro",
-  },
-]
  
 function parseDateTimeRange(dateTimeRange) {
     // Split the string into components
@@ -236,7 +211,6 @@ export default function Home() {
       audioRefError.current?.play();
     }
   };
-
   const stopScanner = () => {
     qrScanner.current?.stop();
     qrScanner.current = null; // Reset the qrScanner to null
@@ -249,7 +223,6 @@ export default function Home() {
 
 
   };
-
   const onConfirm = async () => {
     try {
       // Find the index of the class to update
@@ -279,15 +252,25 @@ export default function Home() {
         group: currentClass.studentGroup,
         id: dateTimeUID
       };
+ 
+      const studentExists = currentAttendanceList.attendanceList.some(
+        attendance => attendance.index === currentClass.studentIndex
+      );
   
+      if (studentExists) {
+           setAlertText("This student has already scanned their code in the past hour.");
+      setOpenAlert(true);
+        return;
+      }
       // Check if attendance already exists
-      const exists = !!updatedClasses[classIndex]?.Attendance?.[dateTimeUID];
-  
+      const exists = updatedClasses[classIndex]?.Attendance?.[dateTimeUID] !== undefined;
+      console.log("exsist",updatedClasses[classIndex]?.Attendance?.[dateTimeUID] !== undefined);
+      
       // Update the attendance list
       currentAttendanceList.attendanceList.push({
         index: currentClass.studentIndex,
         group: currentClass.studentGroup,
-        name: currentClass.name,
+        name: studentData?.name,
         status: 'present'
       });
   
@@ -306,6 +289,8 @@ export default function Home() {
       
       //Perform the appropriate Firebase operation based on existence
       if (exists) {
+        console.log("hello",dateTimeUID);
+        
         await markAttendance(clsid, dateTimeUID, {
           name: studentData?.name,
           group: currentClass.group,
@@ -315,12 +300,12 @@ export default function Home() {
         });
 
       } else {
-
+        console.log("helloeqweqwe",dateTimeUID);
         const date=parseDateTimeRange(`${year}-${month}-${day}-${currentClass.start}-${currentClass.end}`)
         await setDoc(
           doc(db, 'Groups', clsid, 'Attendance', dateTimeUID),
           {
-            group: "G1",
+            group: currentClass.studentGroup,
             end: date.endDateTime,
             id: dateTimeUID,
             start: date.startDateTime,
