@@ -683,6 +683,8 @@ const compareObjects = (obj1, obj2) => {
     
       if (classId) {
         highestGroupNumber++;
+        console.log("the clas is ",dataClass);
+        
         result.added.push({
           ...dataClass,
           classId: classId.id,
@@ -919,6 +921,8 @@ const compareObjects = (obj1, obj2) => {
   const {toast}=useToast()
   const onSubmit = async(data:Teacher) => {
   const result=compareClasses(data.classes,teacher.classes)
+ 
+  
   await processStudentChanges(result,data)
   const { classes, ...teacherData } = data;
 

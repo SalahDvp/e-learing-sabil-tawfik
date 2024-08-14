@@ -27,8 +27,9 @@ import { useTranslations } from "next-intl";
 export const DailyAtandenceDataTable = ({teacher }: {teacher:any }) => {
   const [searchTerm, setSearchTerm] = useState("");
 
-  const { classes } = useData();
-
+  const { classes,students } = useData();
+ 
+  
   const [filter,setFilter]=useState("All")
 
   const selectedStudents = useMemo(() => {
@@ -38,10 +39,26 @@ export const DailyAtandenceDataTable = ({teacher }: {teacher:any }) => {
     );
   
     // Then, combine all students from the filtered classes
-    const students = filteredClasses.flatMap(cls => cls.students);
+    const studentsClasses = filteredClasses.flatMap(cls => cls.students);
   
-    return students;
-  }, [classes, teacher]);
+    // Create a map of student IDs to their details
+    const studentMap = new Map();
+    students.forEach(student => {
+      studentMap.set(student.id, student);
+    });
+  
+    // For each student in the combined students list, find their details and attach subjects
+    const studentsWithSubjects = studentsClasses.map(student => {
+      const studentDetails = studentMap.get(student.id);
+      return {
+        ...student, // Preserve other properties
+        field: studentDetails ? studentDetails.field : ''
+      };
+    });
+  
+    // Sort the students by their index in ascending order
+    return studentsWithSubjects.sort((a, b) => a.index - b.index);
+  }, [classes, teacher, students]);
 
   const columns = useMemo(() => [
     {
@@ -75,10 +92,22 @@ export const DailyAtandenceDataTable = ({teacher }: {teacher:any }) => {
       header: () => <div>group</div>,
       cell: ({ row }) =>{
       
+       const groupDetails=teacher.classes.find(cls=>cls.group===row.original.group)
+        
+        return(
+        <div className="hidden sm:table-cell">{row.getValue("group")}:{t(`${groupDetails?.day}`)},{groupDetails?.start}-{groupDetails?.end}</div>
+      ) },
+      
+    },
+    {
+      accessorKey: "field",
+      header: () => <div>field</div>,
+      cell: ({ row }) =>{
+      
        
         
         return(
-        <div className="hidden sm:table-cell">{row.getValue("group")}</div>
+        <div className="hidden sm:table-cell">{row.getValue("field")}</div>
       ) },
       
     },
@@ -152,11 +181,11 @@ const t=useTranslations()
                 <TabsTrigger   value={"All"} onClick={() =>    table.resetColumnFilters()}>
                       Tout
                     </TabsTrigger>
-                  {teacher.year.map((level) => (
-                    <TabsTrigger key={level} value={level} onClick={() =>    table.getColumn("year")?.setFilterValue(level)}>
-                      {level}
+                    {teacher.classes!= null &&(teacher.classes.map((group,index) => (
+                    <TabsTrigger key={index} value={index} onClick={() =>    table.getColumn("group")?.setFilterValue(group.group)}>
+                     {t(`${group.day}`)},{group.start}-{group.end}
                     </TabsTrigger>
-                  ))}
+                  )))}
                 </TabsList>
               </div>
               {/*  */}

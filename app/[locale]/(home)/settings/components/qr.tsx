@@ -13,7 +13,7 @@ import { PDFDocument, PDFName, PDFPage, rgb } from 'pdf-lib';
 import fs from 'fs';
 import path from 'path';
 import { decode } from 'base64-arraybuffer';
-import { addDoc, collection } from "firebase/firestore"
+import { addDoc, collection, doc, getDoc, getDocs } from "firebase/firestore"
 import { db } from "@/firebase/firebase-config"
 const copyPage = (originalPage) => {
   const cloneNode = originalPage.node.clone();
@@ -40,11 +40,31 @@ const generateQrCode = async (data: string) => {
     return result;
   };
   
-  const generateUniqueIds = (count: number) => {
+  const fetchExistingIds = async (collectionPath: string, documentId: string): Promise<Set<string>> => {
+    const existingIds = new Set<string>();
+    const docRef = doc(db, collectionPath, documentId);
+    const querySnapshot = await getDoc(docRef);
+  
+    if (querySnapshot.exists()) {
+      const data = querySnapshot.data();
+      if (data && Array.isArray(data.qrs)) {
+        // Add each ID from the qrs array to the Set
+        data.qrs.forEach((id: string) => existingIds.add(id));
+      }
+    }
+  
+    return existingIds;
+  };
+  
+  const generateUniqueIds = async (count: number) => {
+    const existingIds = await fetchExistingIds("Qrs","NYX2q0LyHKjO79FkhhOs");
     const uniqueIds = new Set<string>();
-    
+  
     while (uniqueIds.size < count) {
-      uniqueIds.add(generateFirestoreId());
+      const newId = generateFirestoreId();
+      if (!existingIds.has(newId)) {
+        uniqueIds.add(newId);
+      }
     }
   
     return Array.from(uniqueIds);
@@ -136,7 +156,7 @@ export const Component = ()   => {
       const response = await fetch('/Carte-Metidja.pdf');
       const pdfBytes = await response.arrayBuffer();
   
-      const uniqueIds = generateUniqueIds(500);
+      const uniqueIds =await  generateUniqueIds(500);
 await addDoc(collection(db,'Qrs'),{
 qrs:uniqueIds
 })

@@ -189,7 +189,8 @@ interface DataTableDemoProps {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                
+                <DropdownMenuItem onClick={() => openEditSheet(teacherss)}>
+                  {t('edit')} </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => openAttendanceCard(teacherss)}>
                   {t('details')} </DropdownMenuItem>
 
@@ -266,7 +267,7 @@ const orderedMonths = [
     initialState: {
       pagination: {
         pageIndex: 0, //custom initial page index
-        pageSize: 10, //custom default page size
+        pageSize: 50, //custom default page size
       },
     },
   })

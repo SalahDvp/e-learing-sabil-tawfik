@@ -16,7 +16,7 @@ import { CircleAlertIcon, CircleCheckIcon, PlusCircle } from 'lucide-react';
 import QrScanner from "qr-scanner";
 
 import { useTranslations } from 'next-intl';
-import { doc, getDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/firebase/firebase-config';
 
 
@@ -43,24 +43,53 @@ const t=useTranslations()
   const audioRefError = useRef(null);
   const processedQrCodes = useRef(new Set<string>()); // Set to track processed QR codes
   const handleQrScan = async (result) => {
-     
-    if (!isFirestoreId(result.data)) {//less than 20
-        setStudent(null)
+    try {
+      if (!isFirestoreId(result.data)) {
+        // If the result.data is not a valid Firestore ID
+        setStudent(null);
+        audioRefError.current?.play();
+        return;
+      }
+  
+      const studentsRef = collection(db, 'Students');
+  
+      // Queries to find documents where `id` or `newid` matches `result.data`
+      const queryById = query(studentsRef, where('id', '==', result.data));
+      const queryByNewId = query(studentsRef, where('newId', '==', result.data));
+  
+      // Perform the queries
+      const [idSnapshot, newidSnapshot] = await Promise.all([
+        getDocs(queryById),
+        getDocs(queryByNewId),
+      ]);
+  
+      // Determine which query has results and get the student data
+      let studentData = null;
+  
+      if (!idSnapshot.empty) {
+        // If there are results in the id query
+        studentData = idSnapshot.docs[0].data();
+      } else if (!newidSnapshot.empty) {
+        // If there are results in the newid query
+        studentData = newidSnapshot.docs[0].data();
+      }
+  
+      if (studentData) {
+        // Set student data and play success audio
+        setStudent(studentData);
+        audioRefSuccess.current?.play();
+      } else {
+        // If no student data found, set student to null and play error audio
+        setStudent(null);
+        audioRefError.current?.play();
+      }
+    } catch (error) {
+      console.error('Error handling QR scan:', error);
+      setStudent(null);
       audioRefError.current?.play();
-      return;
+    } finally {
+      stopScanner();
     }
-    const userRef = doc(db, 'Students', result.data);
-    const userDoc = await getDoc(userRef);
-
-    if (userDoc.exists()) {
-      const userData = userDoc.data();
-      setStudent(userData);
-      audioRefSuccess.current?.play()
-    } else {
-        setStudent(null)
-        audioRefError.current?.play()
-    }
-     stopScanner();
   };
 
   const stopScanner = () => {

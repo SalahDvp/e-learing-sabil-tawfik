@@ -652,12 +652,13 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
    
         
     ));
+    
     const updatedCollectiveGroups = collectiveGroups.map((group, index) => ({
       ...group,
       id: teacherId.groupUIDs[index]
     }));
     nextStep()
-    setTeachers((prev: Teacher[]) => [...prev, {...data,id:teacherId.id,groupUIDs:teacherId.groupUIDs,teacher:data.name}]);
+    setTeachers((prev: Teacher[]) => [...prev, {...data,id:teacherId.id,groupUIDs:teacherId.groupUIDs,teacher:data.name,classes:teacherId.classesgrouped}]);
     setClasses((prev: any[]) => [...prev, ...updatedCollectiveGroups]);
 
     

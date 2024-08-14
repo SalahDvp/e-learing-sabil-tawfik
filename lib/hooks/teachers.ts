@@ -76,16 +76,34 @@ export const addTeacher = async (teacher: Teacher) => {
 
         ));
             const groupUIDs: string[] = [];
+            const classesgrouped:any[]=[]
          for (const group of collectiveGroups) {
             const groupRef= await addDoc(collection(db, "Groups"), group);
             groupUIDs.push(groupRef.id);
+            const classesgroupeds = group.groups.map(grp => ({
+                classId: groupRef.id,
+                day: grp.day,
+                end: grp.end,
+                group: grp.group,
+                index: 0,
+                quota: 0,
+                room: grp.room,
+                start: grp.start,
+                stream: grp.stream,
+                subject: grp.subject,
+                year: group.year
+              }));
+              
+              // If you want to add these objects to an existing array, you can use .push.apply or spread syntax
+              classesgrouped.push(...classesgroupeds);
+            
         await updateDoc(doc(db, "Teachers", teacherRef.id), {
             groupUIDs: arrayUnion( groupRef.id),
         });
         console.log("Groups added successfully");
         console.log('1st groupUIDs',groupUIDs);
     }
-        return {id:teacherRef.id,groupUIDs:groupUIDs};
+        return {id:teacherRef.id,groupUIDs:groupUIDs,classesgrouped};
     } catch (error) {
         console.error("Error adding Teacher:", error);
         throw error; // Optionally re-throw the error to propagate it further if needed

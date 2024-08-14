@@ -73,8 +73,6 @@ interface openModelProps {
 }
 const subjects =['متوسط','علوم تجريبية', 'تقني رياضي', 'رياضيات', 'تسيير واقتصاد ', 'لغات اجنبية ', 'اداب وفلسفة']
 const classess = [
-  "Select Option",
-   "Select Option",
    "رياضيات",
    "علوم",
    "فيزياء",
@@ -96,12 +94,13 @@ const classess = [
    "تاريخ وجغرافيا",
  
  ];
-const steps = [
+const steps: StepItem[] = [
   { label: "Step 1" },
   { label: "Step 2" },
   { label: "Step 3" },
 
-] satisfies StepItem[]
+];
+
 const years=[
   "1AM",
   "2AM",
@@ -115,7 +114,8 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
   const camera = useRef<null | { takePhoto: () => string }>(null);
   const {setStudents,teachers,classes,students}=useData()
   const t=useTranslations()
-  const form = useForm<any>({
+  const form = useForm<Student>({
+    resolver: zodResolver(StudentSchema),
     
     defaultValues:student
   });
@@ -132,9 +132,8 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
       reset({...student});
   }, [reset,student]);
   const getClassId = (subject:string, name:string,day:string,start:string,end:string)  => {
-    const selectedClass = classes.find(cls => cls.subject === subject && cls.year=== watch('year') &&   cls.groups.some(group => group.stream.includes(watch('field'))) && cls.teacherName === name )
-    const selectedGroup=selectedClass.groups.find( grp=> grp.day === day && grp.start === start && grp.end===end)
-    console.log(end);
+    const selectedClass = classes.find((cls: { subject: string; year: any; groups: any[]; teacherName: string; }) => cls.subject === subject && cls.year=== watch('year') &&   cls.groups.some((group: { stream: string | any[]; }) => group.stream.includes(watch('field'))) && cls.teacherName === name )
+    const selectedGroup=selectedClass.groups.find( (grp: { day: string; start: string; end: string; })=> grp.day === day && grp.start === start && grp.end===end)
     
     return selectedClass ? {id:selectedClass.id,index:selectedClass.students?selectedClass.students.length+1:1,group:selectedGroup.group}: {id:"",index:0,group:""};
   };
@@ -284,7 +283,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
       <FormLabel className="text-right">{t("Year")}</FormLabel>
       <FormControl>
       <Select
-   onValueChange={(e) => {
+   onValueChange={(e: string) => {
     // Call the onChange handler with the new value
     field.onChange(e);
 
@@ -376,7 +375,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
             onClick={() => {
               if (camera.current) {
                 setValue('photo',camera.current.takePhoto());
-                console.log(camera.current.takePhoto());
+               
                 
               } else {
                 console.error('Camera reference is null');
@@ -416,10 +415,10 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {fields.map((invoice,index) => (
+        {fields.map((invoice: { id: React.Key | null | undefined; subject: any; name: any; time: any; cs: any; },index: number) => (
           <TableRow key={invoice.id}>
                         <TableCell className="font-medium"> 
-              <Select  value={invoice.subject} onValueChange={(value)=>handleGroupChange(index,'subject',value)}>
+              <Select  value={invoice.subject} onValueChange={(value: string | number)=>handleGroupChange(index,'subject',value)}>
       <SelectTrigger className="">
         <SelectValue placeholder="Select a Subject" />
       </SelectTrigger>
@@ -435,7 +434,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
       </SelectContent>
     </Select></TableCell>
             <TableCell className="font-medium"> 
-              <Select  value={invoice.name} onValueChange={(value)=>handleGroupChange(index,'name',value)}>
+              <Select  value={invoice.name} onValueChange={(value: string | number)=>handleGroupChange(index,'name',value)}>
       <SelectTrigger className="">
         <SelectValue placeholder="Select a Group" />
       </SelectTrigger>
@@ -443,7 +442,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
       {invoice.subject? ( <SelectGroup>
           <SelectLabel>{t('Groups')}</SelectLabel>
           {Array.from(new Set(classes
-                        .filter(cls => cls.subject === invoice.subject && cls.year=== watch('year') &&   cls.groups.some(group => group.stream.includes(watch('field'))))
+                        .filter((cls: { subject: any; year: any; groups: any[]; }) => cls.subject === invoice.subject && cls.year=== watch('year') &&   cls.groups.some((group: { stream: string | any[]; }) => group.stream.includes(watch('field'))))
                       )).map(cls => (
                         <SelectItem key={cls.teacherName} value={cls.teacherName}>
                           {cls.teacherName}
@@ -452,20 +451,20 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
         </SelectGroup>):(<p className="text-sm text-muted-foreground">Select Subject first</p>)}
       </SelectContent>
     </Select></TableCell>
-            <TableCell> <Select value={invoice.time} onValueChange={(value)=>handleGroupChange(index,'time',value)}>
+            <TableCell> <Select value={invoice.time} onValueChange={(value: string | number)=>handleGroupChange(index,'time',value)}>
       <SelectTrigger className="">
         <SelectValue placeholder="Select a time" />
       </SelectTrigger>
       <SelectContent>
       {invoice.subject && invoice.name? ( <SelectGroup>
           <SelectLabel>{t('times')}</SelectLabel>
-          {classes.find(cls => 
+          {classes.find((cls: { subject: any; year: any; teacherName: any; }) => 
     cls.subject === invoice.subject && 
     cls.year === watch('year') && 
     cls.teacherName === invoice.name
   )?.groups
-    .filter(group => group.stream.includes(watch('field'))) // Filter groups based on stream.includes
-    .map((group, index) => (
+    .filter((group: { stream: string | any[]; }) => group.stream.includes(watch('field'))) // Filter groups based on stream.includes
+    .map((group: { day: any; start: any; end: any; }, index: React.Key | null | undefined) => (
       <SelectItem key={index} value={JSON.stringify(`${group.day},${group.start}-${group.end}`)}>
         {t(`${group.day}`)},{group.start}-{group.end}
       </SelectItem>
@@ -475,7 +474,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
       </SelectContent>
     </Select></TableCell>
     <TableCell className="font-medium"> 
-              <Select value={invoice.cs} onValueChange={(value)=>handleGroupChange(index,'cs',value)}>
+              <Select value={invoice.cs} onValueChange={(value: string | number)=>handleGroupChange(index,'cs',value)}>
       <SelectTrigger className="">
         <SelectValue placeholder="Select a cs" />
       </SelectTrigger>
@@ -527,7 +526,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,stud
     isLastStep,
     isOptionalStep,
   } = useStepper()
-  const generateQrCode = async (text) => {
+  const generateQrCode = async (text: string | QRCode.QRCodeSegment[]) => {
     try {
       return await QRCode.toDataURL(text);
     } catch (err) {
@@ -605,7 +604,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,stud
   
     return result;
   }
-  async function processStudentChanges(result,data) {
+  async function processStudentChanges(result: { added: any; removed: any; updated: any; },data: { classesUIDs: any; }) {
     const { added, removed, updated } = result;
   
     // Add students to classes
@@ -615,8 +614,8 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,stud
         const studentCount = await getStudentCount(id);
         const index = studentCount ;
 
-       setClasses(prevClasses => 
-          prevClasses.map(cls =>
+       setClasses((prevClasses: any[]) => 
+          prevClasses.map((cls: { id: any; students: any; }) =>
       cls.id === id ? {
         ...cls,
         students: [...cls.students, { group, id,cs, index:index, name, year:student.year }]
@@ -624,8 +623,8 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,stud
     )
   );
 
-  setStudents(prevStudents => 
-    prevStudents.map(std =>
+  setStudents((prevStudents: any[]) => 
+    prevStudents.map((std: { id: any; classesUIDs: any; classes: any; }) =>
 std.id === student.id ? {
   ...std,
   classesUIDs: [...std.classesUIDs, { id:id,group:group }],
@@ -648,25 +647,23 @@ await addStudentToClass({...cls,index:index,year:student.year,studentName:studen
        
         
 await removeStudentFromClass({...cls,year:student.year},student.id,student.name)
-console.log('zakamoooooooooo',cls , 'id', student.id, 'year ', student.year, 'name',student.name);
-       setClasses(prevClasses => 
-          prevClasses.map(cls =>
+       setClasses((prevClasses: any[]) => 
+          prevClasses.map((cls: { id: any; students: any[]; }) =>
       cls.id === id ? {
         ...cls,
-        students: cls.students.filter(std => std.id !== student.id)
+        students: cls.students.filter((std: { id: any; }) => std.id !== student.id)
       } : cls
     )
   );
 
-  setStudents(prevStudents => 
-    prevStudents.map(std =>
+  setStudents((prevStudents: any[]) => 
+    prevStudents.map((std: { id: any; classesUIDs: any[]; classes: any[]; }) =>
 std.id === student.id ? {
   ...std,
-  classesUIDs:std.classesUIDs.filter(cls => cls.id !== id),
-  classes:std.classes.filter(cls => cls.id !== id),
+  classesUIDs:std.classesUIDs.filter((cls: { id: any; }) => cls.id !== id),
+  classes:std.classes.filter((cls: { id: any; }) => cls.id !== id),
 } : std
 ))
-console.log("removed",cls);
 
         }
       }
@@ -675,26 +672,26 @@ console.log("removed",cls);
     if (updated && Array.isArray(updated)) {
       for (const { id,group } of updated) {
  
-   const classToUpdate = classes.find(cls => cls.id === id);
-   const updatedStudents = classToUpdate.students.map(std =>
+   const classToUpdate = classes.find((cls: { id: any; }) => cls.id === id);
+   const updatedStudents = classToUpdate.students.map((std: { id: any; }) =>
     std.id === student.id
       ? { ...std, group: group }  // Update the student with the new group
       : std
   );
   await changeStudentGroup(id,student.id,updatedStudents,data.classesUIDs)
-        setClasses(prevClasses =>
-          prevClasses.map(cls =>
+        setClasses((prevClasses: any[]) =>
+          prevClasses.map((cls: { id: any; students: any[]; }) =>
             cls.id === id? {
               ...cls,
-              students: cls.students.map(std =>
+              students: cls.students.map((std: { id: any; }) =>
                 std.id === student.id? { ...std, group: group } : student
               )
             } : cls
           )
         );
   
-        setStudents(prevStudents =>
-          prevStudents.map(std =>
+        setStudents((prevStudents: any[]) =>
+          prevStudents.map((std: { id: any; }) =>
             std.id === student.id ? {...data} : std
           )
         );
@@ -781,7 +778,18 @@ toast({
         </div>
       )}
       <div className="w-full flex justify-end gap-2">
+     
         {hasCompletedAllSteps ? (
+             <div style={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
+           <Button
+           disabled={isDisabledStep}
+           onClick={prevStep}
+           size="sm"
+           variant="secondary"
+           type='button'
+         >
+           {t('Prev')}
+         </Button>
                  <DialogFooter>
                      <DialogClose asChild>
           <LoadingButton size="sm"           disabled={isSubmitting} type='submit'  onClick={form.handleSubmit(onSubmit)}>
@@ -790,6 +798,7 @@ toast({
           
           </DialogClose>
                </DialogFooter>
+               </div>
         ) : (
           <>
             <Button

@@ -49,11 +49,16 @@ const t=useTranslations()
           }`}
         >
           {t('calendar')} </Link>
-        <Link
+          <Link
           href="/students"
           className={`${pathname=== '/students' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
         >
-         {t('Students')} </Link>
+        Lycee </Link>
+         <Link
+          href="/middle"
+          className={`${pathname=== '/middle' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
+        >
+        CEM </Link>
         <Link
           href="/teachers"
           className={`${pathname=== '/teachers' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
@@ -110,7 +115,12 @@ const t=useTranslations()
           href="/students"
           className={`${pathname=== '/students' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
         >
-         {t('Students')} </Link>
+        Lycee </Link>
+         <Link
+          href="/middle"
+          className={`${pathname=== '/middle' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
+        >
+        CEM </Link>
         <Link
           href="/teachers"
           className={`${pathname=== '/teachers' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
