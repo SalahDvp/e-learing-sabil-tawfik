@@ -24,6 +24,11 @@ export const pathnames = {
     "en": "/students",
     "ar": "/students",
     "fr":"/students"
+  },  
+  "/middle": {
+    "en": "/middle",
+    "ar": "/middle",
+    "fr":"/middle"
   },
   "/teachers": {
     "en":"/teachers",
@@ -94,6 +99,11 @@ export const pathnames = {
     "en": "/parent/child/[slug]/Courses",
     "ar": "/parent/child/[slug]/Courses",
     "fr":"/parent/child/[slug]/Courses"
+  },
+  "/student": {
+    "en": "/student",
+    "ar": "/student",
+    "fr":"/student"
   },
 } satisfies Pathnames<typeof locales>;
 

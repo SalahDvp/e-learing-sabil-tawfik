@@ -1,10 +1,11 @@
 "use client"
-import React from 'react';
+
 import {
   ChevronDownIcon,
 } from "@radix-ui/react-icons"
+import React, { useMemo,useCallback } from 'react';
 import { useToast } from "@/components/ui/use-toast"
-
+import { useTranslations } from "next-intl"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -66,7 +67,9 @@ import { useData } from "@/context/admin/fetchDataContext";
 
 import { generateTimeOptions } from '../../settings/components/open-days-table';
 import { setgroups } from 'process';
- 
+import { parse, isBefore, isAfter, isEqual } from 'date-fns';
+import { ScrollArea } from "@/components/ui/scroll-area";
+const parseTime = (timeString) => parse(timeString, 'HH:mm', new Date());
 interface FooterProps {
   formData: Teacher;
   form: UseFormReturn<any>; // Use the specific form type if available
@@ -89,7 +92,7 @@ const middleSchoolYears = ["1AM", "2AM", "3AM", "4AM"];
 const highSchoolYears = ["1AS", "2AS", "3AS"];
 
 export default function TeacherForm() {
-
+  const t=useTranslations()
   const timeOptions = generateTimeOptions("07:00","22:00", 30);
   const form = useForm<any>({
     defaultValues:{
@@ -145,33 +148,7 @@ const handleYearToggle = (field:string) => {
   }
 };
 
-const subjects = [
-  "Select Option",
-  "Mathematics",
-  "Physics",
-  "Chemistry",
-  "Biology",
-  "Geography",
-  "History",
-  "Philosophy",
-  "Arabic",
-  "French",
-  "English",
-  "Islamic Education",
-  "Technology",
-  "Computer Science",
-  "Art",
-  "Physical Education",
-  "Economics",
-  "German",
-  "Spanish",
-  "Law",
-  "Business Studies",
-  "Social Sciences",
-  "Engineering",
-  "Architecture",
-  "Environmental Science"
-];
+
 /*const years=[
   "1AM",
   "2AM",
@@ -182,8 +159,62 @@ const subjects = [
   "3AS"
 ]
 */
+const {classes}=useData()
+const checkRoomAvailability = useCallback((newGroup: Group, allRooms: string[]): string[] => {
+  const { day, start, end } = newGroup;
+  console.log(day, start, end);
+  // Check if any of the required fields are missing
+  if (!day || !start || !end) {
+    return [];
+  }
+
+  
+  const newGroupStart = parseTime(start);
+  const newGroupEnd = parseTime(end);
+
+  return allRooms.filter((room) => {
+    return !classes.some((classItem) =>
+      classItem.groups.some((group) => {
+        const groupStart = parseTime(group.start);
+        const groupEnd = parseTime(group.end);
+
+        return group.day === day &&
+          group.room === room &&
+          ((isBefore(newGroupStart, groupEnd) && isAfter(newGroupEnd, groupStart)) ||
+           isEqual(newGroupStart, groupStart) || 
+           isEqual(newGroupEnd, groupEnd) ||
+           (isBefore(newGroupStart, groupEnd) && isEqual(newGroupEnd, groupEnd))
+          );
+      })
+    );
+  });
+}, [watch("classes")]);
 
 
+const subjects = [
+  "Select Option",
+  "رياضيات",
+  "علوم",
+  "فيزياء",
+  "فلسفة",
+  "العربية",
+  "الإنجليزية",
+  "الفرنسية",
+  "اسبانية",
+  "المانية",
+  "ايطالية",
+  "محاسبة",
+  "هندسة مدنية",
+  "هندسة ميكانيكية",
+  "هندسة الطرائق",
+  "الهندسة الكهربائية",
+  "قانون",
+  "اقتصاد",
+  "العلوم الاسلامية",
+  "تاريخ وجغرافيا",
+  
+
+];
 
 const [schoolType, setSchoolType] = React.useState('');
 
@@ -196,15 +227,15 @@ const [schoolType, setSchoolType] = React.useState('');
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button >Create Teacher</Button>
+        <Button >{t('create-teacher')}</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[950px]">
+      <DialogContent className="sm:max-w-[1400px]">
       <Form {...form} >
       <form >
         <DialogHeader>
-          <DialogTitle>Add Teacher</DialogTitle>
+          <DialogTitle>{t('add-teacher')}</DialogTitle>
           <DialogDescription>
-            Add your Teacher here. Click save when you're done.
+          {t('add-your-teacher-here-click-save-when-youre-done')}
           </DialogDescription>
         </DialogHeader>
 
@@ -226,7 +257,7 @@ const [schoolType, setSchoolType] = React.useState('');
                   name="name"
                   render={({ field }) => (
                     <FormItem className="grid grid-cols-4 items-center gap-4">
-                      <FormLabel className="text-right">Name</FormLabel>
+                      <FormLabel className="text-right">{t('name')}</FormLabel>
                       <FormControl><Input id="name"  className="col-span-3"  {...field}/></FormControl>
 
                       <FormMessage />
@@ -240,7 +271,7 @@ const [schoolType, setSchoolType] = React.useState('');
               name="birthdate"
               render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Birthdate</FormLabel>
+                  <FormLabel className="text-right">{t('birth-date')}</FormLabel>
                   <FormControl>  
                     <CalendarDatePicker
             {...field}
@@ -268,7 +299,7 @@ const [schoolType, setSchoolType] = React.useState('');
         name="year"
         render={({ field }) => (
           <FormItem className="grid grid-cols-4 items-center gap-4">
-            <FormLabel className="text-right">School Type</FormLabel>
+            <FormLabel className="text-right">{t('school-type')}</FormLabel>
             <FormControl>
               <Select
                 onValueChange={(value) => handleSchoolTypeChange(value)}
@@ -278,11 +309,11 @@ const [schoolType, setSchoolType] = React.useState('');
                   id={`schoolType`}
                   aria-label={`Select School Type`}
                 >
-                  <SelectValue placeholder={"Select School Type"} />
+                  <SelectValue placeholder={t('select-school-type')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="middle">Middle School</SelectItem>
-                  <SelectItem value="high">High School</SelectItem>
+                  <SelectItem value="middle">{t('middle-school')}</SelectItem>
+                  <SelectItem value="high">{t('hight-school')}</SelectItem>
                 </SelectContent>
               </Select>
             </FormControl>
@@ -297,7 +328,7 @@ const [schoolType, setSchoolType] = React.useState('');
   name="educational-subject"
   render={({ field }) => (
     <FormItem className="grid grid-cols-4 items-center gap-4">
-      <FormLabel className="text-right">Educational Subject</FormLabel>
+      <FormLabel className="text-right">{t('educational-subject')}</FormLabel>
       <FormControl>
       <Select
    onValueChange={field.onChange}
@@ -307,7 +338,7 @@ const [schoolType, setSchoolType] = React.useState('');
                               id={`subject`}
                               aria-label={`Select subject`}
                             >
-                              <SelectValue placeholder={"select subject"} />
+                              <SelectValue placeholder={t('select-subject')} />
                             </SelectTrigger>
             <SelectContent>
  
@@ -334,12 +365,41 @@ const [schoolType, setSchoolType] = React.useState('');
               name="phoneNumber"
               render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Phone Number</FormLabel>
+                  <FormLabel className="text-right">{t('phone-number')}</FormLabel>
                   <FormControl><Input id="phoneNumber" className="col-span-3" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+            
+<FormField
+        control={control}
+        name="paymentType"
+        render={({ field }) => (
+          <FormItem className="grid grid-cols-4 items-center gap-4">
+            <FormLabel className="text-right">payment Type</FormLabel>
+            <FormControl>
+              <Select
+                onValueChange={field.onChange}
+                defaultValue={field.value}
+              >
+                <SelectTrigger
+                  id={`paymentType`}
+                  aria-label={`Select payment Type`}
+                >
+                  <SelectValue placeholder='payment Type' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="percentage">Percentage</SelectItem>
+                  <SelectItem value="hourly">Hourly</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
 
          
 
@@ -349,22 +409,25 @@ const [schoolType, setSchoolType] = React.useState('');
 
 ) : (
   <div className="w-full h-full">
+         <ScrollArea className="h-[400px]">
    <Table>
   <TableCaption>
-  <Button type='button' size="sm" variant="ghost" className="gap-1 w-full" onClick={() => appendClass({ day: '', start: '', end: '', quota: 0, stream: [] })}>
+  <Button type='button' size="sm" variant="ghost" className="gap-1 w-full" onClick={() => appendClass({ day: '', start: '', end: '', quota: 0, stream: [],paymentType:'',amount:0 })}>
       <PlusCircle className="h-3.5 w-3.5" />
-      Add Group
+      {t('add-group')}
     </Button>
   </TableCaption>
   <TableHeader>
     <TableRow>
-      <TableHead>Day</TableHead>
-      <TableHead>Start Time</TableHead>
-      <TableHead>End Time</TableHead>
-      <TableHead>Room</TableHead>
-      <TableHead>Field</TableHead>
-      <TableHead>Year</TableHead>
-      <TableHead>Action</TableHead>
+      <TableHead>{t('day')}</TableHead>
+      <TableHead>{t('start-time')}</TableHead>
+      <TableHead>{t('end-time')}</TableHead>
+      <TableHead>{t('room')}</TableHead>
+      <TableHead>{t('field')}</TableHead>
+      <TableHead>{t('year')}</TableHead>
+      <TableHead>payment Type</TableHead>
+      <TableHead>Amount</TableHead>
+      <TableHead>{t('action')}</TableHead>
     </TableRow>
   </TableHeader>
   <TableBody>
@@ -386,14 +449,14 @@ const [schoolType, setSchoolType] = React.useState('');
                               id={`end-${index}`}
                               aria-label={`Select day`}
                             >
-                              <SelectValue placeholder="Select day" />
+                              <SelectValue placeholder={t('select-day')} />
                             </SelectTrigger>
                           </FormControl>
 
                           <SelectContent>
                             {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => (
                               <SelectItem key={day} value={day}>
-                                {day}
+                              {t(`${day}`)}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -418,7 +481,7 @@ const [schoolType, setSchoolType] = React.useState('');
                               id={`end-${index}`}
                               aria-label={`Select end time`}
                             >
-                              <SelectValue placeholder="Select End time" />
+                              <SelectValue placeholder={t('select-end-time')} />
                             </SelectTrigger>
                           </FormControl>
 
@@ -450,7 +513,7 @@ const [schoolType, setSchoolType] = React.useState('');
                               id={`end-${index}`}
                               aria-label={`Select end time`}
                             >
-                              <SelectValue placeholder="Select End time" />
+                              <SelectValue placeholder={t('select-end-time')} />
                             </SelectTrigger>
                           </FormControl>
 
@@ -483,12 +546,12 @@ const [schoolType, setSchoolType] = React.useState('');
                               id={`room-${index}`}
                               aria-label={`Select room`}
                             >
-                              <SelectValue placeholder="Select room" />
+                              <SelectValue placeholder={t('select-room')} />
                             </SelectTrigger>
                           </FormControl>
 
                           <SelectContent>
-                            {['room 1','room 2','room 3','room 4','room 5','room 6'].map((room) => (
+                            {checkRoomAvailability(watch(`classes.${index}`),['room 1','room 2','room 3','room 4','room 5','room 6','room 7','room 8']).map((room) => (
                               <SelectItem key={room} value={room}>
                                 {room}
                               </SelectItem>
@@ -503,11 +566,11 @@ const [schoolType, setSchoolType] = React.useState('');
         <DropdownMenu>
     <DropdownMenuTrigger asChild>
       <Button variant="outline" className="ml-auto">
-        Select Fields <ChevronDownIcon className="ml-2 h-4 w-4" />
+      {t('select-field')} <ChevronDownIcon className="ml-2 h-4 w-4" />
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end">
-      {['Scientific Stream', 'Literature and Philosophy', 'Literature and Languages', 'Economics', 'Mathematics and Technology', 'Mathematics'].map(e => (
+      {['متوسط','علوم تجريبية', 'تقني رياضي', 'رياضيات', 'تسيير واقتصاد ', 'لغات اجنبية ', 'اداب وفلسفة'].map(e => (
         <DropdownMenuItem
           key={e}
           value={e}
@@ -515,7 +578,7 @@ const [schoolType, setSchoolType] = React.useState('');
           onClick={() => handleGroupChange(index, 'stream', e) } 
           
         >
-          <span className="mr-2">{e}</span>
+          <span className="mr-2"> { t(`${e}`)}</span>
           {group.stream.includes(e) && <CheckIcon className="h-4 w-4 text-green-500" />}
         </DropdownMenuItem>
       ))}
@@ -538,7 +601,7 @@ const [schoolType, setSchoolType] = React.useState('');
                               id={`year-${index}`}
                               aria-label={`Select year`}
                             >
-                              <SelectValue placeholder="Select room" />
+                              <SelectValue placeholder={t('select-year')} />
                             </SelectTrigger>
                           </FormControl>
 
@@ -554,15 +617,62 @@ const [schoolType, setSchoolType] = React.useState('');
                     )}
                   />
                   </TableCell>
+                  <TableCell className="font-medium">
+        <FormField
+                    control={form.control}
+                    key={group.id}
+                    name={`classes.${index}.paymentType`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger
+                              id={`end-${index}`}
+                              aria-label={`Select paymentType`}
+                            >
+                              <SelectValue placeholder='paymentType' />
+                            </SelectTrigger>
+                          </FormControl>
+
+                          <SelectContent>
+                            {['monthly','session'].map((paymentType) => (
+                              <SelectItem key={paymentType} value={paymentType}>
+                              {paymentType}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+        </TableCell>
+     <TableCell className="font-medium">
+        <FormField
+                    control={form.control}
+                    key={group.id}
+                    name={`classes.${index}.amount`}
+                    render={({ field }) => (
+                      <FormItem>
+                   
+                          <FormControl>
+                          <Input {...field} onChange={event => field.onChange(+event.target.value)}/>
+                          </FormControl>
+                      </FormItem>
+                    )}
+                  />
+        </TableCell>
         <TableCell>
-          <Button type="button" variant="destructive" onClick={() => removeClass(index)}>Remove</Button>
+          <Button type="button" variant="destructive" onClick={() => removeClass(index)}>{t('remove')}</Button>
         </TableCell>
       </TableRow>
     ))}
   </TableBody>
 </Table>
 
-
+</ScrollArea>
 </div>
 )}
               </div>
@@ -615,26 +725,27 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
           stream: cls.stream,
           quota: cls.quota,
           room:cls.room,
-          group:`G${index+1}`
+          group:`G${index+1}`,
+          paymentType:cls.paymentType,
+          amount:cls.amount
         }))}
    
         
     ));
+    
     const updatedCollectiveGroups = collectiveGroups.map((group, index) => ({
       ...group,
       id: teacherId.groupUIDs[index]
     }));
     nextStep()
-    setTeachers((prev: Teacher[]) => [...prev, {...data,id:teacherId.id,groupUIDs:teacherId.groupUIDs,teacher:data.name}]);
+    setTeachers((prev: Teacher[]) => [...prev, {...data,id:teacherId.id,groupUIDs:teacherId.groupUIDs,teacher:data.name,classes:teacherId.classesgrouped}]);
     setClasses((prev: any[]) => [...prev, ...updatedCollectiveGroups]);
-
-    
     toast({
       title: "Teacher Added!",
       description: `The Teacher, ${data.name} added successfully`,
     });
   };
-
+  const t=useTranslations()
 
   return (
     <>
@@ -646,7 +757,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
             <CircleCheckIcon className="h-7 w-7 text-green-400" />
           </div>
           <div className="ml-4">
-            <h3 className="text-lg font-medium text-green-800">Teacher Created Successfully</h3>
+            <h3 className="text-lg font-medium text-green-800">  {t('teacher-added-successfully')}</h3>
           
           </div>
         </div>
@@ -658,7 +769,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
         {hasCompletedAllSteps ? (
                  <DialogFooter>
                      <DialogClose asChild>
-         
+                
           
           </DialogClose>
                </DialogFooter>
@@ -671,10 +782,10 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
               variant="secondary"
               type='button'
             >
-              Prev
+                {t('prev')}
             </Button>
             {isLastStep?(        <LoadingButton size="sm"    loading={isSubmitting}        type={'submit'}   onClick={form.handleSubmit(onSubmit)}>
-              Finish
+            {t('finish')}
             </LoadingButton>):(        <Button size="sm"            type={"button"}    onClick={nextStep}>
               {isLastStep ? "Finish" : isOptionalStep ? "Skip" : "Next"}
             </Button>)}

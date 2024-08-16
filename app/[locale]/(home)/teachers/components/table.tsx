@@ -6,7 +6,6 @@ import {
   DotsHorizontalIcon,
 } from "@radix-ui/react-icons"
 import { useToast } from "@/components/ui/use-toast"
-
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -27,7 +26,7 @@ import {
     CardHeader,
     CardTitle,
   } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
@@ -60,6 +59,16 @@ import TeacherForm from "./teacherForm"
 
 import EditTeacher from "./editTeacher"
 import {AtandenceDataModel} from './attendance-report'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 type Status = 'accepted' | 'pending' | 'rejected';
 export type TeacherSummary = {
   id: string;
@@ -78,8 +87,8 @@ interface DataTableDemoProps {
     const [openCard, setOpenCard] = React.useState(false)
     const [openPayment,setOpenPayment]=React.useState(false)
     const t=useTranslations()
-    const {teachers,setTeachers}=useData()
-
+    const {teachers,setTeachers,classes}=useData()
+    const [openAlert,setOpenAlert]=React.useState(false)
     
 
     
@@ -117,12 +126,12 @@ interface DataTableDemoProps {
       },
       {
         accessorKey: "year",
-        header: () => <div style={{ whiteSpace: 'pre-wrap' }}>year</div>,
+        header: () => <div style={{ whiteSpace: 'pre-wrap' }}>{t('year')}</div>,
         cell: ({ row }) => <div>{row.getValue("year")}</div>,
       },
       {
         accessorKey: "field",
-        header: () => <div>Field</div>,
+        header: () => <div>{t('field')}</div>,
         cell: ({ row }) => {
           const classes = row.original.classes || [];
           const streams = classes.flatMap((classItem: any) => classItem.stream || []);
@@ -137,20 +146,19 @@ interface DataTableDemoProps {
       },
       {
         accessorKey: "phone",
-        header: () => <div >Phone</div>,
+        header: () => <div >{t('phone-number')}</div>,
         cell: ({ row }) => <div>{row.original.phoneNumber}</div>,
       },
       {
         accessorKey: "educational-subject",
-        header: () => <div >Educational Subject</div>,
+        header: () => <div >{t('educational-subject')}</div>,
         cell: ({ row }) => <div>{row.getValue("educational-subject")}</div>,
       },
       {
         id: "classes",
-        header: () => <div>Classes</div>,
+        header: () => <div>{t('classes')}</div>,
         cell: ({ row }) => {
           const classes = row.original.classes;
-          console.log(classes);
           
       return (
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
@@ -158,7 +166,7 @@ interface DataTableDemoProps {
     <div key={index} style={{ maxWidth: '200px', marginBottom: '5px' }}>
       <div className="font-medium">{classItem.subject}</div>
       <div className="text-sm text-muted-foreground">
-        <div>{classItem.day}</div>
+        <div>{t(`${classItem.day}`)}</div>
         <div>{`${classItem.start} -> ${classItem.end}`}</div>
       </div>
     </div>
@@ -184,17 +192,11 @@ interface DataTableDemoProps {
                 <DropdownMenuItem onClick={() => openEditSheet(teacherss)}>
                   {t('edit')} </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => openAttendanceCard(teacherss)}>
-                  {t('Attandance')} </DropdownMenuItem>
+                  {t('details')} </DropdownMenuItem>
 
 
-                <DropdownMenuItem onClick={() =>{deleteTeacher(teacherss.id), setTeachers((prevTeachers:any) =>
-      prevTeachers.filter((std:any) => std.id !== teacherss.id)
-    )
-    toast({
-      title: "Teacher Deleted!",
-      description: `The Teacher, ${teacherss.name} Has been Deleted`,
-    });}}>
-          {t('delete')} </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() =>{setOpenAlert(true);setTeacher(teacherss)}}>
+                  {t('delete')} </DropdownMenuItem>
          
 
               </DropdownMenuContent>
@@ -265,7 +267,7 @@ const orderedMonths = [
     initialState: {
       pagination: {
         pageIndex: 0, //custom initial page index
-        pageSize: 10, //custom default page size
+        pageSize: 50, //custom default page size
       },
     },
   })
@@ -407,6 +409,33 @@ const orderedMonths = [
       </div>
       <EditTeacher open={open} setOpen={setOpen}  teacher={teacher}/>
       <AtandenceDataModel open={openCard} setOpen={setOpenCard}  teacher={teacher}/>
+      <AlertDialog open={openAlert} onOpenChange={setOpenAlert}>
+  <AlertDialogContent>
+    <AlertDialogHeader>
+      <AlertDialogTitle>{t('heads-up')}</AlertDialogTitle>
+      <AlertDialogDescription>
+{t('are-you-sure-you-want-to-delete-student')} </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+      <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+      <AlertDialogAction className={buttonVariants({ variant: "destructive" })}  onClick={async() =>{await deleteTeacher(teacher.id); setTeachers((prevStudents:any) =>
+      prevStudents.filter((std:any) => std.id !==teacher.id)
+
+    
+
+
+    )
+    toast({
+      title: "Student Deleted!",
+      description: `The student, ${teacher.name} Has been Deleted`,
+    });
+    }}> 
+        
+        
+        {t('Delete')}</AlertDialogAction>
+    </AlertDialogFooter>
+  </AlertDialogContent>
+</AlertDialog>
     </CardContent>
   </Card>
 

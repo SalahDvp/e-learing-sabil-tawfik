@@ -70,58 +70,44 @@ export const addTeacher = async (teacher: Teacher) => {
               stream: cls.stream,
               quota: cls.quota,
               room:cls.room,
-              group:`G${index+1}`
+              group:`G${index+1}`,
+              paymentType:cls.paymentType,
+              amount:cls.amount
             }))}
 
 
         ));
             const groupUIDs: string[] = [];
-            const currentDate = new Date();
+            const classesgrouped:any[]=[]
          for (const group of collectiveGroups) {
             const groupRef= await addDoc(collection(db, "Groups"), group);
             groupUIDs.push(groupRef.id);
-            const attendanceRef = collection(groupRef, "Attendance");
-
-            for (const cls of group.groups) {
-                const thisWeekStartDate = startOfWeek(currentDate, { weekStartsOn: 0 });
-                const nextWeekStartDate = addWeeks(thisWeekStartDate, 1);
-
-                // Create attendance for this week
-                const thisWeekDate = getNextDayOfWeek(cls.day, thisWeekStartDate);
-                const formattedDateThisWeek = format(thisWeekDate, 'yyyy-MM-dd');
-                const dateTimeUIDThisWeek = `${formattedDateThisWeek}-${cls.group}`;
-
-                // Add attendance document for this week
-                await setDoc(doc(attendanceRef, dateTimeUIDThisWeek), {
-                    id: dateTimeUIDThisWeek,
-                    start: cls.start,
-                    end: cls.end,
-                    group: cls.group,
-                    attendanceList: []
-                });
-
-                // Create attendance for next week
-                const nextWeekDate = getNextDayOfWeek(cls.day, nextWeekStartDate);
-                const formattedDateNextWeek = format(nextWeekDate, 'yyyy-MM-dd');
-                const dateTimeUIDNextWeek = `${formattedDateNextWeek}-${cls.group}`;
-
-                // Add attendance document for next week
-                await setDoc(doc(attendanceRef, dateTimeUIDNextWeek), {
-                    id: dateTimeUIDNextWeek,
-                    start: cls.start,
-                    end: cls.end,
-                    group: cls.group,
-                    attendanceList: []
-                });
-            }
-        
+            const classesgroupeds = group.groups.map(grp => ({
+                classId: groupRef.id,
+                day: grp.day,
+                end: grp.end,
+                group: grp.group,
+                index: 0,
+                quota: 0,
+                room: grp.room,
+                start: grp.start,
+                stream: grp.stream,
+                subject: grp.subject,
+                year: group.year,
+                paymentType:grp.paymentType,
+                amount:grp.amount
+              }));
+              
+              // If you want to add these objects to an existing array, you can use .push.apply or spread syntax
+              classesgrouped.push(...classesgroupeds);
+            
         await updateDoc(doc(db, "Teachers", teacherRef.id), {
             groupUIDs: arrayUnion( groupRef.id),
         });
         console.log("Groups added successfully");
         console.log('1st groupUIDs',groupUIDs);
     }
-        return {id:teacherRef.id,groupUIDs:groupUIDs};
+        return {id:teacherRef.id,groupUIDs:groupUIDs,classesgrouped};
     } catch (error) {
         console.error("Error adding Teacher:", error);
         throw error; // Optionally re-throw the error to propagate it further if needed
@@ -131,7 +117,7 @@ export const addTeacher = async (teacher: Teacher) => {
 
 export const updateTeacher = async(updatedteacher: Teacher,teacherId:string)=>{
     try {
-            await updateDoc(doc(db, "Teachers",teacherId), updatedteacher);
+        await updateDoc(doc(db, "Teachers",teacherId), updatedteacher);
         console.log("Teacher updated successfully:");
         return true; // Assuming you want to return the ID of the added Teacher
     } catch (error) {
@@ -142,7 +128,7 @@ export const updateTeacher = async(updatedteacher: Teacher,teacherId:string)=>{
 }
 export const deleteTeacher = async(teacherId:string)=>{
     try {
-            await deleteDoc(doc(db, "Teachers",teacherId));
+          await deleteDoc(doc(db, "Teachers",teacherId));
         console.log("Teacher deleted successfully:");
         return true; // Assuming you want to return the ID of the added Teacher
     } catch (error) {
@@ -174,7 +160,7 @@ export const removeGroupFromDoc = async (clss,studentArray) => {
         
         // Update the document to remove the specified group from the groups array
         await updateDoc(docRef, {
-            groups: arrayRemove({day:clss.day,end:clss.end,group:clss.group,quota:clss.quota,room:clss.room,start:clss.start,stream:clss.stream,subject:clss.subject})
+            groups: arrayRemove({day:clss.day,end:clss.end,group:clss.group,quota:clss.quota,room:clss.room,start:clss.start,stream:clss.stream,subject:clss.subject,paymentType:clss.paymentType,amount:clss.amount})
         });
         studentArray.map(async(std)=>{
             await updateDoc(doc(db,'Students',std.id),{
@@ -185,6 +171,8 @@ export const removeGroupFromDoc = async (clss,studentArray) => {
     } catch (error) {
     }}
     export async function updateClassGroup(groupId,group, updatedGroupDetails) {
+        console.log("updated",updatedGroupDetails);
+        
         // Reference to the document
         const userRef = doc(db, 'Groups',groupId);
       
@@ -200,8 +188,10 @@ export const removeGroupFromDoc = async (clss,studentArray) => {
           const taskIndex = tasks.findIndex(task => task.group === group);
       
           if (taskIndex !== -1) {
+            const { classId, year, ...filteredDetails } = updatedGroupDetails;
+      
             // Update the specific task
-            tasks[taskIndex] = { ...tasks[taskIndex], ...updatedGroupDetails };
+            tasks[taskIndex] = {...filteredDetails};
       
             // Write back the updated array to Firestore
             await updateDoc(userRef, { groups: tasks });
@@ -217,51 +207,14 @@ export const removeGroupFromDoc = async (clss,studentArray) => {
         try {
     
                 const groupUIDs: string[] = [];
-                const currentDate = new Date();
+    
                 const groupRef= await addDoc(collection(db, "Groups"), clss);
                 groupUIDs.push(groupRef.id);
-                const attendanceRef = collection(groupRef, "Attendance");
     
-                for (const cls of clss.groups) {
-                    const thisWeekStartDate = startOfWeek(currentDate, { weekStartsOn: 0 });
-                    const nextWeekStartDate = addWeeks(thisWeekStartDate, 1);
-    
-                    // Create attendance for this week
-                    const thisWeekDate = getNextDayOfWeek(cls.day, thisWeekStartDate);
-                    const formattedDateThisWeek = format(thisWeekDate, 'yyyy-MM-dd');
-                    const dateTimeUIDThisWeek = `${formattedDateThisWeek}-${cls.group}`;
-    
-                    // Add attendance document for this week
-                    await setDoc(doc(attendanceRef, dateTimeUIDThisWeek), {
-                        id: dateTimeUIDThisWeek,
-                        start: cls.start,
-                        end: cls.end,
-                        group: cls.group,
-                        attendanceList: []
-                    });
-    
-                    // Create attendance for next week
-                    const nextWeekDate = getNextDayOfWeek(cls.day, nextWeekStartDate);
-                    const formattedDateNextWeek = format(nextWeekDate, 'yyyy-MM-dd');
-                    const dateTimeUIDNextWeek = `${formattedDateNextWeek}-${cls.group}`;
-    
-                    // Add attendance document for next week
-                    await setDoc(doc(attendanceRef, dateTimeUIDNextWeek), {
-                        id: dateTimeUIDNextWeek,
-                        start: cls.start,
-                        end: cls.end,
-                        group: cls.group,
-                        attendanceList: []
-                    });
-                }
-            
             await updateDoc(doc(db, "Teachers", teacherId), {
                 groupUIDs: arrayUnion(groupRef.id),
-              
                 
             });
-            console.log('groupRef.id',groupRef.id);
-            console.log('groupUIDs',groupUIDs)
             return {...clss,classId:groupRef.id};
         } catch (error) {
             console.error("Error adding Teacher:", error);

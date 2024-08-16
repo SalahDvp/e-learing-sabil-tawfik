@@ -26,7 +26,6 @@ import {
     CardTitle,
   } from "@/components/ui/card"
 import { Button, buttonVariants } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -49,16 +48,14 @@ import { File } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import {exportTableToExcel} from '@/components/excelExport'
-import SheetDemo from "./editStudent"
 import { Student }  from "@/validators/auth";
 import { useData } from "@/context/admin/fetchDataContext";
-import { z } from "zod"
 import { useTranslations } from "next-intl"
 import { deleteStudent } from "@/lib/hooks/students"
-import StudentForm from "./studentForm"
-import StudentPaymentSheet from "./studentPaymentSheet"
-import EditStudent from "./editStudent"
-import ChangeCard from "./change-card"
+import StudentForm from "../../students/components/studentForm"
+
+import EditStudent from "../../students/components/editStudent"
+import ChangeCard from "../../students/components/change-card"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -69,9 +66,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import VerifyStudent from "./VerifyStudent"
-import QrSeach from "./Qr-search"
-import { StudentsNumber } from "./area-chart"
+import VerifyStudent from "../../students/components/VerifyStudent"
+import QrSeach from "../../students/components/Qr-search"
 type Status = 'accepted' | 'pending' | 'rejected';
 export type StudentSummary = {
   id: string;
@@ -95,7 +91,7 @@ interface DataTableDemoProps {
       if (!students || !Array.isArray(students)) {
         return [];
       }
-    const orders=students.filter((std)=>std.field != "متوسط")
+    const orders=students.filter((std)=>std.field==="متوسط")
       // Sort the students array by studentIndex in ascending order
       return orders.sort((a, b) => a.studentIndex - b.studentIndex);
     }, [students]);
@@ -319,7 +315,7 @@ const orderedMonths = [
       sorting: [{ id: 'index', desc:true }], // Sort by 'index' column in ascending order by default
     },
   })
-  const subjects = ['علوم تجريبية', 'تقني رياضي', 'رياضيات', 'تسيير واقتصاد ', 'لغات اجنبية ', 'اداب وفلسفة'];
+  const subjects = ['متوسط', 'علوم تجريبية', 'تقني رياضي', 'رياضيات', 'تسيير واقتصاد ', 'لغات اجنبية ', 'اداب وفلسفة'];
   const countStudentsByStream = React.useCallback(() => {
     // Initialize counts for each subject
     const counts = subjects.reduce((acc, subject) => {
@@ -341,9 +337,7 @@ const orderedMonths = [
     <>
 
 
-<div className="max-w-md w-full">
-  <StudentsNumber  students={orderedStudents} fields={subjects}/>
-</div>
+
     <Card x-chunk="dashboard-05-chunk-3" className="mt-2 ">
     <CardHeader className="px-7">
       <CardTitle>{t('your-students')}</CardTitle>
@@ -464,12 +458,12 @@ const orderedMonths = [
           <div className="mt-2">
         <h3 className="text-lg font-medium">Students Count</h3>
         <ul>
-        {subjects.map(subject => (
-            <li key={subject} className="flex">
-              <span className="text-lg font-medium">{subject}:</span>
-              <span className="text-lg font-medium">{" "} {studentCounts[subject] || 0}</span> {/* Display 0 if no students found */}
+       
+            <li key={"متوسط"} className="flex">
+              <span className="text-lg font-medium">{"متوسط"}:</span>
+              <span className="text-lg font-medium">{" "} {orderedStudents.length || 0}</span> {/* Display 0 if no students found */}
             </li>
-          ))}
+   
         </ul>
       </div>
         </div>
@@ -502,7 +496,7 @@ const orderedMonths = [
     </AlertDialogHeader>
     <AlertDialogFooter>
       <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
-      <AlertDialogAction className={buttonVariants({ variant: "destructive" })}   onClick={() =>{deleteStudent(student,classes), setStudents((prevStudents:any) =>
+      <AlertDialogAction className={buttonVariants({ variant: "destructive" })}  onClick={async() =>{await deleteStudent(student,classes); setStudents((prevStudents:any) =>
       prevStudents.filter((std:any) => std.id !== student.id)
 
     

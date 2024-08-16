@@ -19,9 +19,11 @@ import {
   MbscEventcalendarView,
   MbscResource,
   setOptions,
+  locale,
 } from '@mobiscroll/react';
 import { FC} from 'react';
 import './style.css'
+import { format, startOfWeek } from 'date-fns';
 // Function to generate a random color
 const getRandomColor = () => {
   const letters = '0123456789ABCDEF';
@@ -138,8 +140,10 @@ const VerticalResourceView = () => {
           }
    
           const targetDayAbbreviation = dayToWeekDay[day];
+                      
                        
           if (!targetDayAbbreviation) {
+            console.log("dddddd",classId);
             throw new Error("Invalid day provided");
           }
           const firstDayOfMonth = new Date(year, month, 1);
@@ -200,6 +204,7 @@ const VerticalResourceView = () => {
   
       // Find the attendance object for the class
       const attendance = classes.find((cls) => cls.id === classId);
+
   
       // Ensure attendance is defined before accessing its properties
       if (!attendance) {
@@ -207,10 +212,10 @@ const VerticalResourceView = () => {
       }
   
       // Use optional chaining and default value for safety
-      const attendanceDetail = attendance.attendance?.[`${formattedDate}-${group}`] || { attendanceList: [] };
- 
+      const attendanceDetail = attendance.Attendance?.[`${formattedDate}-${group}`] || { attendanceList: [] };
+ const {Attendance,...rest}=attendance
       // Update the selected event with details and extra info
-      setSelectedEvent({ ...args.event.extraInfo, ...attendanceDetail });
+      setSelectedEvent({ ...args.event.extraInfo, ...attendanceDetail,...rest,attendanceId:`${formattedDate}-${group}` });
   
       // Open the event card
       setOpenCard(true);
@@ -261,6 +266,16 @@ const VerticalResourceView = () => {
         name: 'room 6',
         color: '#bacded',
       },
+      {
+        id:7,
+        name: 'room 7',
+        color: '#bacded',
+      },
+      {
+        id:8,
+        name: 'room 8',
+        color: '#bacded',
+      },
     ],
     [],
   );
@@ -274,7 +289,9 @@ const VerticalResourceView = () => {
         endDay: 6,
         startTime: '07:00',
         endTime: '22:00',
+    
       },
+   
     }),
     [],
   );
@@ -293,6 +310,11 @@ const VerticalResourceView = () => {
     ],
     [],
   );
+  const getStartOfWeek = (date = new Date()) => {
+    return startOfWeek(date, { weekStartsOn: 0 }); // Change `weekStartsOn` to 1 if you want Monday as the start
+  };
+  const defaultSelectedDate = getStartOfWeek();
+
   return (
     <div>
  <Eventcalendar
@@ -302,6 +324,8 @@ const VerticalResourceView = () => {
       colors={myColors}
       onEventClick={handleEventClick}
       groupBy='date'
+      locale={locale['fr']}
+defaultSelectedDate={format(defaultSelectedDate, 'yyyy-MM-dd')}
     />
 
         <AttandenceDataModel

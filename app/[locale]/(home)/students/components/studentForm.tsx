@@ -10,6 +10,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/components/ui/use-toast"
 import { Input } from "@/components/ui/input"
 import {
@@ -42,14 +43,11 @@ import {
 } from "@/components/ui/select"
 import { Student, StudentSchema } from '@/validators/auth';
 import { useFieldArray, useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import CalendarDatePicker from './date-picker';
 import { Separator } from '@/components/ui/separator';
 import QRCode from 'qrcode'
-import { addStudent } from '@/lib/hooks/students';
 import { LoadingButton } from '@/components/ui/loadingButton';
-import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { UseFormReturn } from 'react-hook-form';
@@ -65,7 +63,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Label } from "@/components/ui/label";
+import { useTranslations } from 'next-intl';
+import { addStudent } from '@/lib/hooks/students';
+import { ScrollArea } from '@/components/ui/scroll-area';
 interface FooterProps {
   formData: Student;
   form: UseFormReturn<any>; // Use the specific form type if available
@@ -73,41 +73,36 @@ interface FooterProps {
   reset: UseFormReturn<any>['reset']; // Adding reset function from useForm
 }
 
-const subjects =['Scientific Stream', 'Literature and Philosophy', 'Literature and Languages', 'Economics', 'Mathematics and Technology', 'Mathematics']
+const subjects =['متوسط','علوم تجريبية', 'تقني رياضي', 'رياضيات', 'تسيير واقتصاد ', 'لغات اجنبية ', 'اداب وفلسفة']
 const classess = [
-  "Select Option",
-  "Mathematics",
-  "Physics",
-  "Chemistry",
-  "Biology",
-  "Geography",
-  "History",
-  "Philosophy",
-  "Arabic",
-  "French",
-  "English",
-  "Islamic Education",
-  "Technology",
-  "Computer Science",
-  "Art",
-  "Physical Education",
-  "Economics",
-  "German",
-  "Spanish",
-  "Law",
-  "Business Studies",
-  "Social Sciences",
-  "Engineering",
-  "Architecture",
-  "Environmental Science"
+  "رياضيات",
+  "علوم",
+  "فيزياء",
+  "فلسفة",
+  "العربية",
+  "الإنجليزية",
+  "الفرنسية",
+  "اسبانية",
+  "المانية",
+  "ايطالية",
+  "محاسبة",
+  "هندسة مدنية",
+  "هندسة ميكانيكية",
+  "هندسة الطرائق",
+  "الهندسة الكهربائية",
+  "قانون",
+  "اقتصاد",
+  "العلوم الاسلامية",
+  "تاريخ وجغرافيا",
+
 ];
-const steps = [
+const steps: StepItem[] = [
   { label: "Step 1" },
   { label: "Step 2" },
   { label: "Step 3" },
   { label: "Step 4" },
+];
 
-] satisfies StepItem[]
 const years=[
   "1AM",
   "2AM",
@@ -132,13 +127,15 @@ const isFirestoreId = (id) => {
 export default function StudentForm() {
   const camera = useRef<null | { takePhoto: () => string }>(null);
   const {setStudents,teachers,classes,students}=useData()
+  const t=useTranslations()
   const form = useForm<any>({
-    // resolver: zodResolver(StudentSchema),
+    //resolver: zodResolver(StudentSchema),
     defaultValues:{
       id:null,
       studentIndex: students.length + 1,
       classes:[],
-      classesUIDs:[]
+      classesUIDs:[],
+      
     }
   });
 
@@ -152,7 +149,6 @@ export default function StudentForm() {
   const getClassId = (subject:string, name:string,day:string,start:string,end:string)  => {
     const selectedClass = classes.find(cls => cls.subject === subject && cls.year=== watch('year') &&   cls.groups.some(group => group.stream.includes(watch('field'))) && cls.teacherName === name )
     const selectedGroup=selectedClass.groups.find( grp=> grp.day === day && grp.start === start && grp.end===end)
-    console.log(end);
     
     return selectedClass ? {id:selectedClass.id,index:selectedClass.students?selectedClass.students.length+1:1,group:selectedGroup.group}: {id:"",index:0,group:""};
   };
@@ -161,12 +157,12 @@ export default function StudentForm() {
     const classesUids=getValues('classesUIDs')?[...getValues('classesUIDs')]:[]
   
     if (field === 'subject') {
-      const updatedClass = { id: '', name: '', subject: value, time: '' };
+      const updatedClass = { id: '', name: '', subject: value, time: '', cs:classes[index].cs};
       classes[index] = updatedClass;
       setValue(`classes`, classes);
       console.log(value);
     } else if (field === 'name') {
-      const updatedClass = { id: '', name: value, subject: classes[index].subject, time: '' };
+      const updatedClass = { id: '', name: value, subject: classes[index].subject, time: '', cs:classes[index].cs};
       classes[index] = updatedClass;
       setValue(`classes`, classes);
     } else if (field === 'time') {
@@ -188,6 +184,8 @@ export default function StudentForm() {
         day: dayPart,
         id: selectedClassId.id,
         index: selectedClassId.index,
+        cs:classes[index].cs
+        
       };
       const updatedClassUIDs = {
         ...classesUids[index],
@@ -200,8 +198,11 @@ export default function StudentForm() {
       setValue(`classes`, classes);
       setValue(`classesUIDs`, classesUids);
     } else {
-      classes[index][field] = value;
-      setValue(`classes.${index}`, classes[index]);
+
+      const updatedClass = { id: classes[index].id, name: classes[index].name, subject: classes[index].subject, time:classes[index].time, cs:value};
+      classes[index] = updatedClass;
+      setValue(`classes`, classes);
+
     }
   };
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -259,23 +260,24 @@ export default function StudentForm() {
     qrScanner.current = new QrScanner(videoRef.current!, handleQrScan, {
       highlightScanRegion: true,
       overlay: highlightCodeOutlineRef.current!,
-      maxScansPerSecond:0.5,
+      maxScansPerSecond:1,
+      preferredCamera:'user'
     });
     await qrScanner.current.start();
     setShowingQrScanner(true);
   };
   return (
     <Dialog >
-      <DialogTrigger asChild>
-        <Button onClick={()=>{       form.setValue('classes',[]);reset()}}>Create student</Button>
+      <DialogTrigger asChild className='mr-3'>
+        <Button onClick={()=>{       form.setValue('classes',[]);reset()}}>{t('Add student')}</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[800px]">
       <Form {...form} >
       <form >
         <DialogHeader>
-          <DialogTitle>Add Student</DialogTitle>
+          <DialogTitle>{t('Add student')}</DialogTitle>
           <DialogDescription>
-            Add your Student here. Click save when you're done.
+            {t('Add your Student here. Click save when you are done.')}
           </DialogDescription>
         </DialogHeader>
 
@@ -294,14 +296,14 @@ export default function StudentForm() {
       <AlertDialog open={openAlert} onOpenChange={setOpenAlert}>
   <AlertDialogContent>
     <AlertDialogHeader>
-      <AlertDialogTitle>Heads up!</AlertDialogTitle>
+      <AlertDialogTitle>{t('heads-up')}</AlertDialogTitle>
       <AlertDialogDescription>
  {alertText}
       </AlertDialogDescription>
     </AlertDialogHeader>
     <AlertDialogFooter>
-      <AlertDialogCancel>Cancel</AlertDialogCancel>
-      <AlertDialogAction>Continue</AlertDialogAction>
+      <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
+      <AlertDialogAction>{t('Continue')}</AlertDialogAction>
     </AlertDialogFooter>
   </AlertDialogContent>
 </AlertDialog>
@@ -317,7 +319,7 @@ export default function StudentForm() {
      onClick={stopScanner}
          className="mt-4 text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-red-600 dark:hover:bg-red-700 focus:outline-none dark:focus:ring-red-800"
        >
-         Stop QR Scanner
+         {t('Stop QR Scanner')}
        </button>
 
    ) : (
@@ -326,7 +328,7 @@ export default function StudentForm() {
      type='button'
      className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
    >
-     Start QR Scanner
+     {t('Start QR Scanner')}
    </button>
    )}
  </div>
@@ -341,7 +343,7 @@ export default function StudentForm() {
                   name="name"
                   render={({ field }) => (
                     <FormItem className="grid grid-cols-4 items-center gap-4">
-                      <FormLabel className="text-right">Name</FormLabel>
+                      <FormLabel className="text-right">{t('Name')}</FormLabel>
                       <FormControl><Input id="name"  className="col-span-3"  {...field}/></FormControl>
 
                       
@@ -355,7 +357,7 @@ export default function StudentForm() {
               name="birthdate"
               render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Birthdate</FormLabel>
+                  <FormLabel className="text-right">{t('Birthdate')}</FormLabel>
                   <FormControl>  
                     <CalendarDatePicker
             {...field}
@@ -380,7 +382,7 @@ export default function StudentForm() {
               name="birthplace"
               render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Birthplace</FormLabel>
+                  <FormLabel className="text-right">{t('Birthplace')}</FormLabel>
                   <FormControl><Input id="birthplace" className="col-span-3" {...field} /></FormControl>
                   
                 </FormItem>
@@ -393,7 +395,7 @@ export default function StudentForm() {
               name="school"
               render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">School</FormLabel>
+                  <FormLabel className="text-right">{t('School')}</FormLabel>
                   <FormControl><Input id="school" className="col-span-3" {...field} /></FormControl>
                   
                 </FormItem>
@@ -406,10 +408,18 @@ export default function StudentForm() {
   name="year"
   render={({ field }) => (
     <FormItem className="grid grid-cols-4 items-center gap-4">
-      <FormLabel className="text-right">Year</FormLabel>
+      <FormLabel className="text-right">{t("Year")}</FormLabel>
       <FormControl>
       <Select
-   onValueChange={field.onChange}
+   onValueChange={(e) => {
+    // Call the onChange handler with the new value
+    field.onChange(e);
+
+    // Check the value of 'year' and update 'field' if needed
+    if (["1AM", "2AM", "3AM", "4AM"].includes(e)) {
+      setValue("field", "متوسط");
+    }
+  }}
    defaultValue={field.value}
               >
                                  <SelectTrigger
@@ -435,12 +445,12 @@ export default function StudentForm() {
 />
 
 
-<FormField
+{!["1AM","2AM","3AM","4AM"].includes(watch('year')) && (<FormField
   control={control}
   name="field"
   render={({ field }) => (
     <FormItem className="grid grid-cols-4 items-center gap-4">
-      <FormLabel className="text-right">field</FormLabel>
+      <FormLabel className="text-right">{t('field')}</FormLabel>
       <FormControl>
       <Select
    onValueChange={field.onChange}
@@ -466,7 +476,7 @@ export default function StudentForm() {
       <FormMessage />
     </FormItem>
   )}
-/>
+/>)}
   
 
     <FormField
@@ -474,7 +484,7 @@ export default function StudentForm() {
               name="phoneNumber"
               render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Phone Number</FormLabel>
+                  <FormLabel className="text-right">{t('Phone Number')}</FormLabel>
                   <FormControl><Input id="phoneNumber" className="col-span-3" {...field} /></FormControl>
                   
                 </FormItem>
@@ -489,7 +499,7 @@ export default function StudentForm() {
  {!watch('photo') ? (
         <div className="w-[300px] items-center justify-center flex flex-col">
           
-          <Camera ref={camera} aspectRatio={16/9} errorMessages={{noCameraAccessible:"no Cemera"}} />
+          <Camera ref={camera} aspectRatio={16/9} errorMessages={{noCameraAccessible:"no Cemera"}}  facingMode='environment' />
           <Button
             onClick={() => {
               if (camera.current) {
@@ -503,14 +513,14 @@ export default function StudentForm() {
             variant="link"
             type='button'
           >
-            Take photo
+            {t('Take photo')}
           </Button>
         </div>
       ) : (
         <>
           <img src={watch('photo')?watch('photo'):null} alt="Taken photo"  className='w-[300px]'/>
           <Button onClick={() =>   setValue('photo',null)} variant="link" type='button'>
-            Retake photo
+            {t('Retake photo')}
           </Button>
         </>
       )}
@@ -519,17 +529,18 @@ export default function StudentForm() {
 </div>
 ) : (
   <div className="w-full h-full">
+     <ScrollArea className="h-[400px]">
     <Table>
-      <TableCaption>        <Button type='button' size="sm" variant="ghost" className="gap-1 w-full"  onClick={()=>appendClass({id:'',name:'',subject:'',time:''})}>
+      <TableCaption>        <Button type='button' size="sm" variant="ghost" className="gap-1 w-full"  onClick={()=>appendClass({id:'',name:'',subject:'',time:'',cs:'false'})}>
                       <PlusCircle className="h-3.5 w-3.5" />
-                      add group</Button></TableCaption>
+                      {t('add group')}</Button></TableCaption>
       <TableHeader>
         <TableRow>
-        <TableHead>Subject</TableHead>
-          <TableHead >Name</TableHead>
-          <TableHead>Time</TableHead>
-          <TableHead>CS</TableHead>
-          <TableHead>Action</TableHead>
+        <TableHead>{t('Subject')}</TableHead>
+          <TableHead>{t("Name")}</TableHead>
+          <TableHead>{t("Time")}</TableHead>
+          <TableHead>{t('CS')}</TableHead>
+          <TableHead>{t('Action')}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -542,7 +553,7 @@ export default function StudentForm() {
       </SelectTrigger>
       <SelectContent>
         <SelectGroup>
-        <SelectLabel>Subjects</SelectLabel>
+        <SelectLabel>{t('Subjects')}</SelectLabel>
                     {classess.map(subject => (
                       <SelectItem key={subject} value={subject}>
                         {subject}
@@ -558,7 +569,7 @@ export default function StudentForm() {
       </SelectTrigger>
       <SelectContent>
       {invoice.subject? ( <SelectGroup>
-          <SelectLabel>Groups</SelectLabel>
+          <SelectLabel>{t('Groups')}</SelectLabel>
           {Array.from(new Set(classes
                         .filter(cls => cls.subject === invoice.subject && cls.year=== watch('year') &&   cls.groups.some(group => group.stream.includes(watch('field'))))
                       )).map(cls => (
@@ -575,12 +586,19 @@ export default function StudentForm() {
       </SelectTrigger>
       <SelectContent>
       {invoice.subject && invoice.name? ( <SelectGroup>
-          <SelectLabel>times</SelectLabel>
-          {(classes.find(cls => cls.subject === invoice.subject && cls.year=== watch('year') &&   cls.groups.some(group => group.stream.includes(watch('field'))) && cls.teacherName === invoice.name ))?.groups?.map((cls,index) => (
-                          <SelectItem key={index} value={JSON.stringify(`${cls.day},${cls.start}-${cls.end}`)}>
-                            {cls.day},{cls.start}-{cls.end}
-                          </SelectItem>
-                        ))}
+          <SelectLabel>{t('times')}</SelectLabel>
+          {classes.find(cls => 
+    cls.subject === invoice.subject && 
+    cls.year === watch('year') && 
+    cls.teacherName === invoice.name
+  )?.groups
+    .filter(group => group.stream.includes(watch('field'))) // Filter groups based on stream.includes
+    .map((group, index) => (
+      <SelectItem key={index} value={JSON.stringify(`${group.day},${group.start}-${group.end}`)}>
+        {t(`${group.day}`)},{group.start}-{group.end}
+      </SelectItem>
+    ))
+}
         </SelectGroup>):(<p className="text-sm text-muted-foreground">Select Subject and name first</p>)}
       </SelectContent>
     </Select></TableCell>
@@ -602,13 +620,13 @@ export default function StudentForm() {
       </SelectContent>
     </Select></TableCell>
     <TableCell>   
-       <Button  type="button" variant="destructive" onClick={()=>removeClass(index)}>remove</Button></TableCell>
+       <Button  type="button" variant="destructive" onClick={()=>removeClass(index)}>{t('remove')}</Button></TableCell>
 
           </TableRow>
         ))}
       </TableBody>
     </Table>
-
+    </ScrollArea>
 </div>
 )}
               </div>
@@ -680,28 +698,56 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
   const {toast}=useToast()
   const onSubmit = async(data:any) => {
 
-      
-    
-    await addStudent({...data,studentIndex:students.length+1})
+   
+  
+    const newData=await addStudent({...data,studentIndex:students.length+1})
     generateQrCode(data.id);
-    setStudents((prev: Student[]) => [...prev, {...data,id:data.id,student:data.name,studentIndex:prev.length+1}]);
+    setStudents((prev: Student[]) => {
+      // Create updated classes by mapping through the data.classes
+      const updatedClasses = data.classes.map(cls => {
+        const classUpdate = newData.classUpdates.find(update => update.classID === cls.id);
+        if (classUpdate) {
+          // Return the updated class with the new index
+          return { ...cls, index: classUpdate.newIndex };
+        }
+        // Return the existing class if no update is found
+        return cls;
+      });
+    
+      // Add the new student to the previous state
+      return [
+        ...prev,
+        {
+          ...data,
+          studentIndex:students.length+1,  // Basic student details
+          classes: updatedClasses  // Updated classes with new indexes
+        }
+      ];
+    });
+  
     setClasses((prev: any[]) =>
       prev.map((cls) => {
-        const matchingClass = data.classes.find((sls) => sls.id === cls.id);
+        // Find the matching class from the updatedClasses data
+        const matchingClass = newData.classUpdates.find((sls) => sls.classID === cls.id);
+    
         if (matchingClass) {
+          // Return the class with the updated students array
           return {
             ...cls,
             students: [
               ...cls.students,
               {
-                id: data.id,
-                name: data.name,
-                index: matchingClass.index,
-                year:data.year,group:cls.group
+                id: data.id, // The ID of the newly added student
+                name: data.name, // The name of the newly added student
+                index: matchingClass.newIndex, // The new index for the student
+                year: data.year, // The year of the student
+                group: cls.group,
+                cs:matchingClass.cs// The group of the class
               },
             ],
           };
         }
+        // Return the class unchanged if no matching class was found
         return cls;
       })
     );
@@ -787,33 +833,4 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
       </div>
     </>
   )
-}
-function QrCodeIcon(props) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect width="5" height="5" x="3" y="3" rx="1" />
-      <rect width="5" height="5" x="16" y="3" rx="1" />
-      <rect width="5" height="5" x="3" y="16" rx="1" />
-      <path d="M21 16h-3a2 2 0 0 0-2 2v3" />
-      <path d="M21 21v.01" />
-      <path d="M12 7v3a2 2 0 0 1-2 2H7" />
-      <path d="M3 12h.01" />
-      <path d="M12 3h.01" />
-      <path d="M12 16v.01" />
-      <path d="M16 12h1" />
-      <path d="M21 12v.01" />
-      <path d="M12 21v-1" />
-    </svg>
-  );
 }

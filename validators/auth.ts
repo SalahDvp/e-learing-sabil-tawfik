@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { parseISO, isBefore, startOfToday, startOfYear } from 'date-fns';
 export const SubjectsSchema = z.array(z.object({
   id:z.string(),
   subject: z.string().min(1, { message: "Subject is required" }),
@@ -15,15 +16,16 @@ export const SubjectsSchema = z.array(z.object({
 export const StudentSchema = z.object({
   id:z.string(),
   name: z.string().min(1, { message: "Name is required" }),
-  birthdate: z.date(),
+  birthdate: z.date().refine((value:Date) => value < new Date(), { message: 'Please enter a valid date of birth.' }),
   birthplace: z.string().min(1, { message: "Birthplace is required" }),
   school: z.string().min(1, { message: "School is required" }),
   year: z.string().min(1, { message: "Year is required" }),
   field: z.string().min(1, { message: "Field is required" }),
-  phoneNumber: z.string().min(1, { message: "Phone number is required" }),
+  phoneNumber:z.string().min(10, "Please enter a value between 10 and 15 characters.").max(15, "Please enter a value between 10 and 15 characters."),
   photo:z.string().nullable(),
   classes:SubjectsSchema,
-  studentIndex:z.number()
+  studentIndex:z.number(),
+  classesUIDs:z.array(z.object({id:z.string(),group:z.string()}))
 });
 
 // Generate TypeScript type from the Zod schema

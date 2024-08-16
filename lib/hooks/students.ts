@@ -1,5 +1,5 @@
 import { db } from "@/firebase/firebase-config"
-import { addDoc,arrayRemove,arrayUnion,collection, deleteDoc, doc, increment, setDoc, updateDoc } from "firebase/firestore"
+import { addDoc,arrayRemove,arrayUnion,collection, deleteDoc, doc, getDoc, increment, runTransaction, setDoc, updateDoc, writeBatch } from "firebase/firestore"
 import { getDownloadURL, ref, uploadBytes, uploadString } from "firebase/storage";
 import { storage } from "@/firebase/firebase-config";
 import { StudentSchema,Student } from "@/validators/auth";
@@ -37,28 +37,66 @@ export async function uploadAndLinkToCollection(
     // Assuming you want to return an array of objects with metadata
     return downloadUrl
   }
-export const addStudent = async (student:Student) => {
+  export const addStudent = async (student: Student) => {
     try {
+      // Add the student document outside of the transaction
+      const studentRef = doc(db, "Students", student.id);
+      await setDoc(studentRef, student);
   
-        await setDoc(doc(db, "Students",student.id), student);
-       if(student.photo){
-        await uploadAndLinkToCollection(student.photo,'Students',student.id,'photo')
-       } 
-        student.classes.map(async (cls)=>{
-            await updateDoc(doc(db,'Groups',cls.id),{
-                students:arrayUnion({
-                    id:student.id,name:student.name,index:cls.index,year:student.year,group:cls.group
-                })
+      // Upload the student's photo if it exists
+      if (student.photo) {
+        await uploadAndLinkToCollection(student.photo, 'Students', student.id, 'photo');
+      }
+  
+      // Gather all necessary data before starting the transaction
+      const classUpdates: { classID: string, newIndex: number, group: string,cs:string }[] = [];
+      
+      for (const cls of student.classes) {
+        const classRef = doc(db, 'Groups', cls.id);
+        const classDoc = await getDoc(classRef);
+        
+        if (classDoc.exists()) {
+          const classData = classDoc.data();
+          const students = classData.students || [];
+          const highestIndex = students.reduce((max, student) => Math.max(max, student.index || 0), 0);
+          const newIndex = highestIndex + 1;
+  
+          // Collect data for use in the transaction
+          classUpdates.push({ classID: cls.id, newIndex, group: cls.group ,cs:cls.cs});
+        } else {
+          console.log('No such document for class ID:', cls.id);
+          // Handle missing class documents if necessary
+        }
+      }
+  
+      // Use a transaction to ensure atomic updates to class documents
+      const result = await runTransaction(db, async (transaction) => {
+        for (const update of classUpdates) {
+          const classRef = doc(db, 'Groups', update.classID);
+          transaction.update(classRef, {
+            students: arrayUnion({
+              id: student.id,
+              name: student.name,
+              index: update.newIndex,
+              year: student.year,
+              group: update.group ,
+              cs:update.cs// Use group from the collected data
             })
-        })
-        return student.id; // Assuming you want to return the ID of the added Student
+          });
+        }
+  
+        // Return class updates for post-transaction processing
+        return { studentId: student.id, classUpdates };
+      });
+  
+      return result;
     } catch (error) {
-        console.error("Error adding Student:", error);
-        // Handle the error here, such as displaying a message to the user or logging it for further investigation
-        throw error; // Optionally re-throw the error to propagate it further if needed
+      console.error("Error adding Student:", error);
+      // Handle the error here
+      throw error; // Optionally re-throw the error
     }
-    
-};
+  };
+  
 export const updateStudent = async(updatedstudent: any,studnetId:string)=>{
   try {
           await updateDoc(doc(db, "Students",studnetId), updatedstudent);
@@ -70,7 +108,7 @@ export const updateStudent = async(updatedstudent: any,studnetId:string)=>{
       throw error; // Optionally re-throw the error to propagate it further if needed
   }
 }
-export const deleteStudent = async ( student, classes) => {
+export const deleteStudent = async (student, classes) => {
   try {
     // Create an array of promises for each class update
     const updatePromises = student.classesUIDs.map(async (cls) => {
@@ -86,6 +124,7 @@ export const deleteStudent = async ( student, classes) => {
       }
 
       const indx = studentDetails.index;
+console.log('fdskwdkfkfkffkfkfkfkf',cls.group,student.id,indx,student.name,student.year,studentDetails.cs);
 
       // Reference to the class document
       const classDocRef = doc(db, 'Groups', cls.id);
@@ -106,7 +145,11 @@ export const deleteStudent = async ( student, classes) => {
     // Wait for all update operations to complete
     await Promise.all(updatePromises);
 
-    console.log('Student removed from all classes successfully');
+    // Delete the student from the Students collection
+    const studentDocRef = doc(db, 'Students', student.id);
+    await deleteDoc(studentDocRef);
+
+    console.log('Student removed from all classes and deleted from Students collection successfully');
   } catch (error) {
     console.error('Error deleting student:', error);
   }
@@ -156,21 +199,21 @@ export const formatDateToYYYYMMDD = (date: Date): string => {
     });
   
   }
-  export async function removeStudentFromClass(student,studentId) {
+  export async function removeStudentFromClass(student,studentId,studentName) {
     const { id, group,index,name,year,cs } = student;
   
     const studentDocRef = doc(db, 'Students', studentId);  
-  console.log("dqwdqdwqwdqwd",id, group,index,name,year,cs);
+  console.log("dqwdqdwqwdqwd", group, studentId, index, name, year,cs );
   
-      // await updateDoc(studentDocRef, {
-      //   classesUIDs: arrayRemove({ id, group })
-      // });
+      await updateDoc(studentDocRef, {
+        classesUIDs: arrayRemove({ id, group })
+      });
   
       const classDocRef = doc(db, 'Groups', id);
       await updateDoc(classDocRef, {
-        students: arrayRemove({ group, id, index, name, year,cs })
+        students: arrayRemove({ group:student.group, id:studentId, index:student.index, name:studentName, year:student.year,cs:student.cs })
       });
-    }
+     }
     
      export  async function changeStudentGroup(classId,studentId,students,classesUIDs) {
     
@@ -200,4 +243,37 @@ export async function markAttendance(classId,attendanceId,student){
     await updateDoc(doc(db,'Students',studentId),{
       newId:newId
     })
+  }
+  export async function getStudentCount(classId: string): Promise<number> {
+    const classRef = doc(db, 'Groups', classId);
+  
+    try {
+      // Run a transaction to ensure atomicity
+      const newStudentIndex = await runTransaction(db, async (transaction) => {
+        const classDoc = await transaction.get(classRef);
+        if (!classDoc.exists()) {
+          throw new Error('Class not found');
+        }
+  
+        const classData = classDoc.data();
+        const students = classData.students;
+        let highestIndex = 0;
+        
+        for (const student of students) {
+          if (typeof student.index === 'number') {
+            highestIndex = Math.max(highestIndex, student.index);
+          }
+        }
+        console.log("highest",highestIndex);
+        
+        const currentStudentCount = highestIndex + 1;
+  
+        return currentStudentCount;
+      });
+  
+      return newStudentIndex; // Adding 1 to get the new index
+    } catch (error) {
+      console.error('Error fetching student count:', error);
+      throw error;
+    }
   }

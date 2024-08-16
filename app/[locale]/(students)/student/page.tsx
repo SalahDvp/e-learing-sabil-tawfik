@@ -1,6 +1,5 @@
 "use client";
-import { markAttendance } from "@/lib/hooks/students";
-import Image from "next/image";
+
 import QrScanner from "qr-scanner";
 import {  useRef, useState } from "react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -38,32 +37,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { pdf } from "@react-pdf/renderer";
-import StudentInvoice from'../students/components/studentInvoice'
-import { doc, getDoc, setDoc, updateDoc, arrayUnion } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/firebase/firebase-config";
-import { AutoComplete } from "@/components/ui/autocomplete";
- 
-function parseDateTimeRange(dateTimeRange) {
-    // Split the string into components
-    const parts = dateTimeRange.split('-');
-  
-    // Ensure we have the correct number of parts
 
-    
-    const [year, month, day, startTime, endTime] = parts;
-    
-    // Create a date string in the format YYYY-MM-DD
-    const date = `${year}-${month}-${day}`;
-    
-    // Create Date objects for the start and end times
-    const startDateTime = new Date(`${date}T${startTime}:00`);
-    const endDateTime = new Date(`${date}T${endTime}:00`);
-  return {
-    startDateTime,
-    endDateTime
-  };
-}
 const checkClassTime = (scanTime: Date, student: any, groupClasses: any[]): any[] | null => {
   // Get the day of the week for the scan time
   const scanDay = scanTime.toLocaleString('en-US', { weekday: 'long' });
@@ -115,7 +91,6 @@ export default function Home() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const highlightCodeOutlineRef = useRef<HTMLDivElement>(null);
   const qrScanner = useRef<QrScanner | null>(null);
-  const {students,classes,setClasses}=useData()
   const [showingQrScanner, setShowingQrScanner] = useState(false);
   const [studentData, setStudentData] = useState<Student | null>(null);
   const [currentClass, setCurrentClass] = useState<String| any>();
@@ -126,90 +101,42 @@ export default function Home() {
   const [openAlert,setOpenAlert]=useState(false)
   const[alertText,setAlertText]=useState('')
   const [open, setOpen] = React.useState(false)
-  function generateBillIfNeeded(data: any) {
-   
-      const initialData = {
-        name: data.name,
-        subject: data.subject,
-        year: data.year,
-        date: format(new Date(), 'yyyy-MM-dd'),
-      };
+  const handleQrScan = async (result) => {
 
-      const link = document.createElement('a');
-      document.body.appendChild(link);
-
-      pdf(<StudentInvoice data={initialData} />).toBlob().then(blob => {
-        const url = URL.createObjectURL(blob);
-        link.href = url;
-        link.download = 'invoice.pdf';
-        link.click();
-        URL.revokeObjectURL(url);
-        link.parentNode.removeChild(link);
-      });
-    
-  }
-  const onpressed=(id)=>{
-    const parsedData = students.find((student) => student.value === id || student.newId===id);
-    console.log("uiddd",id);
-    
-    if (!parsedData) {
-      setAlertText("Invalid QR code");
+    const parsedData = await getDoc(doc(db, 'Students', result.data));
+    if (!parsedData.exists()) {
+      setAlertText("Invalid QR code or student doesn't exist");
       setOpenAlert(true);
       audioRefError.current?.play();
       return;
     }
 
-    setStudentData(parsedData);
-    const scanTime = new Date();
-    const classInfo =checkClassTime(scanTime,parsedData,classes);
-    
-    if (classInfo) {
+    const classesIds = parsedData.data().classesUIDs;
 
-    
-      setCurrentClasses(classInfo)
-      
-    } else {
-      setAlertText("No current class found for this student to attend.");
-      setOpenAlert(true);
+    // Fetch class data concurrently
+    const classPromises = classesIds.map(async (cls) => {
+      const classData = await getDoc(doc(db, 'Groups', cls.id));
+      const classDetails = classData.data().groups.find((grp) => grp.group === cls.group);
+      return { ...classData.data(), ...classDetails };
+    });
 
-    }
-    
-  }
-  const handleQrScan = (result) => {
-    if (processedQrCodes.current.has(result.data)) {
-      console.log("This student has already scanned their code in the past hour.");
-      
-      setAlertText("This student has already scanned their code in the past hour.");
-      setOpenAlert(true);
+    const classes = await Promise.all(classPromises);
 
-      return;
-    }
+    setStudentData({...parsedData.data(),id:parsedData.id,birthdate:new Date(parsedData.data().birthdate.toDate())});
 
-    processedQrCodes.current.add(result.data);
-
-    const parsedData = students.find((student) => student.id === result.data || student.newId===result.data);
-
-    if (!parsedData) {
-      setAlertText("Invalid QR code");
-      setOpenAlert(true);
-      audioRefError.current?.play();
-      return;
-    }
-
-    setStudentData(parsedData);
-    const scanTime = new Date();
-    const classInfo =checkClassTime(scanTime,parsedData,classes);
-    
-    if (classInfo) {
+    if (classes.length > 0) {
       audioRefSuccess.current?.play();
-    
-      setCurrentClasses(classInfo)
+      console.log("classes",classes);
       
+      setCurrentClasses(classes);
+  
     } else {
-      setAlertText("No current class found for this student to attend.");
+      setAlertText("No current class found for this student.");
       setOpenAlert(true);
       audioRefError.current?.play();
+ 
     }
+
   };
   const stopScanner = () => {
     qrScanner.current?.stop();
@@ -223,118 +150,7 @@ export default function Home() {
 
 
   };
-  const onConfirm = async () => {
-    try {
-      const updatedClasses = [...classes]; // Create a copy of the current classes
-  
-      // Iterate over each selected class and group
-      for (const [subject, selectedClass] of Object.entries(selectedClasses)) {
-        // Find the index of the class to update
-        const classIndex = updatedClasses.findIndex(cls => cls.id === selectedClass.id);
-        if (classIndex === -1) {
-          console.error(`Class not found for subject: ${subject}`);
-          continue;
-        }
-  
-        const clsid = updatedClasses[classIndex].id;
-  
-        // Get the current date and format it for UID
-        const currentDate = new Date();
-        const year = currentDate.getFullYear();
-        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-        const day = String(currentDate.getDate()).padStart(2, '0');
-        const dateTimeUID = `${year}-${month}-${day}-${selectedClass.group}`; // Use the selected class group
-  
-        // Get the current attendance list for the given class
-        const currentAttendanceList = updatedClasses[classIndex]?.Attendance?.[dateTimeUID] || {
-          start: '',
-          end: '',
-          attendanceList: [],
-          group: selectedClass.group, // Use the selected class group
-          id: dateTimeUID
-        };
-  
-        // Check if the student already exists in the attendance list
-        const studentExists = currentAttendanceList.attendanceList.some(
-          attendance => attendance.index === selectedClass.studentIndex
-        );
-  
-        if (studentExists) {
-          setAlertText("This student has already scanned their code in the past hour.");
-          setOpenAlert(true);
-          continue;
-        }
-  
-        // Update the attendance list
-        currentAttendanceList.attendanceList.push({
-          index: selectedClass.studentIndex,
-          group: selectedClass.studentGroup, // Use the selected class group
-          name: studentData?.name,
-          status: 'present'
-        });
-  
-        // Update the class with the new attendance list
-        updatedClasses[classIndex] = {
-          ...updatedClasses[classIndex],
-          Attendance: {
-            ...updatedClasses[classIndex].Attendance,
-            [dateTimeUID]: currentAttendanceList
-          }
-        };
-        setClasses(updatedClasses);
-        // Perform the appropriate Firebase operation based on existence
-        const attendanceDocRef = doc(db, 'Groups', clsid, 'Attendance', dateTimeUID);
-        const docSnapshot = await getDoc(attendanceDocRef);
-        
-        if (docSnapshot.exists()) {
-          // If the document exists, update it
-          await updateDoc(attendanceDocRef, {
-            attendanceList: arrayUnion({
-              name: studentData?.name,
-              group: selectedClass.studentGroup, // Use the selected class group
-              index: selectedClass.studentIndex,
-              status: 'present',
-              id: studentData?.id
-            })
-          });
-        } else {
-          // If the document doesn't exist, create it
-          const date = parseDateTimeRange(`${year}-${month}-${day}-${selectedClass.start}-${selectedClass.end}`);
-          await setDoc(
-            attendanceDocRef,
-            {
-              group: selectedClass.group, // Use the selected class group
-              end: date.endDateTime,
-              id: dateTimeUID,
-              start: date.startDateTime,
-              attendanceList: [{
-                name: studentData?.name,
-                group: selectedClass.studentGroup, // Use the selected class group
-                index: selectedClass.studentIndex,
-                status: 'present',
-                id: studentData?.id
-              }]
-            }
-          );
-        }
-  
-        // Optionally generate a bill if needed
-        generateBillIfNeeded({ name: studentData?.name, subject: selectedClass.subject, year: selectedClass.year });
-      }
-  
-      // Play success audio
-      audioRefSuccess.current?.play();
-  
-      // Clear state
-      setCurrentClass(undefined);
-      setCurrentClasses(undefined);
-      setStudentData(null);
-    } catch (error) {
-      console.error('Error updating attendance:', error);
-      alert('An error occurred while updating attendance. Please try again.');
-    }
-  };
-  
+
   
   
   const handleButtonClick = async () => {
@@ -347,17 +163,7 @@ export default function Home() {
     await qrScanner.current.start();
     setShowingQrScanner(true);
   };
-  const [selectedClasses, setSelectedClasses] = useState({});
-
-  const handleSelection = (classObj, group) => {
-    setSelectedClasses((prev) => ({
-      ...prev,
-      [classObj.subject]: { ...classObj, group }, // store the selected class and group by subject
-    }));
-  };
-  console.log('currentClasses ',currentClasses);
-  console.log('selectedClasses ',selectedClasses);
-  
+ 
   return (
     <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto p-4 md:p-8">
     <div className="flex flex-col gap-6">
@@ -468,57 +274,28 @@ export default function Home() {
     <RadioGroup className="grid grid-cols-3 gap-4">
       {currentClasses.map((classObj, index) => (
         <div key={index}>
-          {classObj.group.split(',').map((group) => (
-            <div key={`${classObj.id}-${group}`}>
+            <div key={`${classObj.id}-${classObj.group}`}>
               <RadioGroupItem
-                value={`${classObj.id}-${group}`}
-                onClick={() => handleSelection(classObj, group)}
-                id={`${classObj.id}-${group}`}
+                value={`${classObj.id}-${classObj.group}`}
+                id={`${classObj.id}-${classObj.group}`}
                 className="peer sr-only"
-                checked={
-                  selectedClasses[classObj.subject]?.id === classObj.id &&
-                  selectedClasses[classObj.subject]?.group === group
-                } // check if the current group is selected for this class
               />
-              <Label
-                htmlFor={`${classObj.id}-${group}`}
-                className={`flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary 
-                ${
-                  selectedClasses[classObj.subject]?.id === classObj.id &&
-                  selectedClasses[classObj.subject]?.group === group
-                    ? 'border-primary'
-                    : ''
-                }`}
+              <Label 
+                htmlFor={`${classObj.id}-${classObj.group}`}
+                className={`flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary`}
               >
                 <span className="font-semibold">{classObj.subject}</span>
-                <span>{classObj.name}</span>
-                <span>{`Group: ${group}`}</span>
-                <span>{classObj.day}, {classObj.start} - {classObj.end}</span>
+                <span>{classObj.teacherName}</span>
+                <span>{`Group: ${classObj.group}`}</span>
+                <span>{t(`${classObj.day}`)}, {classObj.start} - {classObj.end}</span>
               </Label>
             </div>
-          ))}
         </div>
       ))}
     </RadioGroup>
   )}
 </div>
 
-{Object.keys(selectedClasses).length > 0 ? (
-  <div className="mt-4 flex justify-end">
-    <Button
-      onClick={() => { setStudentData(null); setCurrentClass(undefined); setCurrentClasses(undefined); }}
-      variant='outline'
-    >
-      {t('reset')}
-    </Button>
-    <Button
-      onClick={() => onConfirm()}
-      variant='default'
-    >
-      {t('confirm')}
-    </Button>
-  </div>
-) : (
   <div className="mt-4 flex justify-end">
     <Button
       onClick={() => { setStudentData(null); setCurrentClass(undefined); setCurrentClasses(undefined); }}
@@ -527,18 +304,10 @@ export default function Home() {
       {t('reset')}
     </Button>
   </div>
-)}
+
 
 </div>) :(<div className="bg-muted rounded-lg p-6 flex flex-col gap-4">
-  <AutoComplete
-        options={students}
-        emptyMessage="No resulsts."
-        placeholder="Find something"
 
-        onpressed={onpressed}
-        value={studentData?.name}
-
-      />
 
                 <div className="flex items-center gap-4">
         

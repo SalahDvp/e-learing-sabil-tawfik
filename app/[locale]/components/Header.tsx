@@ -48,23 +48,27 @@ const t=useTranslations()
               : 'text-muted-foreground hover:text-foreground foreground transition-colors'
           }`}
         >
-          Calendar </Link>
-        <Link
+          {t('calendar')} </Link>
+          <Link
           href="/students"
           className={`${pathname=== '/students' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
         >
-         {t('Students')} </Link>
+        Lycee </Link>
+         <Link
+          href="/middle"
+          className={`${pathname=== '/middle' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
+        >
+        CEM </Link>
         <Link
           href="/teachers"
           className={`${pathname=== '/teachers' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
         >
           {t('teachers-0')} </Link>
-
-        <Link
-          href="/classes"
-          className={`${pathname=== '/classes' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
+          <Link
+          href="/billing"
+          className={`${pathname=== '/billing' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
         >
-          {t('classes')} </Link>
+          {t('billing')} </Link>
         <Link
           href="/settings"
           className={`${pathname=== '/settings' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
@@ -116,17 +120,18 @@ const t=useTranslations()
           href="/students"
           className={`${pathname=== '/students' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
         >
-         {t('Students')} </Link>
+        Lycee </Link>
+         <Link
+          href="/middle"
+          className={`${pathname=== '/middle' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
+        >
+        CEM </Link>
         <Link
           href="/teachers"
           className={`${pathname=== '/teachers' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
         >
           {t('teachers-0')} </Link>
-        <Link
-          href="/classes"
-          className={`${pathname=== '/classes' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
-        >
-          {t('classes')} </Link>
+
         <Link
           href="/settings"
           className={`${pathname=== '/settings' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}

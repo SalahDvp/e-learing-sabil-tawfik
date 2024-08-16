@@ -149,7 +149,7 @@ export const  FetchDataProvider = ({ children }) => {
           return {
             id: groupId,
             ...groupData,
-            attendance: attendanceData,
+            Attendance: attendanceData,
           };
         });
 
@@ -233,7 +233,8 @@ export const  FetchDataProvider = ({ children }) => {
         setStudents(StudentsData);
         setTeachers(TeachersData);
         setClasses(classesData);
-
+        console.log("donnnee");
+        
       } catch (error) {
         console.error('Error fetching data:', error);
       }

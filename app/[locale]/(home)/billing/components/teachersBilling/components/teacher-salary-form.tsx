@@ -157,7 +157,7 @@ const [teacherModal,setTeacherModal]=useState(false)
 
   const teacherNames = teachers.map((teacher_: { firstName: string; lastName: string; id:string}) => {
     // Combine and trim first and last name to remove leading/trailing spaces
-    const combinedName = `${teacher_.firstName.trim()} ${teacher_.lastName.trim()}`;
+    const combinedName = 'zakamo';
     
     
 

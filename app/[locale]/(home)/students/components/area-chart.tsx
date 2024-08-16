@@ -1,92 +1,118 @@
+"use client"
 
+import { TrendingUp } from "lucide-react"
+import { Bar, BarChart, CartesianGrid, LabelList, XAxis, YAxis } from "recharts"
 
-import { AreaChart, Area, XAxis,  Tooltip, ResponsiveContainer, } from 'recharts';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart"
+const chartData = [
+  { field: "January", number: 186, mobile: 80 },
+  { month: "February", desktop: 305, mobile: 200 },
+  { month: "March", desktop: 237, mobile: 120 },
+  { month: "April", desktop: 73, mobile: 190 },
+  { month: "May", desktop: 209, mobile: 130 },
+  { month: "June", desktop: 214, mobile: 140 },
+]
 
-const data = [
-  {
-    name: 'Page A',
-    uv: 4000,
-    pv: 2400,
-    amt: 2400,
+const chartConfig = {
+  desktop: {
+    label: "numberOfStudents",
+    color: "hsl(var(--chart-1))",
   },
-  {
-    name: 'Page B',
-    uv: 3000,
-    pv: 1398,
-    amt: 2210,
+  label: {
+    color: "hsl(var(--background))",
   },
-  {
-    name: 'Page C',
-    uv: 2000,
-    pv: 9800,
-    amt: 2290,
-  },
-  {
-    name: 'Page D',
-    uv: 2780,
-    pv: 3908,
-    amt: 2000,
-  },
-  {
-    name: 'Page E',
-    uv: 1890,
-    pv: 4800,
-    amt: 2181,
-  },
-  {
-    name: 'Page F',
-    uv: 2390,
-    pv: 3800,
-    amt: 2500,
-  },
-  {
-    name: 'Page G',
-    uv: 3490,
-    pv: 4300,
-    amt: 2100,
-  },
-];
-const GradientColors = () => {
-    return (
-<linearGradient id="colorView" x1="0" y1="0" x2="0" y2="1">
-  <stop offset="0%" stopColor="#1C64F2" stopOpacity={0.55} />
-  <stop offset="100%" stopColor="#1C64F2" stopOpacity={0} />
-</linearGradient>
-    );
-  };
-export function Overview() {
+} satisfies ChartConfig
+function countStudentsByField(students, fields) {
+  // Initialize an object to hold the count of students in each field
+  const fieldCounts = fields.reduce((acc, field) => {
+    acc[field] = 0;
+    return acc;
+  }, {});
+
+  // Loop through the students and count them by field
+  students.forEach(student => {
+    if (fieldCounts.hasOwnProperty(student.field)) {
+      fieldCounts[student.field]++;
+    }
+  });
+
+  // Convert the fieldCounts object to an array of objects
+  return Object.keys(fieldCounts).map(field => ({
+    name: field,
+    numberOfStudents: fieldCounts[field],
+  }));
+}
+export function StudentsNumber({students,fields}) {
+  const chartData=countStudentsByField(students,fields)
   return (
-    <ResponsiveContainer width="100%" height={100} >
-      <AreaChart data={data}   
-  
-   margin={{
-    top: 0,
-    right: 0,
-    left: 0,
-    bottom: 0,
-  }}
+    <Card>
+      <CardHeader>
+        <CardTitle>Students Chart</CardTitle>
+        <CardDescription> </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ChartContainer config={chartConfig}>
+          <BarChart
+            accessibilityLayer
+            data={chartData}
+            layout="vertical"
+            margin={{
+              right: 30,
+            }}
           >
-            <defs>
-            <GradientColors />
-          </defs>
-          <Tooltip />
-   
-          <XAxis
-      dataKey="name"
-      stroke="#888888"
-      fontSize={12}
-      tickLine={false}
-      axisLine={false}
-      interval={0} // Display all labels
-      angle={-45} // Rotate labels if needed
-    />
-     <Area type="monotone"
-      dataKey="uv"   
-          strokeWidth={3}
-      stroke="#1A56DB"  
-             fill="url(#colorView)"   />
-
-      </AreaChart>
-    </ResponsiveContainer>
+            <CartesianGrid horizontal={false} />
+            <YAxis
+              dataKey="name"
+              type="category"
+              tickLine={false}
+              tickMargin={10}
+              axisLine={false}
+              tickFormatter={(value) => value.slice(0, 3)}
+              hide
+            />
+            <XAxis dataKey="numberOfStudents" type="number" hide />
+            <ChartTooltip
+              cursor={false}
+              content={<ChartTooltipContent indicator="line" />}
+            />
+            <Bar
+              dataKey="numberOfStudents"
+              layout="vertical"
+              fill="var(--color-desktop)"
+              radius={4}
+            >
+              <LabelList
+                dataKey="name"
+                position="insideLeft"
+                offset={8}
+                className="fill-[--color-label]"
+                fontSize={12}
+              />
+              <LabelList
+                dataKey="numberOfStudents"
+                position="right"
+                offset={8}
+                className="fill-foreground"
+                fontSize={12}
+              />
+            </Bar>
+          </BarChart>
+        </ChartContainer>
+      </CardContent>
+      
+    </Card>
   )
 }
