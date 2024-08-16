@@ -139,7 +139,6 @@ import { exportTableToExcel } from "@/components/excelExport"
 
       cell: ({ row }) => (
         <div className="lowercase hidden sm:table-cell">
-{((row.getValue("nextPaymentDate") as Date)).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
         </div>
       ),
     },

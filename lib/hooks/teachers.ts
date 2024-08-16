@@ -70,7 +70,9 @@ export const addTeacher = async (teacher: Teacher) => {
               stream: cls.stream,
               quota: cls.quota,
               room:cls.room,
-              group:`G${index+1}`
+              group:`G${index+1}`,
+              paymentType:cls.paymentType,
+              amount:cls.amount
             }))}
 
 
@@ -91,7 +93,9 @@ export const addTeacher = async (teacher: Teacher) => {
                 start: grp.start,
                 stream: grp.stream,
                 subject: grp.subject,
-                year: group.year
+                year: group.year,
+                paymentType:grp.paymentType,
+                amount:grp.amount
               }));
               
               // If you want to add these objects to an existing array, you can use .push.apply or spread syntax
@@ -113,7 +117,7 @@ export const addTeacher = async (teacher: Teacher) => {
 
 export const updateTeacher = async(updatedteacher: Teacher,teacherId:string)=>{
     try {
-            await updateDoc(doc(db, "Teachers",teacherId), updatedteacher);
+        await updateDoc(doc(db, "Teachers",teacherId), updatedteacher);
         console.log("Teacher updated successfully:");
         return true; // Assuming you want to return the ID of the added Teacher
     } catch (error) {
@@ -124,7 +128,7 @@ export const updateTeacher = async(updatedteacher: Teacher,teacherId:string)=>{
 }
 export const deleteTeacher = async(teacherId:string)=>{
     try {
-            await deleteDoc(doc(db, "Teachers",teacherId));
+          await deleteDoc(doc(db, "Teachers",teacherId));
         console.log("Teacher deleted successfully:");
         return true; // Assuming you want to return the ID of the added Teacher
     } catch (error) {
@@ -156,7 +160,7 @@ export const removeGroupFromDoc = async (clss,studentArray) => {
         
         // Update the document to remove the specified group from the groups array
         await updateDoc(docRef, {
-            groups: arrayRemove({day:clss.day,end:clss.end,group:clss.group,quota:clss.quota,room:clss.room,start:clss.start,stream:clss.stream,subject:clss.subject})
+            groups: arrayRemove({day:clss.day,end:clss.end,group:clss.group,quota:clss.quota,room:clss.room,start:clss.start,stream:clss.stream,subject:clss.subject,paymentType:clss.paymentType,amount:clss.amount})
         });
         studentArray.map(async(std)=>{
             await updateDoc(doc(db,'Students',std.id),{
@@ -187,7 +191,7 @@ export const removeGroupFromDoc = async (clss,studentArray) => {
             const { classId, year, ...filteredDetails } = updatedGroupDetails;
       
             // Update the specific task
-            tasks[taskIndex] = {...filteredDetails };
+            tasks[taskIndex] = {...filteredDetails};
       
             // Write back the updated array to Firestore
             await updateDoc(userRef, { groups: tasks });

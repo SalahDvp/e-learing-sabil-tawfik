@@ -229,7 +229,7 @@ const [schoolType, setSchoolType] = React.useState('');
       <DialogTrigger asChild>
         <Button >{t('create-teacher')}</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[1300px]">
+      <DialogContent className="sm:max-w-[1400px]">
       <Form {...form} >
       <form >
         <DialogHeader>
@@ -371,6 +371,35 @@ const [schoolType, setSchoolType] = React.useState('');
                 </FormItem>
               )}
             />
+            
+<FormField
+        control={control}
+        name="paymentType"
+        render={({ field }) => (
+          <FormItem className="grid grid-cols-4 items-center gap-4">
+            <FormLabel className="text-right">payment Type</FormLabel>
+            <FormControl>
+              <Select
+                onValueChange={field.onChange}
+                defaultValue={field.value}
+              >
+                <SelectTrigger
+                  id={`paymentType`}
+                  aria-label={`Select payment Type`}
+                >
+                  <SelectValue placeholder='payment Type' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="percentage">Percentage</SelectItem>
+                  <SelectItem value="hourly">Hourly</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
 
          
 
@@ -383,7 +412,7 @@ const [schoolType, setSchoolType] = React.useState('');
          <ScrollArea className="h-[400px]">
    <Table>
   <TableCaption>
-  <Button type='button' size="sm" variant="ghost" className="gap-1 w-full" onClick={() => appendClass({ day: '', start: '', end: '', quota: 0, stream: [] })}>
+  <Button type='button' size="sm" variant="ghost" className="gap-1 w-full" onClick={() => appendClass({ day: '', start: '', end: '', quota: 0, stream: [],paymentType:'',amount:0 })}>
       <PlusCircle className="h-3.5 w-3.5" />
       {t('add-group')}
     </Button>
@@ -396,6 +425,8 @@ const [schoolType, setSchoolType] = React.useState('');
       <TableHead>{t('room')}</TableHead>
       <TableHead>{t('field')}</TableHead>
       <TableHead>{t('year')}</TableHead>
+      <TableHead>payment Type</TableHead>
+      <TableHead>Amount</TableHead>
       <TableHead>{t('action')}</TableHead>
     </TableRow>
   </TableHeader>
@@ -586,6 +617,53 @@ const [schoolType, setSchoolType] = React.useState('');
                     )}
                   />
                   </TableCell>
+                  <TableCell className="font-medium">
+        <FormField
+                    control={form.control}
+                    key={group.id}
+                    name={`classes.${index}.paymentType`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger
+                              id={`end-${index}`}
+                              aria-label={`Select paymentType`}
+                            >
+                              <SelectValue placeholder='paymentType' />
+                            </SelectTrigger>
+                          </FormControl>
+
+                          <SelectContent>
+                            {['monthly','session'].map((paymentType) => (
+                              <SelectItem key={paymentType} value={paymentType}>
+                              {paymentType}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+        </TableCell>
+     <TableCell className="font-medium">
+        <FormField
+                    control={form.control}
+                    key={group.id}
+                    name={`classes.${index}.amount`}
+                    render={({ field }) => (
+                      <FormItem>
+                   
+                          <FormControl>
+                          <Input {...field} onChange={event => field.onChange(+event.target.value)}/>
+                          </FormControl>
+                      </FormItem>
+                    )}
+                  />
+        </TableCell>
         <TableCell>
           <Button type="button" variant="destructive" onClick={() => removeClass(index)}>{t('remove')}</Button>
         </TableCell>
@@ -647,7 +725,9 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
           stream: cls.stream,
           quota: cls.quota,
           room:cls.room,
-          group:`G${index+1}`
+          group:`G${index+1}`,
+          paymentType:cls.paymentType,
+          amount:cls.amount
         }))}
    
         
@@ -660,8 +740,6 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
     nextStep()
     setTeachers((prev: Teacher[]) => [...prev, {...data,id:teacherId.id,groupUIDs:teacherId.groupUIDs,teacher:data.name,classes:teacherId.classesgrouped}]);
     setClasses((prev: any[]) => [...prev, ...updatedCollectiveGroups]);
-
-    
     toast({
       title: "Teacher Added!",
       description: `The Teacher, ${data.name} added successfully`,

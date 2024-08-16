@@ -348,7 +348,34 @@ const years=[
               )}
             />
 
-         
+<FormField
+        control={control}
+        name="paymentType"
+        render={({ field }) => (
+          <FormItem className="grid grid-cols-4 items-center gap-4">
+            <FormLabel className="text-right">payment Type</FormLabel>
+            <FormControl>
+              <Select
+                onValueChange={field.onChange}
+                defaultValue={field.value}
+              >
+                <SelectTrigger
+                  id={`paymentType`}
+                  aria-label={`Select payment Type`}
+                >
+                  <SelectValue placeholder='payment Type' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="percentage">Percentage</SelectItem>
+                  <SelectItem value="hourly">Hourly</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      /> 
 
 
     
@@ -360,7 +387,7 @@ const years=[
       <ScrollArea className="h-[400px]">
    <Table>
   <TableCaption>
-  <Button type='button' size="sm" variant="ghost" className="gap-1 w-full" onClick={() => appendClass({ day: '', start: '', end: '', quota: 0, stream: [] })}>
+  <Button type='button' size="sm" variant="ghost" className="gap-1 w-full" onClick={() =>  appendClass({ day: '', start: '', end: '', quota: 0, stream: [],paymentType:'',amount:0 })}>
       <PlusCircle className="h-3.5 w-3.5" />
       {t('add-group')}
     </Button>
@@ -373,6 +400,8 @@ const years=[
       <TableHead>{t('room')}</TableHead>
       <TableHead>{t('field')}</TableHead>
       <TableHead>{t('year')}</TableHead>
+      <TableHead>payment Type</TableHead>
+      <TableHead>Amount</TableHead>
       <TableHead>{t('action')}</TableHead>
     </TableRow>
   </TableHeader>
@@ -564,6 +593,53 @@ const years=[
                     )}
                   />
                   </TableCell>
+                  <TableCell className="font-medium">
+        <FormField
+                    control={form.control}
+                    key={group.id}
+                    name={`classes.${index}.paymentType`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger
+                              id={`end-${index}`}
+                              aria-label={`Select paymentType`}
+                            >
+                              <SelectValue placeholder='paymentType' />
+                            </SelectTrigger>
+                          </FormControl>
+
+                          <SelectContent>
+                            {['monthly','session'].map((paymentType) => (
+                              <SelectItem key={paymentType} value={paymentType}>
+                              {paymentType}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+        </TableCell>
+     <TableCell className="font-medium">
+        <FormField
+                    control={form.control}
+                    key={group.id}
+                    name={`classes.${index}.amount`}
+                    render={({ field }) => (
+                      <FormItem>
+                   
+                          <FormControl>
+                          <Input {...field} onChange={event => field.onChange(+event.target.value)}/>
+                          </FormControl>
+                      </FormItem>
+                    )}
+                  />
+        </TableCell>
         <TableCell>
           <Button type="button" variant="destructive" onClick={() => removeClass(index)}>{t('remove')}</Button>
         </TableCell>
@@ -605,35 +681,8 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
   } = useStepper()
   
   const  {setTeachers,classes,setClasses,setStudents}= useData()
-// Helper function to generate a unique key for a class
-function getClassKey(cls) {
-    // Use a combination of properties to create a unique key
-  return `${cls.classId}-${cls.group}`;
-}
-const arraysEqual = (arr1, arr2) => {
-  // Check if arrays have the same length
-  if (arr1.length !== arr2.length) return false;
 
-  // Sort arrays to ensure order doesn't matter
-  const sortedArr1 = [...arr1].sort();
-  const sortedArr2 = [...arr2].sort();
 
-  // Check if each element in sorted arrays is equal
-  return sortedArr1.every((value, index) => value === sortedArr2[index]);
-};
-
-const compareObjects = (obj1, obj2) => {
-  // List of keys to compare
-  const keys = ['day', 'end', 'group', 'quota', 'room', 'start', 'year'];
-
-  // Compare each key
-  return keys.every(key => {
-    if (Array.isArray(obj1[key]) && Array.isArray(obj2[key])) {
-      return arraysEqual(obj1[key], obj2[key]);
-    }
-    return String(obj1[key]) === String(obj2[key]);
-  });
-};
 
 
 
@@ -714,7 +763,9 @@ const compareObjects = (obj1, obj2) => {
           teacherClass.start !== dataClass.start ||
           teacherClass.end !== dataClass.end ||
           teacherClass.day !== dataClass.day ||
-          teacherClass.room !== dataClass.room
+          teacherClass.room !== dataClass.room ||
+          teacherClass.paymentType !== dataClass.paymentType ||
+          teacherClass.amount !== dataClass.amount
         );
   
         if (hasChanges) {
@@ -724,7 +775,9 @@ const compareObjects = (obj1, obj2) => {
             start: dataClass.start,
             end: dataClass.end,
             day: dataClass.day,
-            room: dataClass.room
+            room: dataClass.room,
+            paymentType:dataClass.paymentType,
+            amount:dataClass.amount,
           });
           
         }
@@ -932,6 +985,7 @@ const compareObjects = (obj1, obj2) => {
     year: teacherData.year,
     birthdate: teacherData.birthdate,
     phoneNumber: teacherData.phoneNumber,
+    paymentType:teacherData.paymentType
   };
 
   toast({

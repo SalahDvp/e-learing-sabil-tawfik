@@ -122,7 +122,7 @@ const SheetDemo: React.FC<openModelProps> = ({ setOpen,open,teacherSalary }) => 
 
     const teacherNames = teachers.map((teacher_: { firstName: string; lastName: string; id:string}) => {
       // Combine and trim first and last name to remove leading/trailing spaces
-      const combinedName = `${teacher_.firstName.trim()} ${teacher_.lastName.trim()}`;
+      const combinedName = 'test zakamo';
     
       return {
         label: combinedName, // For use in UI components like dropdowns

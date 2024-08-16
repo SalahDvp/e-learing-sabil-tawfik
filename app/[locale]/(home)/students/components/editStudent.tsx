@@ -188,7 +188,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
 
   return (
     <Dialog open={open} onOpenChange={setOpen} >
- <DialogContent className="sm:max-w-[800px]">
+ <DialogContent className="sm:max-w-[1300px]">
       <Form {...form} >
       <form >
         <DialogHeader>
@@ -411,11 +411,12 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
           <TableHead >{t('Name')}</TableHead>
           <TableHead>{t('Time')}</TableHead>
           <TableHead>{t('CS')}</TableHead>
+          <TableHead>{t('Fee')}</TableHead>
           <TableHead>{t('Action')}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {fields.map((invoice: { id: React.Key | null | undefined; subject: any; name: any; time: any; cs: any; },index: number) => (
+        {fields.map((invoice: { id: React.Key | null | undefined; subject: any; name: any; time: any; cs: any; fee:any },index: number) => (
           <TableRow key={invoice.id}>
                         <TableCell className="font-medium"> 
               <Select  value={invoice.subject} onValueChange={(value: string | number)=>handleGroupChange(index,'subject',value)}>
@@ -490,6 +491,19 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
         </SelectGroup>
       </SelectContent>
     </Select></TableCell>
+  
+    <TableCell className="font-medium">
+  <Input
+    type="text"
+    value={`${2000} DA`} //{invoice.fee}
+    onChange={(e) => handleGroupChange(index, 'fee', e.target.value)}
+    className="col-span-3 w-24"
+    readOnly
+  />
+ 
+</TableCell>
+
+
     <TableCell>   
        <Button  type="button" variant="destructive" onClick={()=>removeClass(index)}>{t('remove')}</Button></TableCell>
 
@@ -504,6 +518,16 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
             </Step>
           )
         })}
+         <TableCell className="font-medium">
+  <Input
+    type="text"
+    value={`${2000} DA`} //{invoice.fee}
+    onChange={(e) => handleGroupChange(index, 'fee', e.target.value)}
+    className="col-span-3 w-24"
+    readOnly
+  />
+ 
+</TableCell>
         <Footer formData={getValues()} form={form} isSubmitting={isSubmitting} reset={reset} student={student} setOpen={setOpen}/>
 
       </Stepper>

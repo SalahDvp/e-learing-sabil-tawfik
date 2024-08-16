@@ -64,6 +64,11 @@ const t=useTranslations()
           className={`${pathname=== '/teachers' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
         >
           {t('teachers-0')} </Link>
+          <Link
+          href="/billing"
+          className={`${pathname=== '/billing' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
+        >
+          {t('billing')} </Link>
         <Link
           href="/settings"
           className={`${pathname=== '/settings' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
