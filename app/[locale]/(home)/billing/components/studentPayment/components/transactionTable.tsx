@@ -61,7 +61,7 @@ type Status = 'paid' | 'not paid' | 'rejected';
 
 
   export const TransactionDataTableDemo= () => {
-    const {invoices}=useData()
+    const {students}=useData()
     const [invoice,setInvoice]=React.useState<any>({
       "paymentTitle": "dwqdqwdqwd",
       "paymentAmount": 500,
@@ -151,13 +151,10 @@ type Status = 'paid' | 'not paid' | 'rejected';
       cell: ({ row }) => <div className="lowercase hidden sm:table-cell">{row.getValue("id")}</div>,
     },
     {
-      accessorKey: "student",
+      accessorKey: "name",
       header:() => <div>{t('student')}</div>, 
-      cell: ({ row }) => (
-        <div className="capitalize">
-           <div className="font-medium">{row.original.student.student}</div>
-        </div>
-      ),
+      cell: ({ row }) => <div className="lowercase hidden sm:table-cell">{row.getValue("name")}</div>,
+    
     },
     {
       accessorKey: "paymentAmount",
@@ -179,11 +176,9 @@ type Status = 'paid' | 'not paid' | 'rejected';
       accessorKey: "paymentDate",
       header:() => <div>{t('transaction-date')}</div>, 
 
-      cell: ({ row }) => (
-       
+     
+        cell: ({ row }) => <div className="lowercase hidden sm:table-cell">{row.getValue("name")}</div>,
 
-        <div className="capitalize hidden sm:table-cell"> {format(row.getValue("paymentDate"), 'dd/MM/yyyy')}</div>
-      ),
     },
     {
       accessorKey: "status",
@@ -224,13 +219,12 @@ type Status = 'paid' | 'not paid' | 'rejected';
               <DropdownMenuItem onClick={()=>openEditSheet(invoice)}>
                 {t('view-transaction-details')} </DropdownMenuItem>
                 <DropdownMenuItem onClick={()=>   downloadInvoice({
-      student: invoice.student.student,
-      level: invoice.level,
-      parent: invoice.parent.name,
-      paymentAmount: invoice.paymentAmount,
-     paymentDate: format(invoice.paymentDate, 'dd/MM/yyyy'),
-      status: t(invoice.status),
-      fromWho: invoice.fromWho
+      student: students,
+      level: students.level,
+      paymentAmount:  students.paymentAmount,
+     paymentDate: format( students.paymentDate, 'dd/MM/yyyy'),
+      status: t( students.status),
+      fromWho:  students.fromWho
     },invoice.id,[t('student'), t('level'), t('parent'), t('amount'), t('paymentDate'), t('status'), t('fromWho')],
   {
     amount:t("Amount"), from:t('From:'), shippingAddress:t('shipping-address'), billedTo:t('billed-to'), subtotal:t('Subtotal:'), totalTax:t('total-tax-0'), totalAmount:t('total-amount-3'),invoice:t('invoice')
@@ -251,7 +245,7 @@ type Status = 'paid' | 'not paid' | 'rejected';
   const [rowSelection, setRowSelection] = React.useState({})
 
   const table = useReactTable({
-    data:invoices,
+    data:students,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,

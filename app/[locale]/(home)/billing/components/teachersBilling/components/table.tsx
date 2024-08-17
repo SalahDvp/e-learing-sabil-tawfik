@@ -123,14 +123,9 @@ accessorFn: (row) => row.teacher.name,
 header:() => <div>{t('teacher')}</div>, 
       cell: ({ row }) => (
         <div className="capitalize">
-           <div className="font-medium">{row.original.teacher.name}</div>S
+           <div className="font-medium">{row.original.teacher.teacher}</div>
         </div>
       ),
-    },
-    {
-      accessorKey: "typeofTransaction",
-      header:() => <div>{t('transaction')}</div>, 
-      cell: ({ row }) => <div className="lowercase hidden sm:table-cell">{row.getValue("typeofTransaction")}</div>,
     },
     {
       accessorKey: "salaryDate",
@@ -149,13 +144,7 @@ header:() => <div>{t('teacher')}</div>,
         <div className="capitalize hidden sm:table-cell">{row.getValue("monthOfSalary")}</div>
       ),
     },
-    {
-      accessorKey: "status",
-      header:() => <div>{t('status')}</div>, 
-      cell: ({ row }) => (
-        <Badge   className="capitalize hidden sm:table-cell" style={{backgroundColor:getStatusColor(row.getValue("status"))}}>{t(row.getValue("status"))}</Badge>
-      ),
-    },
+
 
     {
       accessorKey: "salaryAmount",

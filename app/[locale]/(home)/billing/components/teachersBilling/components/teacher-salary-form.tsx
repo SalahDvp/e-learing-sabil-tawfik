@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -18,7 +19,7 @@ import {
 } from "@/components/ui/card";
 import {ResetIcon } from "@radix-ui/react-icons";
 import { Input } from "@/components/ui/input";
-import { useForm } from "react-hook-form";
+import { useFieldArray, useForm } from "react-hook-form";
 import { teacherPaymentRegistrationSchema } from "@/validators/teacherSalarySchema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import React, { useCallback, useState} from "react";
@@ -36,17 +37,16 @@ import { useTranslations } from "next-intl";
 import { Checkbox } from "@/components/ui/checkbox"
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { format } from "date-fns";
+import { differenceInWeeks, format } from "date-fns";
 import { downloadInvoice } from "./generateInvoice";
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 const fieldNames = [
-  "teacher",
-    "salaryTitle",
-    "salaryAmount",
+    "teacher",
     "salaryDate",
-    "typeofTransaction",
     "monthOfSalary",
-    "fromWho",
-    "status",
+
+    "salaryAmount",
 
 ];
 type FormKeys = "salaryTitle" | "salaryAmount" | "salaryDate" | "typeofTransaction" | "monthOfSalary" | "fromWho"|"status";
@@ -61,10 +61,46 @@ type TeacherSalaryFormValues=z.infer<typeof teacherPaymentRegistrationSchema>;
     name: string;
     source:any;
   }
+  const getGroupsByTeacher = (classes, teacherId) => {
+    return classes
+      .filter(cls => cls.teacherUID === teacherId) // Filter classes by teacherId
+      .flatMap(cls => // Flatten the array of groups
+        cls.groups.map(group => {
+          const studentCount = cls.students.filter(student => student.group === group.group).length;
+          return {
+            start: group.start,
+            end: group.end,
+            day: group.day,
+            groupcode: group.group,
+            amount: group.amount,
+            students: studentCount
+          };
+        })
+      )
+  };
+  const calculateSalary = (paymentType, teacher, expenses) => {
+    switch (paymentType) {
+      case "salaryAmount":
+        return teacher.amount;
+
+      case "hourly":
+        const weeks = differenceInWeeks(new Date(), new Date(teacher.salaryDate.toDate()));
+        return weeks * teacher.amount * expenses.length;
+
+      case "percentage":       
+        return expenses.reduce(
+          (total, expense) => total + (expense.amount*expense.students) * teacher.amount/100,
+          0
+        );
+
+      default:
+        return 0;
+    }
+  };
 export default function PaymentForm() {
   const { toast } = useToast();
   const {setTeachersSalary} = useData()
-  const {teachers,setAnalytics}= useData()
+  const {teachers,setAnalytics,classes}= useData()
   const[printBill,setPrintBill]=useState(false)
 
   const [filesToUpload, setFilesToUpload] = useState<FileUploadProgress[]>([]);
@@ -148,26 +184,16 @@ const [monthModal,setMonthModal]=useState(false)
 const [teacherModal,setTeacherModal]=useState(false)
 
   const [openTypeofpayment, setOpenTypeofpayment] = useState(false);
-  const form = useForm<TeacherSalaryFormValues>({
-    resolver: zodResolver(teacherPaymentRegistrationSchema),
+  const form = useForm<any>({
+
+    defaultValues:{expenses:[]}
   });
-  const { reset, formState, setValue, getValues } = form;
+  const { reset, formState, setValue, getValues,control,register,watch } = form;
   const { isSubmitting } = formState;
+  const { fields:expenses, append:appendExpense,remove:removeExpense, } = useFieldArray({
+    control: form.control,
+    name: "expenses",
 
-
-  const teacherNames = teachers.map((teacher_: { firstName: string; lastName: string; id:string}) => {
-    // Combine and trim first and last name to remove leading/trailing spaces
-    const combinedName = 'zakamo';
-    
-    
-
-   
-  
-    return {
-      label: combinedName, // For use in UI components like dropdowns
-      value: combinedName, // For use as a form value or ID
-      id: teacher_.id,
-    };
   });
 
   const renderInput = (fieldName:string, field:any) => {
@@ -227,11 +253,16 @@ const [teacherModal,setTeacherModal]=useState(false)
               value={getValues("teacher")?.name}
               onSelected={(selectedValue) => {
                 const selectedTeacher = teachers.find(
-                    (teacher:any) => teacher.value === selectedValue
+                    (teacher:any) => teacher.id === selectedValue
                   );
                if(selectedTeacher){
-              form.setValue(fieldName, {name:selectedTeacher?.value,id:selectedTeacher?.id})
-              form.setValue("salaryAmount", selectedTeacher.salary)
+                const result = getGroupsByTeacher(classes, selectedValue);
+                console.log("resuslt",result);
+                form.setValue('expenses',result)
+              form.setValue(fieldName, {...selectedTeacher,name:selectedTeacher?.value,id:selectedTeacher?.id,})
+              const amount=calculateSalary(selectedTeacher?.paymentType,selectedTeacher,expenses)
+              form.setValue("salaryAmount",amount)
+ 
             }
           
               }} // Set the value based on the form's current value for the field
@@ -253,44 +284,50 @@ const [teacherModal,setTeacherModal]=useState(false)
           />
         );
         case "salaryAmount":
-            return (<Input {...field} onChange={event => field.onChange(+event.target.value)}/>)
+          const amount=calculateSalary(watch('teacher')?.paymentType,watch('teacher'),expenses)
+   
+          
+            return (<Input {...field} readOnly value={amount}/>)
 
       default:
         return <Input {...field} />;
     }
   };
 
-  async function onSubmit(data:TeacherSalaryFormValues) {
+  async function onSubmit(data:any) {
     const month=getMonthInfo(data.salaryDate)
+    console.log(data);
+    
     const teacherId= await addTeacherSalary({...data,documents:[]})
-    const uploaded = await uploadFilesAndLinkToCollection("Billing/payouts/TeachersTransactions", teacherId, filesToUpload);
-    setTeachersSalary((prev:TeacherSalaryFormValues[])=>[{...data,id:teacherId,teacher:data.teacher.name,documents:uploaded,    value:teacherId,
+    //const uploaded = await uploadFilesAndLinkToCollection("Billing/payouts/TeachersTransactions", teacherId, filesToUpload);
+    setTeachersSalary((prev:TeacherSalaryFormValues[])=>[{...data,id:teacherId,teacher:data.teacher.name,documents:[],    value:teacherId,
       label:teacherId,},...prev])
-      setAnalytics((prevState:any) => ({
-        data: {
-          ...prevState.data,
-          [month.abbreviation]: {
-            ...prevState.data[month.abbreviation],
-            expenses:prevState.data[month.abbreviation].expenses + data.salaryAmount
-          }
-        },
-        totalExpenses: prevState.totalExpenses +  data.salaryAmount
-      }));
-      if(printBill){
+
+      // setAnalytics((prevState:any) => ({
+      //   data: {
+      //     ...prevState.data,
+      //     [month.abbreviation]: {
+      //       ...prevState.data[month.abbreviation],
+      //       expenses:prevState.data[month.abbreviation].expenses + data.salaryAmount
+      //     }
+      //   },
+      //   totalExpenses: prevState.totalExpenses +  data.salaryAmount
+      // }));
+      // if(printBill){
         
-        downloadInvoice({
-          toWho: data.teacher.name,
-          typeofPayment: data.typeofTransaction,
-          paymentAmount: data.salaryAmount,
-          salaryMonth:data.monthOfSalary,
-         paymentDate: format(data.salaryDate, 'dd/MM/yyyy'),
-          status: t(data.status),
+      //   downloadInvoice({
+      //     toWho: data.teacher.name,
+      //     typeofPayment: data.typeofTransaction,
+      //     paymentAmount: data.salaryAmount,
+      //     salaryMonth:data.monthOfSalary,
+      //    paymentDate: format(data.salaryDate, 'dd/MM/yyyy'),
+      //     status: t(data.status),
         
-        },teacherId,[t('teacher'), t('method'), t('amount'), t("monthOfSalary"),t('paymentDate'), t('status')],
-      {
-        amount:t("Amount"), from:t('From:'), shippingAddress:t('shipping-address'), billedTo:t('billed-to'), subtotal:t('Subtotal:'), totalTax:t('total-tax-0'), totalAmount:t('total-amount-3'),invoice:t('payslip')
-      })
-      }  
+      //   },teacherId,[t('teacher'), t('method'), t('amount'), t("monthOfSalary"),t('paymentDate'), t('status')],
+      // {
+      //   amount:t("Amount"), from:t('From:'), shippingAddress:t('shipping-address'), billedTo:t('billed-to'), subtotal:t('Subtotal:'), totalTax:t('total-tax-0'), totalAmount:t('total-amount-3'),invoice:t('payslip')
+      // })
+      // }  
 toast({
               title: t('teacher-salary-added'),
               description: t('teacher-salary-added-successfully'),
@@ -344,6 +381,77 @@ toast({
                   )}
                 />
               ))}
+                                               <FormField
+            control={control}
+            name="expenses"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t('payment-methods')}</FormLabel>
+                <FormDescription>{t('add-how-parents-are-going-to-pay')}</FormDescription>
+                <Table>
+  <TableHeader>
+    <TableRow>
+      <TableHead>group</TableHead>
+      <TableHead>number of student</TableHead>
+      <TableHead>Amount</TableHead>
+    </TableRow>
+  </TableHeader>
+  <TableBody>
+
+                {expenses.map((option,index) => (
+        
+        
+                    <TableRow key={index}>
+                    <TableCell className="font-semibold">
+                 
+              <Input
+
+                defaultValue={`${option.day},${option.start}-${option.end}`}
+                readOnly
+              />
+ 
+            </TableCell>
+            <TableCell>
+      
+      <Input
+       placeholder={t('enter-price')}
+       type="number"
+       value={option.students}
+      readOnly
+      />
+
+    </TableCell>
+            <TableCell>
+      
+              <Input
+               placeholder={t('enter-price')}
+               type="number"
+               value={option.amount}
+              readOnly
+              />
+  
+            </TableCell>
+            <TableCell>
+
+
+    </TableCell>
+      </TableRow>
+    
+
+                ))}
+         
+         </TableBody>
+         <TableFooter>
+        {/* <TableRow>
+          <TableCell >Total</TableCell>
+          <TableCell colSpan={3}>DZD{totalAmount}</TableCell>
+        </TableRow> */}
+      </TableFooter>
+</Table>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
             </form>
           </Form>
           <div className="flex items-center space-x-2 mb-3">

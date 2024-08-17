@@ -1,5 +1,6 @@
 "use client"
-import React, { useState, useRef } from 'react';
+import React, {  useState, useRef, useEffect, useMemo} from 'react';
+import { Timestamp } from 'firebase/firestore';
 import {
   Dialog,
   DialogClose,
@@ -72,6 +73,8 @@ interface FooterProps {
   isSubmitting: boolean;
   reset: UseFormReturn<any>['reset']; // Adding reset function from useForm
 }
+
+const currentDate = new Date();
 
 const subjects =['متوسط','علوم تجريبية', 'تقني رياضي', 'رياضيات', 'تسيير واقتصاد ', 'لغات اجنبية ', 'اداب وفلسفة']
 const classess = [
@@ -266,12 +269,34 @@ export default function StudentForm() {
     await qrScanner.current.start();
     setShowingQrScanner(true);
   };
+
+  const calculatedAmount = useMemo(() => {
+    return fields
+      .map((invoice) =>
+        classes
+          .filter(cls =>
+            cls.subject === invoice.subject &&
+            cls.year === watch('year') &&
+            cls.teacherName === invoice.name
+          )
+          .flatMap(cls =>
+            cls.groups
+              .filter(group =>
+                group.stream.includes(watch('field')) &&
+                JSON.stringify(`${group.day},${group.start}-${group.end}`) === invoice.time
+              )
+              .map(group => group.amount)
+          )
+      )
+      .flat() // Flatten the array to get all amounts in a single array
+      .reduce((acc, amount) => acc + amount, 0); // Sum up all amounts
+  }, [fields, classes, watch]);
   return (
     <Dialog >
       <DialogTrigger asChild className='mr-3'>
         <Button onClick={()=>{       form.setValue('classes',[]);reset()}}>{t('Add student')}</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[800px]">
+      <DialogContent className="sm:max-w-[1300px]">
       <Form {...form} >
       <form >
         <DialogHeader>
@@ -540,6 +565,7 @@ export default function StudentForm() {
           <TableHead>{t("Name")}</TableHead>
           <TableHead>{t("Time")}</TableHead>
           <TableHead>{t('CS')}</TableHead>
+          <TableHead>{t('Amount')}</TableHead>
           <TableHead>{t('Action')}</TableHead>
         </TableRow>
       </TableHeader>
@@ -619,6 +645,31 @@ export default function StudentForm() {
         </SelectGroup>
       </SelectContent>
     </Select></TableCell>
+
+
+    <TableCell className="font-medium">
+
+<Input
+            type="text"
+            value={classes
+              .filter(cls =>
+                cls.subject === invoice.subject &&
+                cls.year === watch('year') &&
+                cls.teacherName === invoice.name
+              )
+              .flatMap(cls =>
+                cls.groups
+                  .filter(group =>
+                    group.stream.includes(watch('field')) &&
+                    JSON.stringify(`${group.day},${group.start}-${group.end}`) === invoice.time
+                  )
+                  .map(group => group.amount + ' DA')
+              )}
+            className="col-span-3 w-24"
+            readOnly/>
+
+</TableCell>
+
     <TableCell>   
        <Button  type="button" variant="destructive" onClick={()=>removeClass(index)}>{t('remove')}</Button></TableCell>
 
@@ -633,7 +684,18 @@ export default function StudentForm() {
             </Step>
           )
         })}
-        <Footer formData={getValues()} form={form} isSubmitting={isSubmitting} reset={reset}/>
+
+
+<div className="flex items-center space-x-2">
+              <span className="text-sm font-semibold">Total:</span> {/* Title before the input */}
+              <Input
+        type="text"
+        value={calculatedAmount + ' DA'}
+        className="col-span-3 w-24"
+        readOnly
+      />
+            </div>
+        <Footer formData={getValues()} form={form} isSubmitting={isSubmitting} reset={reset} calculatedAmount={calculatedAmount}/>
 
       </Stepper>
 
@@ -645,7 +707,7 @@ export default function StudentForm() {
   )
 }
 
-const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) => {
+const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset, calculatedAmount}) => {
   const {
     nextStep,
     prevStep,
@@ -694,13 +756,23 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
       setQr('')
      
   }
-  const {setStudents,setClasses,students}=useData()
+  const {setStudents,setClasses,students,classes}=useData()
   const {toast}=useToast()
   const onSubmit = async(data:any) => {
 
    
   
-    const newData=await addStudent({...data,studentIndex:students.length+1})
+    const newData=await addStudent({...data,studentIndex:students.length+1, 
+      amountLeftToPay: calculatedAmount,
+      lastPaymentDate: Timestamp.fromDate(currentDate),  // Firebase Timestamp for the current date and time
+      monthlyPayments: Array.from({ length: 12 }, (_, i) => ({
+        month: new Date(new Date().setMonth(i)).toLocaleString('default', { month: 'long' }),
+        status: "notPaid"
+      })),  // All months with "notPaid" status
+      nextPaymentDate: Timestamp.fromDate(new Date(new Date().setMonth(new Date().getMonth() + 1))),  // Current date + 1 month
+      registrationAndInsuranceFee: 'notPaid',
+      totalAmount: calculatedAmount
+      })
     generateQrCode(data.id);
     setStudents((prev: Student[]) => {
       // Create updated classes by mapping through the data.classes
@@ -714,13 +786,27 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
         return cls;
       });
     
+
+
       // Add the new student to the previous state
       return [
         ...prev,
         {
           ...data,
-          studentIndex:students.length+1,  // Basic student details
-          classes: updatedClasses  // Updated classes with new indexes
+          studentIndex: students.length + 1,  // Basic student details
+          classes: updatedClasses,  // Updated classes with new indexes
+         
+          amountLeftToPay: calculatedAmount,
+lastPaymentDate: Timestamp.fromDate(currentDate),  // Firebase Timestamp for the current date and time
+monthlyPayments: Array.from({ length: 12 }, (_, i) => ({
+  month: new Date(new Date().setMonth(i)).toLocaleString('default', { month: 'long' }),
+  status: "notPaid"
+})),  // All months with "notPaid" status
+nextPaymentDate: Timestamp.fromDate(new Date(new Date().setMonth(new Date().getMonth() + 1))),  // Current date + 1 month
+registrationAndInsuranceFee: 'notPaid',
+totalAmount: calculatedAmount
+          
+        
         }
       ];
     });

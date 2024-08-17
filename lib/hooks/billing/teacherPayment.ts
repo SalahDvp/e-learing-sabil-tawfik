@@ -22,19 +22,17 @@ export const addTeacherSalary = async (transaction:TeacherSalaryFormValues) => {
     try {
         const month=getMonthInfo(transaction.salaryDate)
         const teacherTransRef = await addDoc(collection(db, "Billing","payouts","TeachersTransactions"), transaction);
-        await setDoc(doc(db, "Teachers", transaction.teacher.id, "TeacherSalary", teacherTransRef.id), {   ref: teacherTransRef.id, }); 
+        await setDoc(doc(db, "Teachers", transaction.teacher.id, "TeacherSalary", teacherTransRef.id), {ref: teacherTransRef.id, }); 
     
-        // Reference to the added document
-        console.log("Tracher Salary added successfully:",teacherTransRef.id );    
-        await updateDoc(doc(db, "Billing", "payouts"), {
-            teachersExpenses: increment(transaction.salaryAmount),
-            
-        });
-        await updateDoc(doc(db, "Billing","analytics"), {
-            totalExpenses:increment(transaction.salaryAmount),
-            [`data.${month.abbreviation}.expenses`]: increment(transaction.salaryAmount)
-
-        });
+        // // Reference to the added document
+        // console.log("Tracher Salary added successfully:",teacherTransRef.id );    
+        // await updateDoc(doc(db, "Billing", "payouts"), {
+        //     teachersExpenses: increment(transaction.salaryAmount),
+        // });
+        // await updateDoc(doc(db, "Billing","analytics"), {
+        //     totalExpenses:increment(transaction.salaryAmount),
+        //     [`data.${month.abbreviation}.expenses`]: increment(transaction.salaryAmount)
+        // });
         return teacherTransRef.id;
         // Assuming you want to return the ID of the added Tracher Salary
     } catch (error) {

@@ -89,6 +89,11 @@ interface openModelProps {
   open: boolean; // Specify the type of setOpen
   teacher:any
 }
+const paymentTypeOptions = {
+  monthly: "salaryAmount",
+  percentage: "percentage",
+  hourly: "hourly"
+};
 const EditTeacher: React.FC<openModelProps> = ({ setOpen, open,teacher }) => {
   const t=useTranslations()
   const timeOptions = generateTimeOptions("07:00","22:00", 30);
@@ -378,7 +383,28 @@ const years=[
       /> 
 
 
-    
+<FormField
+  control={control}
+  name={'amount'}
+  render={({ field }) => {
+    const paymentType:any=watch("paymentType");
+
+    const label = paymentTypeOptions[paymentType] ;
+
+    return (
+      <FormItem className="grid grid-cols-4 items-center gap-4">
+        <FormLabel className="text-right">{label}</FormLabel>
+        <FormControl>
+          <Input
+            {...field}
+            onChange={event => field.onChange(+event.target.value)}
+          />
+        </FormControl>
+        <FormMessage />
+      </FormItem>
+    );
+  }}
+/>;
   </div>
 
 ) : (

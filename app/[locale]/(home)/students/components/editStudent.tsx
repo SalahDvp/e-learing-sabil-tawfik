@@ -411,12 +411,12 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
           <TableHead >{t('Name')}</TableHead>
           <TableHead>{t('Time')}</TableHead>
           <TableHead>{t('CS')}</TableHead>
-          <TableHead>{t('Fee')}</TableHead>
+          <TableHead>{t('Amount')}</TableHead>
           <TableHead>{t('Action')}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {fields.map((invoice: { id: React.Key | null | undefined; subject: any; name: any; time: any; cs: any; fee:any },index: number) => (
+        {fields.map((invoice: { id: React.Key | null | undefined; subject: any; name: any; time: any; cs: any; amount:any },index: number) => (
           <TableRow key={invoice.id}>
                         <TableCell className="font-medium"> 
               <Select  value={invoice.subject} onValueChange={(value: string | number)=>handleGroupChange(index,'subject',value)}>
@@ -493,13 +493,25 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
     </Select></TableCell>
   
     <TableCell className="font-medium">
-  <Input
-    type="text"
-    value={`${2000} DA`} //{invoice.fee}
-    onChange={(e) => handleGroupChange(index, 'fee', e.target.value)}
-    className="col-span-3 w-24"
-    readOnly
-  />
+
+    <Input
+                type="text"
+                value={classes
+                  .filter(cls =>
+                    cls.subject === invoice.subject &&
+                    cls.year === watch('year') &&
+                    cls.teacherName === invoice.name
+                  )
+                  .flatMap(cls =>
+                    cls.groups
+                      .filter(group =>
+                        group.stream.includes(watch('field')) &&
+                        JSON.stringify(`${group.day},${group.start}-${group.end}`) === invoice.time
+                      )
+                      .map(group => group.amount + ' DA')
+                  )}
+                className="col-span-3 w-24"
+                readOnly/>
  
 </TableCell>
 
@@ -518,25 +530,47 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
             </Step>
           )
         })}
-         <TableCell className="font-medium">
-  <Input
-    type="text"
-    value={`${2000} DA`} //{invoice.fee}
-    onChange={(e) => handleGroupChange(index, 'fee', e.target.value)}
-    className="col-span-3 w-24"
-    readOnly
-  />
- 
-</TableCell>
-        <Footer formData={getValues()} form={form} isSubmitting={isSubmitting} reset={reset} student={student} setOpen={setOpen}/>
+    
+     
+            <div className="flex items-center space-x-2">
+              <span className="text-sm font-semibold">Total:</span> {/* Title before the input */}
+              <Input
+                type="text"
+                value={fields
+                  .map((invoice) =>
+                    classes
+                      .filter(cls =>
+                        cls.subject === invoice.subject &&
+                        cls.year === watch('year') &&
+                        cls.teacherName === invoice.name
+                      )
+                      .flatMap(cls =>
+                        cls.groups
+                          .filter(group =>
+                            group.stream.includes(watch('field')) &&
+                            JSON.stringify(`${group.day},${group.start}-${group.end}`) === invoice.time
+                          )
+                          .map(group => group.amount)
+                      )
+                  )
+                  .flat() // Flatten the array to get all amounts in a single array
+                  .reduce((acc, amount) => acc + amount, 0) + ' DA'} // Sum up all amounts
+                className="col-span-3 w-24"
+                readOnly
+              />
+            </div>
+    
 
-      </Stepper>
+<Footer formData={getValues()} form={form} isSubmitting={isSubmitting} reset={reset} student={student} setOpen={setOpen} />
 
-    </div>
-    </form>
-    </Form>
-      </DialogContent>
-    </Dialog>
+</Stepper>
+
+</div>
+</form>
+</Form>
+</DialogContent>
+</Dialog>
+
   )
 }
 

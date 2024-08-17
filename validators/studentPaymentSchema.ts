@@ -12,19 +12,10 @@ export const studentPaymentSchema: ZodSchema<{
   paymentTitle: string;
   paymentAmount: number;
   paymentDate: Date;
-  typeofTransaction: string;
   fromWho: string;
-  student:{value:string;label:string;id:string,student:string,  nextPaymentDate:Date};
-  parent:{name:string;id:string};
-  level:string;             
+  //student:string;
+  //level:string;             
   class:string;
-  paymentPlan:{
-    name:string;
-    period:string;
-    price: number;
-    value:string;
-    label:string;
-  };
   status: string;
   description:string;
 }> = z.object({
@@ -35,16 +26,9 @@ export const studentPaymentSchema: ZodSchema<{
   paymentDate: z.date().refine((value: Date) => value < new Date(), { message: 'Please enter a valid date.' }),
   typeofTransaction: z.string(),
   fromWho: z.string(),
-  student:z.object({value:string(),label:string(),id:string(),student:z.string(),nextPaymentDate:z.date()}),  
-  parent: z.object({name:z.string(),id:z.string()}),
-  level: z.string(),
+  //student:z.string(),  
+  //level: z.string(),
   class: z.string(),
-  paymentPlan: z.object({
-    name: z.string(),
-    period: z.string(),
-    price:  z.number().min(2, 'Please enter a value between 2 and 50 characters.'),
-    value: z.string(),
-    label: z.string(),}),
   status: z.string().min(2, 'Please enter a value between 2 and 50 characters.').max(50, 'Please enter a value between 2 and 50 characters.'), 
   description: z.string().min(2, 'Please enter a value between 2 and 50 characters.').max(50, 'Please enter a value between 2 and 50 characters.'), 
 
