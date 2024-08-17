@@ -8,7 +8,17 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription
 } from "@/components/ui/form";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableFooter
+} from "@/components/ui/table"
 import {
   Card,
   CardContent,
@@ -19,7 +29,7 @@ import {
 } from "@/components/ui/card";
 import {ResetIcon } from "@radix-ui/react-icons";
 import { Input } from "@/components/ui/input";
-import { useForm } from "react-hook-form";
+import {useFieldArray, useForm } from "react-hook-form";
 import { studentPaymentSchema } from "@/validators/studentPaymentSchema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import React, { useCallback, useState} from "react";
@@ -38,19 +48,20 @@ import { useTranslations } from "next-intl";
 import { Checkbox } from "@/components/ui/checkbox"
 import { downloadInvoice, generateBill } from "@/app/[locale]/(home)/billing/components/studentPayment/components/generateInvoice"
 import { format } from "date-fns";
+import { PlusCircle } from "lucide-react";
 const fieldNames: string[] = [
   'student',
-  'parent',
   'level',
-  'class',
+  'field',
+  'classes',
+  'school',
   "amountLeftToPay",
-  'paymentPlan',
-  'paymentAmount',
-  'nextPaymentDate',
-  'paymentTitle',
   'paymentDate',
+  'paymentAmount',
+  'paymentTitle',
   'fromWho',
   'typeofTransaction',
+  'nextPaymentDate',
   'status',
   'description',
 
@@ -64,11 +75,11 @@ type FormKeys =
   | 'typeofTransaction'
   | 'fromWho'
   | 'student'
-  |'description'
-  | 'parent'
+  | 'description'
   | 'level'
-  | 'class'
-  | 'paymentPlan'
+  | 'field'
+  | 'classes'
+  | 'school'
   |  "amountLeftToPay"
   |  'nextPaymentDate'
   | 'status';
@@ -130,7 +141,7 @@ const orderedMonths = [
 ];
 export default function StudentPaymentForm() {
   const { toast } = useToast();
-  const {students,levels,setInvoices,setStudents,setAnalytics}=useData()
+  const {students,classes,setInvoices,setStudents,setAnalytics}=useData()
   const [status, setstatus] = useState(false);
   const [openTypeofpayment, setOpenTypeofpayment] = useState(false);
   const [studentModal,setStudentModal]=React.useState(false)
@@ -141,8 +152,13 @@ export default function StudentPaymentForm() {
   const form = useForm<StudentPaymentFormValues>({
     resolver: zodResolver(studentPaymentSchema),
   });
-  const { reset, formState, setValue, getValues,watch } = form;
+  const { reset, formState, setValue, getValues,watch,control,register } = form;
   const { isSubmitting } = formState;
+  const { fields:expenses, append:appendExpense,remove:removeExpense, } = useFieldArray({
+    control: form.control,
+    name: "expenses",
+
+  });
 const t=useTranslations()
   const typeofTransaction = [
     {
@@ -167,25 +183,62 @@ const t=useTranslations()
       label: t('not-paid'),
     },
   ]
-  const watchlevel=watch('level')
+
+
+
+  const watchStudent = watch('student');
+
+const levelAndClassOptions = React.useMemo(() => {
+  const selectedStudent = students.find((student: any) => student.value === watchStudent?.value);
+  
+  if (selectedStudent) {
+    return {
+      year: selectedStudent.year,
+      field: selectedStudent.field,
+      school: selectedStudent.school,
+
+    };
+  }
+  
+  return { year: '', field: '' ,school:''};
+}, [watchStudent, students]);
+
+
+
+  
+const watchlevel=watch('year')
 const paymentPlans = React.useMemo(() => {
-  const studentValue = form.getValues("level");
+const studentValue = form.getValues("year");
+  console.log('studentValue',studentValue);
   
   if (studentValue) {
-    const selectedLevel = levels.find((level:any) => level.level === studentValue);
+    const selectedLevel = students.find((year:any) => year.year === studentValue);
 
     if (selectedLevel) {      
       return selectedLevel.prices.map((price:any)=>({...price,label:price.name,value:price.name}));
     }
   }
   return [];
-}, [form,levels,watchlevel]);
+}, [form,classes,watchlevel]);
 const onSelected=(selectedStudent:any)=>{
   form.setValue("class",selectedStudent.class)
-  form.setValue("parent",{name:selectedStudent.parentFullName,id:selectedStudent.parentId})
   form.setValue("level",selectedStudent.level)
   form.setValue("amountLeftToPay",selectedStudent.amountLeftToPay)
+
+  const studentClassesUIDs = selectedStudent.classesUIDs || [];
+
+  // Find and set the relevant class information based on the classesUIDs
+  const selectedClasses = classes.filter((classItem: any) => 
+    studentClassesUIDs.includes(classItem.id)
+  );
+  
+  form.setValue("classes", selectedClasses);
+
+
+
 }
+
+
   const renderInput = (fieldName:string, field:any) => {
     switch (fieldName) {
       case "paymentDate":
@@ -216,31 +269,32 @@ const onSelected=(selectedStudent:any)=>{
               }}
             />
           );
-        case "student":
-          return (
-            <Combobox
-              {...field}
-              open={studentModal}
-              setOpen={setStudentModal}
-              placeHolder={t('student')}
-              options={students}
-              value={getValues("student")?.student}
-              onSelected={(selectedValue) => {
-                const selectedStudent = students.find((student:any) => student.value === selectedValue);
-          
-                
-                if (selectedStudent) {
-                  const { value, label, ...rest } = selectedStudent; 
-                  const updatedStudent:any = { ...rest };
-                  onSelected(updatedStudent); 
-                  form.setValue(fieldName, {value:selectedStudent.value,label:selectedStudent.label,id:selectedStudent.id,student:selectedStudent.student,nextPaymentDate:selectedStudent.nextPaymentDate}); 
-                }
-              }}
-         
-            />
-
-          );
- 
+          case "student":
+            return (
+              <Combobox
+      {...field}
+      open={studentModal}
+      setOpen={setStudentModal}
+      placeHolder={t('student')}
+      options={students}
+      value={getValues("student")?.student}
+      onSelected={(selectedValue) => {
+        const selectedStudent = students.find((student: any) => student.value === selectedValue);
+        if (selectedStudent) {
+          const { value, label, ...rest } = selectedStudent;
+          const updatedStudent: any = { ...rest };
+          onSelected(updatedStudent); // Added to handle the selected student
+          form.setValue(fieldName, {
+            value: selectedStudent.value,
+            label: selectedStudent.label,
+            id: selectedStudent.id,
+            student: selectedStudent.student,
+            nextPaymentDate: selectedStudent.nextPaymentDate,
+          });
+        }
+      }}
+    />
+            );
       case "status":
         return (
           <Combobox
@@ -271,14 +325,36 @@ const onSelected=(selectedStudent:any)=>{
           />
         );
         
+
+   
+          case "level":
+            return <Input {...field} value={levelAndClassOptions.year} readOnly />;
+          
+          case "field":
+            return <Input {...field} value={levelAndClassOptions.field} readOnly />;
+
+
+            case "classes":
+              return (
+                <Input 
+                  {...field} 
+                  value={classes.map((classItem: any) => `${classItem.subject} (${classItem.teacherName})`).join(', ')} 
+                  readOnly 
+                />
+              );
+            
+
+
+            
+        
+         case "school":
+          return <Input {...field} value={levelAndClassOptions.school} readOnly />;
+
         case "paymentAmount":
             return (<Input {...field} onChange={event => field.onChange(+event.target.value)}/>)
 
-        case "parent" :
-          return (<Input {...field}  value={getValues("parent")?.name} readOnly/>)
-          
-        case "level" :
-          return (<Input {...field}  value={getValues("level")} readOnly/>)
+       
+        
 
         case "paymentPlan":
           return (
@@ -312,8 +388,7 @@ const onSelected=(selectedStudent:any)=>{
           )
           case "nextPaymentDate":
             return (<Input {...field} value={field.value?.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })} readOnly/>)
-            case "class":
-              return <Input {...field}  value={getValues("class")}/>;
+          
                       default:
         return <Input {...field} />;
     }
@@ -332,7 +407,6 @@ const onSelected=(selectedStudent:any)=>{
         {
           student: data.student.student,
           level: data.level,
-          parent: data.parent.name,
           paymentAmount: data.paymentAmount,
           amountLeftToPay:data.amountLeftToPay,
           paymentDate:format(data.paymentDate, 'dd/MM/yyyy'),
@@ -343,7 +417,6 @@ const onSelected=(selectedStudent:any)=>{
         [
           t('student'),
           t('level'),
-          t('parent'),
           t('amount'),
           t('amount-left-to-pay'),
           t('paymentDate'),
@@ -439,6 +512,12 @@ const onSelected=(selectedStudent:any)=>{
             reset(); 
   }
 
+  const handleChangeExpense = (index:number, newPrice:number) => {
+    const newPrices = [...getValues('expenses')]; // Get the current prices array
+    newPrices[index].amount = newPrice; // Update the price at the specified index
+    setValue('expenses', newPrices); // Set the updated prices array in the form
+  };
+
   return (
     <Card className="overflow-hidden" x-chunk="dashboard-05-chunk-4">
       <CardHeader className="flex flex-row items-start bg-muted/50">
@@ -466,7 +545,10 @@ const onSelected=(selectedStudent:any)=>{
         style={{ maxHeight: "600px" }}
       >
         <CardContent>
-          <Form {...form}>
+          <Form {...form}
+          >
+
+            
             <form>
               {fieldNames.map((fieldName, index) => (
                 <FormField
@@ -483,6 +565,72 @@ const onSelected=(selectedStudent:any)=>{
                   )}
                 />
               ))}
+
+<FormField
+            control={control}
+            name="expenses"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t('payment-methods')}</FormLabel>
+                <FormDescription>{t('add-how-parents-are-going-to-pay')}</FormDescription>
+                <Table>
+  <TableHeader>
+    <TableRow>
+      <TableHead>{t('name')}</TableHead>
+      <TableHead>{t('price')}</TableHead>
+      <TableHead>Action</TableHead>
+    </TableRow>
+  </TableHeader>
+  <TableBody>
+
+                {expenses.map((option,index) => (
+        
+        
+                    <TableRow key={index}>
+                    <TableCell className="font-semibold">
+                 
+              <Input
+                placeholder={t('enter-method-name')}
+                defaultValue={option.name}
+                {...register(`expenses.${index}.name`)}
+              />
+ 
+            </TableCell>
+            <TableCell>
+      
+              <Input
+               placeholder={t('enter-price')}
+               type="number"
+               value={option.amount}
+               onChange={(e) => handleChangeExpense(index, parseInt(e.target.value))}
+
+              />
+  
+            </TableCell>
+            <TableCell>
+            <Button  type="button" variant="destructive" onClick={()=>removeExpense(index)}>{t('remove')}</Button>
+
+    </TableCell>
+      </TableRow>
+    
+
+                ))}
+         
+         </TableBody>
+         <TableFooter>
+        <TableRow>
+          <TableCell >Total</TableCell>
+          <TableCell colSpan={3}>DZD 200</TableCell>
+        </TableRow>
+      </TableFooter>
+</Table>
+<Button type='button' size="sm" variant="ghost" className="gap-1 w-full"  onClick={() => appendExpense({name: '',amount:0})}>
+                      <PlusCircle className="h-3.5 w-3.5" />
+                      {t('add-expense')}</Button>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
             </form>
           </Form>
           <div className="flex items-center space-x-2 mb-3">
@@ -509,5 +657,7 @@ const onSelected=(selectedStudent:any)=>{
         </div>
       </CardFooter>
     </Card>
+
+    
   );
 }

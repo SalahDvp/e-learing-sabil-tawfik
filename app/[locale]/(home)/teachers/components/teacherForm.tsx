@@ -96,7 +96,8 @@ export default function TeacherForm() {
   const timeOptions = generateTimeOptions("07:00","22:00", 30);
   const form = useForm<any>({
     defaultValues:{
-      year:[]
+      year:[],
+      salaryDate:new Date()
     }
    
   });
@@ -215,7 +216,11 @@ const subjects = [
   
 
 ];
-
+const paymentTypeOptions = {
+  monthly: "salaryAmount",
+  percentage: "percentage",
+  hourly: "hourly"
+};
 const [schoolType, setSchoolType] = React.useState('');
 
   const handleSchoolTypeChange = (type) => {
@@ -401,7 +406,28 @@ const [schoolType, setSchoolType] = React.useState('');
         )}
       />
 
-         
+<FormField
+  control={control}
+  name={'amount'}
+  render={({ field }) => {
+    const paymentType:any=watch("paymentType");
+
+    const label = paymentTypeOptions[paymentType] ;
+
+    return (
+      <FormItem className="grid grid-cols-4 items-center gap-4">
+        <FormLabel className="text-right">{label}</FormLabel>
+        <FormControl>
+          <Input
+            {...field}
+            onChange={event => field.onChange(+event.target.value)}
+          />
+        </FormControl>
+        <FormMessage />
+      </FormItem>
+    );
+  }}
+/>;
 
 
     
@@ -705,9 +731,8 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
   const  {setTeachers,setClasses}= useData()
 
   const {toast}=useToast()
-  const onSubmit = async(data:Teacher) => {
+  const onSubmit = async(data:any) => {
 
-    
     const teacherId = await addTeacher(data)
     const classesByYear = groupClassesByYear(data.classes);
   
@@ -738,7 +763,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
       id: teacherId.groupUIDs[index]
     }));
     nextStep()
-    setTeachers((prev: Teacher[]) => [...prev, {...data,id:teacherId.id,groupUIDs:teacherId.groupUIDs,teacher:data.name,classes:teacherId.classesgrouped}]);
+    setTeachers((prev: Teacher[]) => [...prev, {...data,id:teacherId.id,groupUIDs:teacherId.groupUIDs,teacher:data.name,classes:teacherId.classesgrouped,value:teacherId.id,label:data.name}]);
     setClasses((prev: any[]) => [...prev, ...updatedCollectiveGroups]);
     toast({
       title: "Teacher Added!",

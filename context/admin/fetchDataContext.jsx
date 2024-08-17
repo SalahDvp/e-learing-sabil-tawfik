@@ -162,11 +162,14 @@ export const  FetchDataProvider = ({ children }) => {
           birthdate: new Date(doc.data().birthdate.toDate()),
           teacher: `${doc.data().name}`,
           phoneNumber: doc.data().phoneNumber,
-          year: doc.data().year
+          year: doc.data().year,
+          value:doc.id,
+          label:doc.data().name
         }
         const result = teacher.groupUIDs.flatMap(cls => {
           const classDetail = classesData.find(clss => clss.id === cls);
           return classDetail.groups.map(grp=>({
+            ...grp,
             "day": grp.day,
             "end": grp.end,
             "group": grp.group,
