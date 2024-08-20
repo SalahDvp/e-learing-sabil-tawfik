@@ -1,5 +1,5 @@
 import { db } from "@/firebase/firebase-config"
-import { addDoc, collection, deleteDoc, doc, increment, updateDoc } from "firebase/firestore"
+import { addDoc, collection, deleteDoc, doc, increment ,arrayUnion, updateDoc ,setDoc} from "firebase/firestore"
 import { studentPaymentSchema } from "@/validators/studentPaymentSchema";
 import { z } from "zod";
 function getMonthInfo(date:Date) {
@@ -9,36 +9,36 @@ function getMonthInfo(date:Date) {
     const monthAbbreviation = monthName.slice(0, 3); // Get the first three characters for the abbreviation
     return { fullName: monthName, abbreviation: monthAbbreviation };
   }
-type StudentPaymentFormValues = z.infer<typeof studentPaymentSchema> & {documents?:any[]};
-export const addPaymentTransaction = async (transaction:StudentPaymentFormValues,months:any[]) => {
+type StudentPaymentFormValues = z.infer<any> & {documents?:any[]};
+export const addPaymentTransaction = async (transaction: any, studentID: string) => {
     try {
-        const month=getMonthInfo(transaction.paymentDate)
+        // Validate studentID
+        if (!studentID) {
+            throw new Error("Student ID is required.");
+        }
 
-        const transactionRef = await addDoc(collection(db, "Billing","payments","Invoices"),{...transaction,student:{student:transaction.student.student,
-            id:transaction.student.id,nextPaymentDate:transaction.student.nextPaymentDate},paymentPlan:{period:transaction.paymentPlan.period,name:transaction.paymentPlan.name,price:transaction.paymentPlan.price}
+        // Reference to the specific student's invoice document
+        const transactionRef = doc(db, "Billing", "payments", "Invoices", studentID);
+
+        // Ensure transaction is not undefined
+        if (!transaction || !transaction) {
+            throw new Error("Transaction data is missing or malformed.");
+        }
+
+        // Update the document with arrayUnion
+        await updateDoc(transactionRef, {
+            transaction: arrayUnion(transaction), // Ensure transaction.transaction is an array
+            // months: arrayUnion(...months) // Uncomment and modify if using months
         });
-        await updateDoc(doc(db, "Billing", "analytics"), {
-            totalIncome: increment(transaction.paymentAmount),
-            [`data.${month.abbreviation}.income`]: increment(transaction.paymentAmount)
-        });
-        await updateDoc(doc(db, "Students", transaction.student.id), {
-            nextPaymentDate: transaction.nextPaymentDate,
-            amountLeftToPay: transaction.amountLeftToPay - transaction.paymentAmount,
-            ...Object.fromEntries(
-                months.map((month) => [`monthly_payments.${month}.status`, 'Paid'])
-            )
-        });
-        await updateDoc(doc(db,"Parents",transaction.parent.id),{
-            totalPayment:increment(transaction.paymentAmount)
-        })
-        console.log("parent added successfully:");
-        return transactionRef.id; // Assuming you want to return the ID of the added parent
+
+        console.log("Transaction successfully added to Firestore!");
+
+        return transactionRef.id; // Return the ID of the document
     } catch (error) {
-        console.error("Error adding parent:", error);
+        console.error("Error adding transaction:", error);
         // Handle the error here, such as displaying a message to the user or logging it for further investigation
         throw error; // Optionally re-throw the error to propagate it further if needed
     }
-    
 };
 export const updateStudentInvoice = async(updatedtransaction:StudentPaymentFormValues,transactionID:string,oldSalary:number)=>{
     try {
