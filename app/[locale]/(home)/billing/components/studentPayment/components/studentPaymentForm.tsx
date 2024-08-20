@@ -1,4 +1,4 @@
-
+'use client'
 
 import { Button } from "@/components/ui/button";
 import { arrayUnion } from "firebase/firestore";
@@ -152,7 +152,10 @@ const orderedMonths = [
 ];
 export default function StudentPaymentForm() {
   const { toast } = useToast();
-  const {students,classes,setInvoices,setStudents,setAnalytics}=useData()
+  const {students,classes,setInvoices,setStudents,setAnalytics,invoices}=useData()
+
+  console.log('invoices',invoices);
+  
   const [status, setstatus] = useState(false);
   const [openTypeofpayment, setOpenTypeofpayment] = useState(false);
   const [studentModal,setStudentModal]=React.useState(false)

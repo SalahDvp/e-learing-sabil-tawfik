@@ -1,3 +1,4 @@
+"use client";
 import * as React from "react";
 import {
   CaretSortIcon,
@@ -7,13 +8,11 @@ import {
 import {
   ColumnDef,
   ColumnFiltersState,
-  SortingState,
   VisibilityState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
-  getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import {
@@ -28,12 +27,12 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
@@ -55,38 +54,9 @@ import { format } from "date-fns";
 import { downloadInvoice } from "./generateInvoice";
 
 type Status = "paid" | "not paid" | "rejected";
-
 export const TransactionDataTableDemo = () => {
-  const { students } = useData();
-  const [invoice, setInvoice] = React.useState<any>({
-    paymentTitle: "dwqdqwdqwd",
-    paymentAmount: 500,
-    paymentDate: new Date("2024-04-26"),
-    typeofTransaction: "CreditCard",
-    fromWho: "ddqwdqwd",
-    student: {
-      student: "Charlie Brown",
-      value: "Charlie Brown",
-      label: "Charlie Brown",
-      id: "4",
-    },
-    parent: {
-      name: "Eleanor",
-      id: "4",
-    },
-    level: "Kindergarten",
-    class: "6C",
-    paymentPlan: {
-      name: "Monthly Plan",
-      period: "1 month",
-      price: 500,
-      value: "Monthly Plan",
-      label: "Monthly Plan",
-    },
-    status: "paid",
-    description: "eeee",
-  });
-
+  const { students, invoices } = useData();
+  const [invoice, setInvoice] = React.useState<any>(null);
   const t = useTranslations();
   const [open, setOpen] = React.useState(false);
 
@@ -109,102 +79,83 @@ export const TransactionDataTableDemo = () => {
   }, []);
 
   const handleExport = () => {
-    const exceldata = students.map((invoice: any) => ({
-      [`${t("transaction-id")}`]: invoice.id,
-      [`${t("student")}`]: invoice.student.student,
-      [`${t("amount")}`]: new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "DZD",
-      }).format(invoice.paymentAmount),
-      [`${t("payemnt-date")}`]: format(invoice.paymentDate, "dd/MM/yyyy"),
-      [`${t("status")}`]: t(invoice.status),
-      [`${t("from")}`]: invoice.fromWho,
-    }));
+    const exceldata = invoices?.flatMap((invoice: any) =>
+      invoice.transaction.map((trans: any) => ({
+        [`${t("transaction-id")}`]: invoice.id,
+        [`${t("student")}`]: invoice.student.student,
+        [`${t("amount")}`]: new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: "DZD",
+        }).format(trans.paymentAmount),
+        [`${t("payment-date")}`]: format(trans.paymentDate.toDate(), "dd/MM/yyyy"),
+        [`${t("status")}`]: t(trans.status),
+        [`${t("from")}`]: trans.fromWho,
+      }))
+    );
     exportTableToExcel(t("students-payments-transactions-table"), exceldata);
   };
 
+  const transactionsData = React.useMemo(() => invoices?.flatMap((invoice: any) =>
+    invoice?.transaction?.map((trans: any) => ({
+      ...invoice, // Include other invoice details
+      ...trans, // Include transaction details as separate fields
+    }))
+  ).sort((a, b) => b.paymentDate - a.paymentDate), [invoices]); // Sort by latest paymentDate
+
+  if (transactionsData.length === 0) {
+    return null;
+  }
+
   const columns: ColumnDef<any>[] = [
     {
-      id: "select",
-      header: ({ table }) => (
-        <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
-      ),
-      enableSorting: false,
-      enableHiding: false,
+      id:"student",
+      header: "Student",
+      accessorFn: (row) => row?.student?.student,
+      cell: ({ getValue }) => <div className="font-medium">{getValue()}</div>,
     },
     {
-      accessorKey: "id",
-      header: () => <div>{t("transaction-id")}</div>,
-      cell: ({ row }) => (
-        <div className="lowercase hidden sm:table-cell">
-          {row.getValue("id")}
+      header: "Payment Day",
+      accessorFn: (row) => row?.paymentDate,
+      cell: ({ getValue }) => (
+        <div className="capitalize hidden sm:table-cell">
+          {(getValue() as Date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
         </div>
       ),
     },
+    
     {
-      accessorKey: "student.student",
-      header: () => <div>{t("student")}</div>,
-      cell: ({ row }) => (
-        <div className="lowercase hidden sm:table-cell">
-          {row.getValue("student.student")}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "paymentAmount",
-      header: () => <div>{t("amount")}</div>,
-      cell: ({ row }) => {
-        const amount = parseFloat(row.getValue("paymentAmount"));
-        const formatted = new Intl.NumberFormat("en-US", {
+      header: "Payment Amount",
+      accessorFn: (row) => row?.paymentAmount,
+      cell: ({ getValue }) => {
+        const formattedAmount = new Intl.NumberFormat("en-US", {
           style: "currency",
           currency: "DZD",
-        }).format(amount);
-        return <div className=" font-medium">{formatted}</div>;
+        }).format(getValue());
+        return <div className="font-medium">{formattedAmount}</div>;
       },
     },
     {
-      accessorKey: "paymentDate",
-      header: () => <div>{t("transaction-date")}</div>,
-      cell: ({ row }) => (
-        <div className="lowercase hidden sm:table-cell">
+      header: "Next Payment Day",
+      accessorFn: (row) => row?.nextPaymentDate,
+      cell: ({ getValue }) => (
+        <div className="capitalize hidden sm:table-cell">
+          {(getValue() as Date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
         </div>
       ),
     },
     {
-      accessorKey: "status",
-      header: () => <div>{t("payment-status")}</div>,
-      cell: ({ row }) => (
-        <Badge
-          className="capitalize hidden sm:table-cell"
-          style={{ backgroundColor: getStatusColor(row.getValue("status")) }}
-        >
-          {t(row.getValue("status"))}
-        </Badge>
-      ),
+      header: "Amount Left To Pay",
+      accessorFn: (row) => row?.amountLeftToPay,
+      cell: ({ getValue }) => {
+        const formattedAmount = new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: "DZD",
+        }).format(getValue());
+        return <div className="font-medium">{formattedAmount}</div>;
+      },
     },
-    {
-      accessorKey: "fromWho",
-      header: () => <div>{t("from")}</div>,
-      cell: ({ row }) => (
-        <div className="capitalize">
-          <div className="font-medium">{row.getValue("fromWho")}</div>
-        </div>
-      ),
-    },
+   
+   
     {
       id: "actions",
       enableHiding: false,
@@ -228,15 +179,12 @@ export const TransactionDataTableDemo = () => {
                 onClick={() =>
                   downloadInvoice(
                     {
-                      student: students,
-                      level: students.level,
-                      paymentAmount: students.paymentAmount,
-                      paymentDate: format(
-                        students.paymentDate,
-                        "dd/MM/yyyy"
-                      ),
-                      status: t(students.status),
-                      fromWho: students.fromWho,
+                      student: invoice.student,
+                      level: invoice.level,
+                      paymentAmount: invoice.paymentAmount,
+                      paymentDate: format(invoice.paymentDate, "dd/MM/yyyy"),
+                      status: t(invoice.status),
+                      fromWho: invoice.fromWho,
                     },
                     invoice.id,
                     [
@@ -270,32 +218,31 @@ export const TransactionDataTableDemo = () => {
     },
   ];
 
-  const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
-  );
-  const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({});
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
   const table = useReactTable({
-    data: students,
+    data: transactionsData,
     columns,
     state: {
-      sorting,
       columnFilters,
       columnVisibility,
       rowSelection,
     },
     enableRowSelection: true,
-    onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getRowId: (row) => row.id,
+    getCoreRowModel: React.useMemo(() => getCoreRowModel(), []),
+    getFilteredRowModel: React.useMemo(() => getFilteredRowModel(), []),
+    getPaginationRowModel: React.useMemo(() => getPaginationRowModel(), []),
+    getRowId: React.useCallback((row) => row?.id, []),
+    initialState: {
+      pagination: {
+        pageIndex: 0, //custom initial page index
+        pageSize: 10, //custom default page size
+      },
+    },
   });
 
   return (
@@ -306,31 +253,47 @@ export const TransactionDataTableDemo = () => {
           {t("students-payments-transactions-table-description")}
         </CardDescription>
       </CardHeader>
-      <CardContent className="p-1">
+      <CardContent className="pl-2">
         <div className="flex items-center py-4">
           <Input
-            placeholder={t("search")}
-            value={
-              (table.getColumn("student.student")?.getFilterValue() as string) ??
-              ""
-            }
+            placeholder={t('filter-by-student')}
+            value={(table.getColumn("student")?.getFilterValue() as string) ?? ""}
             onChange={(event) =>
-              table
-                .getColumn("student.student")
-                ?.setFilterValue(event.target.value)
+              table.getColumn("student")?.setFilterValue(event.target.value)
             }
             className="max-w-sm"
           />
-          <Button
-            variant="outline"
-            onClick={handleExport}
-            className="ml-auto hidden h-8 lg:flex"
-          >
-            <File className="mr-2 h-4 w-4" />
-            {t("download")}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="ml-auto">
+                {t('columns')} <ChevronDownIcon className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {table
+                .getAllColumns()
+                .filter((column) => column.getCanHide())
+                .map((column) => {
+                  return (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      className="capitalize"
+                      checked={column.getIsVisible()}
+                      onCheckedChange={(value) =>
+                        column.toggleVisibility(!!value)
+                      }
+                    >
+                      {column.id}
+                    </DropdownMenuCheckboxItem>
+                  );
+                })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button variant="outline" className="ml-2" onClick={handleExport}>
+            {t('export')} <File className="ml-2 h-4 w-4" />
           </Button>
         </div>
-        <div className="rounded-md border">
+        <ScrollArea className="h-96">
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
@@ -338,29 +301,12 @@ export const TransactionDataTableDemo = () => {
                   {headerGroup.headers.map((header) => {
                     return (
                       <TableHead key={header.id}>
-                        {header.isPlaceholder ? null : (
-                          <div
-                            className={
-                              header.column.getCanSort()
-                                ? "cursor-pointer select-none"
-                                : ""
-                            }
-                            onClick={header.column.getToggleSortingHandler()}
-                          >
-                            {flexRender(
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
                               header.column.columnDef.header,
                               header.getContext()
                             )}
-                            {{
-                              asc: (
-                                <CaretSortIcon className="ml-2 h-4 w-4" />
-                              ),
-                              desc: (
-                                <CaretSortIcon className="ml-2 h-4 w-4 rotate-180" />
-                              ),
-                            }[header.column.getIsSorted() as string] ?? null}
-                          </div>
-                        )}
                       </TableHead>
                     );
                   })}
@@ -393,34 +339,39 @@ export const TransactionDataTableDemo = () => {
               )}
             </TableBody>
           </Table>
-        </div>
-      </CardContent>
-      <CardFooter>
-        <div className="flex items-center justify-between space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            {t("previous")}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            {t("next")}
-          </Button>
-        </div>
-      </CardFooter>
-      <EditStudentPaymentForm
-        open={open}
-        setOpen={setOpen}
-        student={invoice}
-        setStudent={setInvoice}
-      />
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
+ 
+     
+      
+    
+      <div className="flex items-center justify-between py-4">
+  <div className="flex-1 text-sm text-muted-foreground">
+    {table.getFilteredSelectedRowModel().rows.length} of{" "}
+    {table.getFilteredRowModel().rows.length} {t('row-s-selected')}
+  </div>
+  <div className="flex space-x-2">
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => table.previousPage()}
+      disabled={!table.getCanPreviousPage()}
+    >
+      {t('previous')}
+    </Button>
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => table.nextPage()}
+      disabled={!table.getCanNextPage()}
+    >
+      {t('next')}
+    </Button>
+  </div>
+</div>
+
+
+</CardContent>
     </Card>
   );
 };

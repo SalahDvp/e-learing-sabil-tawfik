@@ -103,20 +103,27 @@ export const  FetchDataProvider = ({ children }) => {
         const invoicesSnapshot = await getDocs(
           query(
             collection(db, 'Billing', "payments", "Invoices"),
-            where("paymentDate", ">=", date.from),
-            where("paymentDate", "<=", date.to)
+          
           )
         );
   
         const invoicesData = invoicesSnapshot.docs.map((doc) => ({
           ...doc.data(),
-          id: doc.id,
+          lastPaymentDate:new Date(doc.data().lastPaymentDate.toDate()),
+          transaction: doc.data().transaction.map((trans) => ({
+            ...trans,
+            paymentDate: new Date(trans.paymentDate.toDate()), // Format paymentDate as a Date object
+            nextPaymentDate:new Date(trans.nextPaymentDate.toDate()),
+          })),
+          //paymentDate:new Date(doc.data().paymentDate.toDate()),
+         /* id: doc.id,
           value: doc.id,
           label: doc.id,
           invoice: doc.id,
           paymentDate: new Date(doc.data().paymentDate.toDate())
+          */
         }));
-  
+  console.log('test invoicesData',invoicesData );
         setInvoices(invoicesData);
       } catch (error) {
         console.error('Error fetching Invoices:', error);
@@ -196,6 +203,7 @@ export const  FetchDataProvider = ({ children }) => {
             ...doc.data(),
             id: doc.id,
             birthdate: new Date(doc.data().birthdate.toDate()),
+            nextPaymentDate:new Date(doc.data().nextPaymentDate.toDate()),
             student: `${doc.data().name}`,
             value: `${doc.data().name}`,
             label: `${doc.data().name}`,
@@ -320,3 +328,19 @@ export const  useData =()=>{
     }
     return value
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

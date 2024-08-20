@@ -117,36 +117,35 @@ import { exportTableToExcel } from "@/components/excelExport"
       enableHiding: false,
     },
     {
-      accessorKey: "student",
+      accessorKey: "name",
       header:() => <div>{t('Name')}</div>, 
 
       cell: ({ row }) => (
         <div className="capitalize">
-           <div className="font-medium">{row.getValue("student")}</div>
+           <div className="font-medium">{row.getValue("name")}</div>
 
         </div>
       ),
     },
     {
-      accessorKey: "level",
+      accessorKey: "year",
       header:() => <div>{t('level')}</div>, 
 
-      cell: ({ row }) => <div className="lowercase hidden sm:table-cell">{row.getValue("level")}</div>,
+      cell: ({ row }) => <div className="lowercase hidden sm:table-cell">{row.getValue("year")}</div>,
     },
     {
       accessorKey: "nextPaymentDate",
-      header:() => <div>{t('next-payment-date-0')}</div>, 
-
+      header:() => <div>{t('nextPaymentDate')}</div>, 
       cell: ({ row }) => (
-        <div className="lowercase hidden sm:table-cell">
-        </div>
+      <div className="capitalize hidden sm:table-cell"> {((row.getValue("nextPaymentDate") as Date)).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
       ),
     },
+    
     {
-        accessorKey: "parentPhone",
-        header:() => <div>{t('parent-phone-0')}</div>, 
+        accessorKey: "transaction.phoneNumber",
+        header:() => <div>{t('phone-number')}</div>, 
         cell: ({ row }) => (
-          <div className="capitalize hidden sm:table-cell">{row.getValue("parentPhone")}</div>
+          <div className="capitalize hidden sm:table-cell">{row.getValue("phoneNumber")}</div>
         ),
       },
     {

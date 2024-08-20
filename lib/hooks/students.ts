@@ -108,7 +108,8 @@ export async function uploadAndLinkToCollection(
                 id: student.id,
                 nextPaymentDate: student.nextPaymentDate,
 
-            }
+            },
+            transaction:[]
             
             });
 
