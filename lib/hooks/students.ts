@@ -89,6 +89,29 @@ export async function uploadAndLinkToCollection(
         return { studentId: student.id, classUpdates };
       });
   
+
+      const transactionRef = doc(db, "Billing", "payments", "Invoices", student.id);
+
+            // Filter out undefined values
+            
+          
+
+            await setDoc(transactionRef, {
+            amountLeftToPay:student.amountLeftToPay,
+            field:student.field,
+            lastPaymentDate:student.lastPaymentDate,
+            registrationAndInsuranceFee:student.registrationAndInsuranceFee,
+            school:student.school,
+            year:student.year,
+            student: {
+                student: student.name,
+                id: student.id,
+                nextPaymentDate: student.nextPaymentDate,
+
+            }
+            
+            });
+
       return result;
     } catch (error) {
       console.error("Error adding Student:", error);

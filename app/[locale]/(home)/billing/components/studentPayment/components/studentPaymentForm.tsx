@@ -1,6 +1,8 @@
 
 
 import { Button } from "@/components/ui/button";
+import { arrayUnion } from "firebase/firestore";
+
 import {
   Form,
   FormControl,
@@ -53,7 +55,6 @@ const fieldNames: string[] = [
   'student',
   'level',
   'field',
-  'classes',
   'school',
   "amountLeftToPay",
   'paymentDate',
@@ -68,6 +69,17 @@ const fieldNames: string[] = [
 ];
 
 
+type Transaction = {
+  typeOfTransaction: string;
+  status: string;
+  paymentAmount: number;
+  paymentDate: Date;
+  description: string;
+  amountLeftToPay: number;
+  nextPaymentDate: Date | null;
+  fromWho: string;
+};
+
 type FormKeys =
   | 'paymentTitle'
   | 'paymentAmount'
@@ -78,13 +90,12 @@ type FormKeys =
   | 'description'
   | 'level'
   | 'field'
-  | 'classes'
   | 'school'
   |  "amountLeftToPay"
   |  'nextPaymentDate'
   | 'status';
 
-type StudentPaymentFormValues = z.infer<typeof studentPaymentSchema>;
+type StudentPaymentFormValues = z.infer<any>;
 function addMonthsToDate(date: Date, monthsToAdd: number): Date {
   const newDate = new Date(date.getTime()); // Create a copy of the original date
   newDate.setMonth(newDate.getMonth() + monthsToAdd); // Add months to the date
@@ -135,9 +146,9 @@ console.log(months);
 
 
 const orderedMonths = [
-  'Sept24', 'Oct24', 'Nov24', 'Dec24',
-  'Jan25', 'Feb25', 'Mar25', 'Apr25',
-  'May25', 'Jun25', 'Jul25','Aug25'
+  'Sep', 'Oct', 'Nov', 'Dec',
+  'Jan', 'Feb', 'Mar', 'Apr',
+  'May', 'Jun', 'Jul','Aug'
 ];
 export default function StudentPaymentForm() {
   const { toast } = useToast();
@@ -149,8 +160,8 @@ export default function StudentPaymentForm() {
   const[printBill,setPrintBill]=useState(false)
 
   const [filesToUpload, setFilesToUpload] = useState<FileUploadProgress[]>([]);
-  const form = useForm<StudentPaymentFormValues>({
-    resolver: zodResolver(studentPaymentSchema),
+  const form = useForm<any>({
+    //resolver: zodResolver(studentPaymentSchema),
   });
   const { reset, formState, setValue, getValues,watch,control,register } = form;
   const { isSubmitting } = formState;
@@ -211,32 +222,33 @@ const paymentPlans = React.useMemo(() => {
 const studentValue = form.getValues("year");
   console.log('studentValue',studentValue);
   
-  if (studentValue) {
-    const selectedLevel = students.find((year:any) => year.year === studentValue);
 
-    if (selectedLevel) {      
-      return selectedLevel.prices.map((price:any)=>({...price,label:price.name,value:price.name}));
-    }
-  }
-  return [];
 }, [form,classes,watchlevel]);
-const onSelected=(selectedStudent:any)=>{
-  form.setValue("class",selectedStudent.class)
-  form.setValue("level",selectedStudent.level)
-  form.setValue("amountLeftToPay",selectedStudent.amountLeftToPay)
-
-  const studentClassesUIDs = selectedStudent.classesUIDs || [];
-
-  // Find and set the relevant class information based on the classesUIDs
-  const selectedClasses = classes.filter((classItem: any) => 
-    studentClassesUIDs.includes(classItem.id)
-  );
+const onSelected = (selectedStudent: any) => {
+  form.setValue("class", selectedStudent.class);
+  form.setValue("level", selectedStudent.level);
+  form.setValue("amountLeftToPay", selectedStudent.amountLeftToPay);
+  form.setValue("year", selectedStudent.year);
+  form.setValue("field", selectedStudent.field);
+  form.setValue("school", selectedStudent.school);
   
+  form.setValue("student", {
+    value: selectedStudent.name,
+    label: selectedStudent.name,
+    id: selectedStudent.id, // Ensure this is set
+    student: selectedStudent.student,
+    nextPaymentDate: selectedStudent.nextPaymentDate,
+  });
+  
+  form.setValue("id",selectedStudent.id);
+  const studentClassesUIDs = selectedStudent.classesUIDs || [];
+  const selectedClasses = classes.filter((classItem: any) => studentClassesUIDs.includes(classItem.id));
   form.setValue("classes", selectedClasses);
+};
 
 
 
-}
+
 
 
   const renderInput = (fieldName:string, field:any) => {
@@ -285,8 +297,8 @@ const onSelected=(selectedStudent:any)=>{
           const updatedStudent: any = { ...rest };
           onSelected(updatedStudent); // Added to handle the selected student
           form.setValue(fieldName, {
-            value: selectedStudent.value,
-            label: selectedStudent.label,
+            value: selectedStudent.name,
+            label: selectedStudent.name,
             id: selectedStudent.id,
             student: selectedStudent.student,
             nextPaymentDate: selectedStudent.nextPaymentDate,
@@ -328,7 +340,7 @@ const onSelected=(selectedStudent:any)=>{
 
    
           case "level":
-            return <Input {...field} value={levelAndClassOptions.year} readOnly />;
+            return <Input {...field} value={levelAndClassOptions.year} readOnly  />;
           
           case "field":
             return <Input {...field} value={levelAndClassOptions.field} readOnly />;
@@ -437,80 +449,58 @@ const onSelected=(selectedStudent:any)=>{
       );
     }
   }
-    async function onSubmit(data: StudentPaymentFormValues) {
-      const monthAbbreviations = getMonthAbbreviationsInRange(
-        getValues("student").nextPaymentDate,
-        data.nextPaymentDate
-      );
-      const month = getMonthInfo(data.paymentDate);
+  
+  
+  async function onSubmit(data: any) {
+    console.log('data.id',data.id)
+    const transactionData: Transaction = {
+      typeOfTransaction: data.typeofTransaction,
+      status: data.status,
+      paymentAmount: data.paymentAmount,
+      paymentDate: data.paymentDate,
+      description: data.description,
+      amountLeftToPay: data.amountLeftToPay,
+      nextPaymentDate: data.nextPaymentDate,
+      fromWho: data.fromWho,
+      
+    };
+  
+    // Create the `transaction` array and add the transaction data to it
+    const transactionArray = [transactionData];
+  
+    // Save the data with the `transaction` array
+  await addPaymentTransaction(transactionData,data.id);
     
-      let months: Record<string, MonthData>;
-      let billGenerated = false;
-      const transactionId = await addPaymentTransaction(
-        { ...data, documents: [] },
-        monthAbbreviations
-      );
-      const uploaded = await uploadFilesAndLinkToCollection(
-        "Billing/payments/Invoices",
-        transactionId,
-        filesToUpload
-      );
-      setInvoices((prev: StudentPaymentFormValues[]) => [
-        {
-          ...data,
-          id: transactionId,
-          invoice: transactionId,
-          value: transactionId,
-          label: transactionId,
-          documents: uploaded,
-        },
-        ...prev,
-      ]);
-    
-      setStudents((prevStudents: any) => {
-        const updatedStudents = prevStudents.map((student: any) => {
-          if (student.id === data.student.id) {
-            const updatedStudent = {
-              ...student,
-              nextPaymentDate: data.nextPaymentDate,
-              amountLeftToPay: data.amountLeftToPay - data.paymentAmount,
-              monthly_payments: { ...student.monthly_payments }, // Ensure a new object is created for immutability
-            };
-            
-            // Update status for each month
-            monthAbbreviations.forEach((month) => {
-              updatedStudent.monthly_payments[month].status = 'Paid';
-            });
-    
-            console.log("Updated student:", updatedStudent);
-            if (!billGenerated) {
-              generateBillIfNeeded(updatedStudent.monthly_payments, data);
-              billGenerated = true; // Update variable
-            }
-            return updatedStudent;
-          }
-          return student;
-        });  
-        return updatedStudents;
-      });
-      setAnalytics((prevState: any) => ({
-        data: {
-          ...prevState.data,
-          [month.abbreviation]: {
-            ...prevState.data[month.abbreviation],
-            income: prevState.data[month.abbreviation].income + data.paymentAmount,
-          },
-        },
-        totalIncome: prevState.totalIncome + data.paymentAmount,
-      }));
-
+  
+    // Handle file uploads and update the UI accordingly
+   /* const uploaded = await uploadFilesAndLinkToCollection(
+      "Billing/payments/Invoices",
+      transactionId,
+      filesToUpload
+    );
+  
+    setInvoices((prev: StudentPaymentFormValues[]) => [
+      {
+        ...data,
+        id: transactionId,
+        invoice: transactionId,
+        value: transactionId,
+        label: transactionId,
+        transaction: transactionArray, // Include the transaction array in the invoices
+        documents: uploaded,
+      },
+      ...prev,
+    ]);
+  */
+    // Generate the bill if needed
+  
     toast({
       title: t('changes-applied-0'),
       description: t('changes-applied-successfully'),
     });
-  console.log(data);
-            reset(); 
+    reset();
   }
+  
 
   const handleChangeExpense = (index:number, newPrice:number) => {
     const newPrices = [...getValues('expenses')]; // Get the current prices array
