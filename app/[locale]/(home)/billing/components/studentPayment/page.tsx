@@ -1,11 +1,16 @@
 
 "use client"
 import React from "react"
-
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs"
 import StudentPaymentForm from "./components/studentPaymentForm"
 import { StudentPaymentTable } from "./components/studentPaymentTable"
 
-
+import StudentReimbursmentForm from "./components/reimbursements"
 import {TransactionDataTableDemo} from './components/transactionTable'
  function Studentpayment() {
 
@@ -28,7 +33,21 @@ import {TransactionDataTableDemo} from './components/transactionTable'
 
           </div>
 
-          <StudentPaymentForm />
+          <div className="lg:flex-grow">
+            <Tabs defaultValue="createPayment">
+              <TabsList>
+                <TabsTrigger value="createPayment">regular payment</TabsTrigger>
+                <TabsTrigger value="createreimbursement">reimbursement</TabsTrigger>
+              </TabsList>
+              <TabsContent value="createPayment" className="space-y-4">
+                <StudentPaymentForm />
+              </TabsContent>
+              <TabsContent value="createreimbursement" className="space-y-4">
+                <StudentReimbursmentForm />
+              </TabsContent>
+            </Tabs>
+          </div> 
+         
 
 
        

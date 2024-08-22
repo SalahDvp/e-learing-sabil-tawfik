@@ -1,5 +1,5 @@
 "use client"
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef,useMemo } from 'react';
 import { useToast } from "@/components/ui/use-toast"
 
 import {
@@ -48,7 +48,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import CalendarDatePicker from './date-picker';
 import { Separator } from '@/components/ui/separator';
 import QRCode from 'qrcode'
-import { addStudent, addStudentToClass, changeStudentGroup, getStudentCount, removeStudentFromClass, updateStudent } from '@/lib/hooks/students';
+import { addStudent, addStudentToClass, changeStudentGroup, getStudentCount, removeStudentFromClass, updateStudent, updateStudentPicture } from '@/lib/hooks/students';
 import { LoadingButton } from '@/components/ui/loadingButton';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
@@ -115,7 +115,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
   const {setStudents,teachers,classes,students}=useData()
   const t=useTranslations()
   const form = useForm<Student>({
-    resolver: zodResolver(StudentSchema),
+    //resolver: zodResolver(StudentSchema),
     
     defaultValues:student
   });
@@ -186,6 +186,28 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
     }
   };
 
+
+  const calculatedAmount = useMemo(() => {
+    return fields
+      .map((invoice) =>
+        classes
+          .filter(cls =>
+            cls.subject === invoice.subject &&
+            cls.year === watch('year') &&
+            cls.teacherName === invoice.name
+          )
+          .flatMap(cls =>
+            cls.groups
+              .filter(group =>
+                group.stream.includes(watch('field')) &&
+                JSON.stringify(`${group.day},${group.start}-${group.end}`) === invoice.time
+              )
+              .map(group => group.amount)
+          )
+      )
+      .flat() // Flatten the array to get all amounts in a single array
+      .reduce((acc, amount) => acc + amount, 0); // Sum up all amounts
+  }, [fields, classes, watch]);
   return (
     <Dialog open={open} onOpenChange={setOpen} >
  <DialogContent className="sm:max-w-[1300px]">
@@ -370,7 +392,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
  {!watch('photo') ? (
         <div className="w-[300px] items-center justify-center flex flex-col">
           
-          <Camera ref={camera} aspectRatio={16/9} errorMessages={{noCameraAccessible:"no Cemera"}} />
+          <Camera ref={camera} aspectRatio={16/9} errorMessages={{noCameraAccessible:"no Cemera"}}  facingMode='environment' />
           <Button
             onClick={() => {
               if (camera.current) {
@@ -495,23 +517,24 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
     <TableCell className="font-medium">
 
     <Input
-                type="text"
-                value={classes
-                  .filter(cls =>
-                    cls.subject === invoice.subject &&
-                    cls.year === watch('year') &&
-                    cls.teacherName === invoice.name
+            type="text"
+            value={classes
+              .filter(cls =>
+                cls.subject === invoice.subject &&
+                cls.year === watch('year') &&
+                cls.teacherName === invoice.name
+              )
+              .flatMap(cls =>
+                cls.groups
+                  .filter(group =>
+                    group.stream.includes(watch('field')) &&
+                    JSON.stringify(`${group.day},${group.start}-${group.end}`) === invoice.time
                   )
-                  .flatMap(cls =>
-                    cls.groups
-                      .filter(group =>
-                        group.stream.includes(watch('field')) &&
-                        JSON.stringify(`${group.day},${group.start}-${group.end}`) === invoice.time
-                      )
-                      .map(group => group.amount + ' DA')
-                  )}
-                className="col-span-3 w-24"
-                readOnly/>
+                  .map(group => group.amount + ' DA')
+              )}
+            className="col-span-3 w-24"
+            readOnly/>
+
  
 </TableCell>
 
@@ -535,33 +558,15 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
             <div className="flex items-center space-x-2">
               <span className="text-sm font-semibold">Total:</span> {/* Title before the input */}
               <Input
-                type="text"
-                value={fields
-                  .map((invoice) =>
-                    classes
-                      .filter(cls =>
-                        cls.subject === invoice.subject &&
-                        cls.year === watch('year') &&
-                        cls.teacherName === invoice.name
-                      )
-                      .flatMap(cls =>
-                        cls.groups
-                          .filter(group =>
-                            group.stream.includes(watch('field')) &&
-                            JSON.stringify(`${group.day},${group.start}-${group.end}`) === invoice.time
-                          )
-                          .map(group => group.amount)
-                      )
-                  )
-                  .flat() // Flatten the array to get all amounts in a single array
-                  .reduce((acc, amount) => acc + amount, 0) + ' DA'} // Sum up all amounts
-                className="col-span-3 w-24"
-                readOnly
-              />
+        type="text"
+        value={calculatedAmount + ' DA'}
+        className="col-span-3 w-24"
+        readOnly
+      />
             </div>
     
 
-<Footer formData={getValues()} form={form} isSubmitting={isSubmitting} reset={reset} student={student} setOpen={setOpen} />
+<Footer formData={getValues()} form={form} isSubmitting={isSubmitting} reset={reset} student={student} setOpen={setOpen} calculatedAmount={calculatedAmount} />
 
 </Stepper>
 
@@ -574,7 +579,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
   )
 }
 
-const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,student,setOpen}) => {
+const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,student,setOpen,calculatedAmount}) => {
   const {
     nextStep,
     prevStep,
@@ -731,6 +736,10 @@ std.id === student.id ? {
       for (const { id,group } of updated) {
  
    const classToUpdate = classes.find((cls: { id: any; }) => cls.id === id);
+   if(student.photo != formData.photo){
+    await updateStudentPicture(student.id,formData.photo)
+  }
+  student.id
    const updatedStudents = classToUpdate.students.map((std: { id: any; }) =>
     std.id === student.id
       ? { ...std, group: group }  // Update the student with the new group
@@ -766,6 +775,7 @@ std.id === student.id ? {
     
 await  processStudentChanges(result,data)
 const StudentInfoToUpdate = {
+  monthlypayment: calculatedAmount,
   name: data.name,
   year: data.year,
   birthdate: data.birthdate,

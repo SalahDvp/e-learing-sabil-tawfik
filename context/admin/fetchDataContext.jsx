@@ -113,7 +113,7 @@ export const  FetchDataProvider = ({ children }) => {
           transaction: doc.data().transaction.map((trans) => ({
             ...trans,
             paymentDate: new Date(trans.paymentDate.toDate()), // Format paymentDate as a Date object
-            nextPaymentDate:new Date(trans.nextPaymentDate.toDate()),
+            nextPaymentDate:new Date(trans?.nextPaymentDate.toDate()),
           })),
           //paymentDate:new Date(doc.data().paymentDate.toDate()),
          /* id: doc.id,

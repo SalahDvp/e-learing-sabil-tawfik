@@ -86,7 +86,7 @@ export const TransactionDataTableDemo = () => {
         [`${t("amount")}`]: new Intl.NumberFormat("en-US", {
           style: "currency",
           currency: "DZD",
-        }).format(trans.paymentAmount),
+        }).format(trans.amount),
         [`${t("payment-date")}`]: format(trans.paymentDate.toDate(), "dd/MM/yyyy"),
         [`${t("status")}`]: t(trans.status),
         [`${t("from")}`]: trans.fromWho,
@@ -95,12 +95,19 @@ export const TransactionDataTableDemo = () => {
     exportTableToExcel(t("students-payments-transactions-table"), exceldata);
   };
 
-  const transactionsData = React.useMemo(() => invoices?.flatMap((invoice: any) =>
-    invoice?.transaction?.map((trans: any) => ({
-      ...invoice, // Include other invoice details
-      ...trans, // Include transaction details as separate fields
-    }))
-  ).sort((a, b) => b.paymentDate - a.paymentDate), [invoices]); // Sort by latest paymentDate
+  const transactionsData = React.useMemo(() => {
+    if (!Array.isArray(invoices)) {
+      return []; // Return an empty array if invoices is not an array or is undefined
+    }
+  
+    return invoices.flatMap((invoice: any) =>
+      (Array.isArray(invoice?.transaction) ? invoice.transaction : []).map((trans: any) => ({
+        ...invoice, // Include other invoice details
+        ...trans,   // Include transaction details as separate fields
+      }))
+    ).sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime()); // Sort by latest paymentDate
+  }, [invoices]);
+  
 
   if (transactionsData.length === 0) {
     return null;
@@ -124,8 +131,8 @@ export const TransactionDataTableDemo = () => {
     },
     
     {
-      header: "Payment Amount",
-      accessorFn: (row) => row?.paymentAmount,
+      header: "Amount Paid",
+      accessorFn: (row) => row?.amount,
       cell: ({ getValue }) => {
         const formattedAmount = new Intl.NumberFormat("en-US", {
           style: "currency",
@@ -144,8 +151,8 @@ export const TransactionDataTableDemo = () => {
       ),
     },
     {
-      header: "Amount Left To Pay",
-      accessorFn: (row) => row?.amountLeftToPay,
+      header: "Debt",
+      accessorFn: (row) => row?.debt,
       cell: ({ getValue }) => {
         const formattedAmount = new Intl.NumberFormat("en-US", {
           style: "currency",
@@ -158,6 +165,7 @@ export const TransactionDataTableDemo = () => {
    
     {
       id: "actions",
+      header: "action",
       enableHiding: false,
       cell: ({ row }) => {
         const invoice = row.original;
@@ -170,18 +178,15 @@ export const TransactionDataTableDemo = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>{t("actions")}</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => openEditSheet(invoice)}>
-                {t("view-transaction-details")}
-              </DropdownMenuItem>
+            
+           
               <DropdownMenuItem
                 onClick={() =>
                   downloadInvoice(
                     {
                       student: invoice.student,
                       level: invoice.level,
-                      paymentAmount: invoice.paymentAmount,
+                      amount: invoice.amount,
                       paymentDate: format(invoice.paymentDate, "dd/MM/yyyy"),
                       status: t(invoice.status),
                       fromWho: invoice.fromWho,

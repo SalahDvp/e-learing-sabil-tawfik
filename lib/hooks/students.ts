@@ -97,7 +97,8 @@ export async function uploadAndLinkToCollection(
           
 
             await setDoc(transactionRef, {
-            amountLeftToPay:student.amountLeftToPay,
+            monthlypayment:student.monthlypayment,
+            debt:0,
             field:student.field,
             lastPaymentDate:student.lastPaymentDate,
             registrationAndInsuranceFee:student.registrationAndInsuranceFee,
@@ -124,7 +125,7 @@ export async function uploadAndLinkToCollection(
 export const updateStudent = async(updatedstudent: any,studnetId:string)=>{
   try {
           await updateDoc(doc(db, "Students",studnetId), updatedstudent);
-      console.log("Teacher updated successfully:");
+      console.log("student updated successfully:");
       return true; // Assuming you want to return the ID of the added Teacher
   } catch (error) {
       console.error("Error updating Teacher:", error);
@@ -301,3 +302,32 @@ export async function markAttendance(classId,attendanceId,student){
       throw error;
     }
   }
+
+
+  export async function updateStudentFinance(paymentDate,nextPaymentDate,debt,studentId){
+  
+
+      await updateDoc(doc(db,'Students',studentId),{
+            debt:debt,
+            lastPaymentDate:paymentDate,
+            nextPaymentDate:nextPaymentDate
+
+
+      });
+
+}
+export const updateStudentPicture = async (studentId: string, image:any) => {
+  try {
+
+    const storageRef = ref(storage, `Students/${studentId}/photo`); // Assuming you're storing pictures in a folder named 'students' with a unique ID for each student
+    var file = dataURLtoFile(image ?image:'null','photo.jpeg');
+    // Upload the new image, overwriting the old one
+    await uploadBytes(storageRef, file);
+    console.log("Profile picture updated successfully.");
+
+    console.log("Firestore document updated successfully.");
+  } catch (error) {
+    console.error("Error updating profile picture:", error);
+    throw error;
+  }
+};
