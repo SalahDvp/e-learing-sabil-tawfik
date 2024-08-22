@@ -1,7 +1,7 @@
 
 
 import { db } from "@/firebase/firebase-config"
-import { addDoc, collection, deleteDoc, doc, updateDoc ,setDoc,increment} from "firebase/firestore"
+import { addDoc, collection, deleteDoc, doc, updateDoc ,setDoc,increment, arrayUnion} from "firebase/firestore"
 import { teacherPaymentRegistrationSchema } from "@/validators/teacherSalarySchema";
 import { z } from "zod";
 
@@ -18,21 +18,27 @@ export function getMonthInfo(date:Date) {
   }
   
 type TeacherSalaryFormValues = z.infer<typeof  teacherPaymentRegistrationSchema> & {documents?:any[]};
-export const addTeacherSalary = async (transaction:TeacherSalaryFormValues) => {
+export const addTeacherSalary = async (transaction:any) => {
     try {
-        const month=getMonthInfo(transaction.salaryDate)
+        const month=getMonthInfo(transaction.date)
         const teacherTransRef = await addDoc(collection(db, "Billing","payouts","TeachersTransactions"), transaction);
         await setDoc(doc(db, "Teachers", transaction.teacher.id, "TeacherSalary", teacherTransRef.id), {ref: teacherTransRef.id, }); 
     
-        // // Reference to the added document
-        // console.log("Tracher Salary added successfully:",teacherTransRef.id );    
-        // await updateDoc(doc(db, "Billing", "payouts"), {
-        //     teachersExpenses: increment(transaction.salaryAmount),
-        // });
+        // Reference to the added document
+        console.log("Tracher Salary added successfully:",teacherTransRef.id );    
+        await updateDoc(doc(db, "Billing", "payouts"), {
+            teachersExpenses: increment(transaction.amount),
+        });
         // await updateDoc(doc(db, "Billing","analytics"), {
-        //     totalExpenses:increment(transaction.salaryAmount),
-        //     [`data.${month.abbreviation}.expenses`]: increment(transaction.salaryAmount)
+        //     totalExpenses:increment(transaction.amount),
+        //     [`data.${month.abbreviation}.expenses`]: increment(transaction.amount)
         // });
+        if (transaction.paymentType==='advance') {
+            await updateDoc(doc(db,"Teachers",transaction.teacher.id),{
+                advancePayment:arrayUnion({date:transaction.date,amount:transaction.amount})
+            })
+            
+        }
         return teacherTransRef.id;
         // Assuming you want to return the ID of the added Tracher Salary
     } catch (error) {

@@ -966,7 +966,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
       for (const [year, classesArray] of Object.entries(groupedClasses)) {
         try {
 //addtodatabase
- const classesReturned=await addNewClasses({groups:classesArray,students:[],subject:formData['educational-subject'],teacherName:formData.name,teacherUID:teacher.id,year:year},teacher.id)
+ const classesReturned=await addNewClasses({groups:classesArray,students:[],reimbursements:[],subject:formData['educational-subject'],teacherName:formData.name,teacherUID:teacher.id,year:year},teacher.id)
 
  setClasses((prevClasses:any[])=>[...prevClasses,classesReturned])
  setTeachers(prevTeachers =>

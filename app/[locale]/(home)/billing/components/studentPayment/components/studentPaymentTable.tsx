@@ -84,7 +84,7 @@ import { exportTableToExcel } from "@/components/excelExport"
       lastPaymentDate: new Date(),
       nextPaymentDate: new Date(),
       totalAmount: 1000,
-      amountLeftToPay: 500,
+      monthlypayment: 500,
       class: { name: 'Class Name', id: 'class123' },
     })
     const t=useTranslations()
@@ -117,43 +117,42 @@ import { exportTableToExcel } from "@/components/excelExport"
       enableHiding: false,
     },
     {
-      accessorKey: "student",
+      accessorKey: "name",
       header:() => <div>{t('Name')}</div>, 
 
       cell: ({ row }) => (
         <div className="capitalize">
-           <div className="font-medium">{row.getValue("student")}</div>
+           <div className="font-medium">{row.getValue("name")}</div>
 
         </div>
       ),
     },
     {
-      accessorKey: "level",
+      accessorKey: "year",
       header:() => <div>{t('level')}</div>, 
 
-      cell: ({ row }) => <div className="lowercase hidden sm:table-cell">{row.getValue("level")}</div>,
+      cell: ({ row }) => <div className="lowercase hidden sm:table-cell">{row.getValue("year")}</div>,
     },
     {
       accessorKey: "nextPaymentDate",
-      header:() => <div>{t('next-payment-date-0')}</div>, 
-
+      header:() => <div>{t('nextPaymentDate')}</div>, 
       cell: ({ row }) => (
-        <div className="lowercase hidden sm:table-cell">
-        </div>
+        <div className="capitalize hidden sm:table-cell"> {((row.getValue("nextPaymentDate") as Date)).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
       ),
     },
+    
     {
-        accessorKey: "parentPhone",
-        header:() => <div>{t('parent-phone-0')}</div>, 
+        accessorKey: "phoneNumber",
+        header:() => <div>{t('phone-number')}</div>, 
         cell: ({ row }) => (
-          <div className="capitalize hidden sm:table-cell">{row.getValue("parentPhone")}</div>
+          <div className="capitalize hidden sm:table-cell">{row.getValue("phoneNumber")}</div>
         ),
       },
     {
-      accessorKey: "amountLeftToPay",
-      header: () => <div className="text-right">{t('amount-left')}</div>,
+      accessorKey: "monthlypayment",
+      header: () => <div className="text-right">{t('monthly-payment')}</div>,
       cell: ({ row }) => {
-        const amount = parseFloat(row.getValue("amountLeftToPay"))
+        const amount = parseFloat(row.getValue("monthlypayment"))
   
         // Format the amount as a dollar amount
         const formatted = new Intl.NumberFormat("en-US", {
@@ -165,10 +164,10 @@ import { exportTableToExcel } from "@/components/excelExport"
       },
     },
     {
-        accessorKey: "totalAmount",
-        header: () => <div className="text-right">{t('total-amount-0')}</div>,
+        accessorKey: "debt",
+        header: () => <div className="text-right">{t('debt')}</div>,
         cell: ({ row }) => {
-          const amount = parseFloat(row.getValue("totalAmount"))
+          const amount = parseFloat(row.getValue("debt"))
     
           // Format the amount as a dollar amount
           const formatted = new Intl.NumberFormat("en-US", {
@@ -179,6 +178,23 @@ import { exportTableToExcel } from "@/components/excelExport"
           return <div className="text-right font-medium">{formatted}</div>
         },
       },
+      {
+  accessorKey: "Totalamount",
+  header: () => <div className="text-right">{t('Total')}</div>,
+  cell: ({ row }) => {
+    const monthlyPayment = parseFloat(row.getValue("monthlypayment"));
+    const debt = parseFloat(row.getValue("debt"));
+    const totalAmount = monthlyPayment + debt;
+
+    // Format the total amount as a currency amount
+    const formatted = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "DZD",
+    }).format(totalAmount);
+
+    return <div className="text-right font-medium">{formatted}</div>;
+  },
+},
   
     {
       id: "actions",
@@ -215,7 +231,7 @@ import { exportTableToExcel } from "@/components/excelExport"
     [`${t('amount-left')}`]: new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "DZD",
-    }).format(student.amountLeftToPay),
+    }).format(student.monthlypayment),
     [`${t('total-amount-0')}`]: new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "DZD",

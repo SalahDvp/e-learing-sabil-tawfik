@@ -37,16 +37,17 @@ import { useTranslations } from "next-intl";
 import { Checkbox } from "@/components/ui/checkbox"
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { differenceInWeeks, format } from "date-fns";
+import { differenceInWeeks, endOfMonth, format, startOfMonth } from "date-fns";
 import { downloadInvoice } from "./generateInvoice";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { updateDoc } from "firebase/firestore";
 
 const fieldNames = [
     "teacher",
-    "salaryDate",
-    "monthOfSalary",
+    "paymentType",
+    "date",
 
-    "salaryAmount",
 
 ];
 type FormKeys = "salaryTitle" | "salaryAmount" | "salaryDate" | "typeofTransaction" | "monthOfSalary" | "fromWho"|"status";
@@ -78,6 +79,52 @@ type TeacherSalaryFormValues=z.infer<typeof teacherPaymentRegistrationSchema>;
         })
       )
   };
+  const getReimbursementByTeacher = (classes, teacherId) => {
+    const currentDate = new Date();
+    const start = startOfMonth(currentDate);
+    const end = endOfMonth(currentDate);
+  
+    let totalReimbursement = 0;
+  
+    // Filter classes by teacherId
+    const filteredClasses = classes.filter(c => c.teacherUID === teacherId);
+  
+    filteredClasses.forEach(c => {
+      if (c.reimbursements && Array.isArray(c.reimbursements)) {
+        // Filter reimbursements by date
+        c.reimbursements.forEach(reimbursement => {
+          const reimbursementDate = reimbursement.date.toDate(); // Convert Firestore timestamp to JS Date
+          if (reimbursementDate >= start && reimbursementDate <= end) {
+            totalReimbursement += reimbursement.amount;
+          }
+        });
+      }
+    });
+  
+    return totalReimbursement;
+  };
+  const getAdvancedPaymentByTeacher = (teacher) => {
+    const currentDate = new Date();
+    const start = startOfMonth(currentDate);
+    const end = endOfMonth(currentDate);
+  
+    let totalAdvance = 0;
+
+      if (teacher.advancePayment&& Array.isArray(teacher.advancePayment)) {
+        // Filter reimbursements by date
+        teacher.advancePayment.forEach(advance => {
+          const advanceDate = new Date(advance.date.toDate()); // Convert Firestore timestamp to JS Date
+          if (advanceDate >= start && advanceDate <= end) {
+            console.log(advance.amount);
+            
+            totalAdvance += advance.amount;
+          }
+        });
+      }
+
+      
+    return totalAdvance;
+  };
   const calculateSalary = (paymentType, teacher, expenses) => {
     switch (paymentType) {
       case "salaryAmount":
@@ -100,7 +147,7 @@ type TeacherSalaryFormValues=z.infer<typeof teacherPaymentRegistrationSchema>;
 export default function PaymentForm() {
   const { toast } = useToast();
   const {setTeachersSalary} = useData()
-  const {teachers,setAnalytics,classes}= useData()
+  const {teachers,setAnalytics,classes,setTeachers}= useData()
   const[printBill,setPrintBill]=useState(false)
 
   const [filesToUpload, setFilesToUpload] = useState<FileUploadProgress[]>([]);
@@ -198,11 +245,11 @@ const [teacherModal,setTeacherModal]=useState(false)
 
   const renderInput = (fieldName:string, field:any) => {
     switch (fieldName) {
-      case "salaryDate":
+      case "date":
         return (
           <CalendarDatePicker
             {...field}
-            date={getValues("salaryDate")}
+            date={getValues("date")}
             setDate={(selectedValue) => {
               if (selectedValue === undefined) {
                 // Handle undefined case if needed
@@ -213,7 +260,7 @@ const [teacherModal,setTeacherModal]=useState(false)
           />
         );
 
-      case "monthOfSalary": 
+      case "month": 
       return (
         <Combobox
         {...field}
@@ -221,7 +268,7 @@ const [teacherModal,setTeacherModal]=useState(false)
         setOpen={setMonthModal}
         placeHolder={t('month')}
         options={MonthOfYear}
-        value={getValues("monthOfSalary")}
+        value={getValues("month")}
         onSelected={(selectedValue) => {
           form.setValue(fieldName, selectedValue);
         }} 
@@ -257,11 +304,20 @@ const [teacherModal,setTeacherModal]=useState(false)
                   );
                if(selectedTeacher){
                 const result = getGroupsByTeacher(classes, selectedValue);
-                console.log("resuslt",result);
+                console.log(result);
+            
+               
+                const reimbursement=getReimbursementByTeacher(classes,selectedValue)
+                const advancePayment=getAdvancedPaymentByTeacher(selectedTeacher)
+                form.setValue('advancePayment',advancePayment)
+                form.setValue('reimbursement',reimbursement)
                 form.setValue('expenses',result)
-              form.setValue(fieldName, {...selectedTeacher,name:selectedTeacher?.value,id:selectedTeacher?.id,})
-              const amount=calculateSalary(selectedTeacher?.paymentType,selectedTeacher,expenses)
-              form.setValue("salaryAmount",amount)
+                form.setValue(fieldName, {...selectedTeacher,name:selectedTeacher?.value,id:selectedTeacher?.id,})
+                const amount=calculateSalary(selectedTeacher?.paymentType,selectedTeacher,result)
+                form.setValue("grossSalary",amount)
+                const netSalary=amount-advancePayment-reimbursement
+                form.setValue("netSalary",netSalary)
+                form.setValue("amount",netSalary)
  
             }
           
@@ -283,25 +339,41 @@ const [teacherModal,setTeacherModal]=useState(false)
             }}
           />
         );
-        case "salaryAmount":
-          const amount=calculateSalary(watch('teacher')?.paymentType,watch('teacher'),expenses)
-   
+        case "paymentType":
+          return(
           
-            return (<Input {...field} readOnly value={amount}/>)
-
+              <Select
+              onValueChange={field.onChange}
+              value={field.value}
+              >
+                <SelectTrigger
+                  id={`schoolType`}
+                  aria-label={`Select School Type`}
+                >
+                  <SelectValue placeholder={t('select-school-type')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="salary">Salaire</SelectItem>
+                  <SelectItem value="advance">Avance</SelectItem>
+                </SelectContent>
+              </Select>
+ 
+          )
+        case "grossSalary":
+            return (<Input {...field} readOnly />);
+          case "reimbursement":
+                return (<Input {...field} readOnly/>);
+                case "advancePayment":
+                  return (<Input {...field} readOnly/>);
+                  case "amount":
+                    return (<Input {...field} onChange={event => field.onChange(+event.target.value)}/>)
       default:
         return <Input {...field} />;
     }
   };
 
   async function onSubmit(data:any) {
-    const month=getMonthInfo(data.salaryDate)
-    console.log(data);
-    
-    const teacherId= await addTeacherSalary({...data,documents:[]})
-    //const uploaded = await uploadFilesAndLinkToCollection("Billing/payouts/TeachersTransactions", teacherId, filesToUpload);
-    setTeachersSalary((prev:TeacherSalaryFormValues[])=>[{...data,id:teacherId,teacher:data.teacher.name,documents:[],    value:teacherId,
-      label:teacherId,},...prev])
+   // const month=getMonthInfo(data.salaryDate)
 
       // setAnalytics((prevState:any) => ({
       //   data: {
@@ -313,27 +385,49 @@ const [teacherModal,setTeacherModal]=useState(false)
       //   },
       //   totalExpenses: prevState.totalExpenses +  data.salaryAmount
       // }));
-      // if(printBill){
-        
-      //   downloadInvoice({
-      //     toWho: data.teacher.name,
-      //     typeofPayment: data.typeofTransaction,
-      //     paymentAmount: data.salaryAmount,
-      //     salaryMonth:data.monthOfSalary,
-      //    paymentDate: format(data.salaryDate, 'dd/MM/yyyy'),
-      //     status: t(data.status),
-        
-      //   },teacherId,[t('teacher'), t('method'), t('amount'), t("monthOfSalary"),t('paymentDate'), t('status')],
-      // {
-      //   amount:t("Amount"), from:t('From:'), shippingAddress:t('shipping-address'), billedTo:t('billed-to'), subtotal:t('Subtotal:'), totalTax:t('total-tax-0'), totalAmount:t('total-amount-3'),invoice:t('payslip')
-      // })
-      // }  
+  
+      const teacherId= await addTeacherSalary({...data,documents:[]})
+      const uploaded = await uploadFilesAndLinkToCollection("Billing/payouts/TeachersTransactions", teacherId, filesToUpload);
+      setTeachersSalary((prev:TeacherSalaryFormValues[])=>[{...data,id:teacherId,teacher:data.teacher,documents:[],    value:teacherId,
+        label:teacherId,},...prev])
+  
+        if(printBill){
+          
+        //   downloadInvoice({
+        //     toWho: data.teacher.name,
+        //     typeofPayment: data.typeofTransaction,
+        //     paymentAmount: data.salaryAmount,
+        //     salaryMonth:data.monthOfSalary,
+        //    paymentDate: format(data.salaryDate, 'dd/MM/yyyy'),
+        //     status: t(data.status),
+          
+        //   },teacherId,[t('teacher'), t('method'), t('amount'), t("monthOfSalary"),t('paymentDate'), t('status')],
+        // {
+        //   amount:t("Amount"), from:t('From:'), shippingAddress:t('shipping-address'), billedTo:t('billed-to'), subtotal:t('Subtotal:'), totalTax:t('total-tax-0'), totalAmount:t('total-amount-3'),invoice:t('payslip')
+        // })
+        } 
+if(data.paymentType==='advance'){
+  setTeachers((prevTeachers) =>
+    prevTeachers.map((teacher) => {
+      if (teacher.id === teacherId) {
+        return {
+          ...teacher,
+          advancePayment: [
+            ...(teacher.advancePayment || []), // Ensure the array exists
+            { amount:data.amount, date: data.date} // Add the new payment
+          ]
+        };
+      }
+      return teacher;
+    })
+  );
+}
+ 
 toast({
               title: t('teacher-salary-added'),
               description: t('teacher-salary-added-successfully'),
             });
-    console.log(data);
-            reset(); 
+            reset({paymentType:"",expenses:[]});
           
           }
 
@@ -351,7 +445,7 @@ toast({
             size="sm"
             variant="outline"
             className="h-8 gap-1"
-            onClick={() => reset()}
+            onClick={() => reset({paymentType:"",expenses:[]})}
           >
             <ResetIcon className="h-3.5 w-3.5" />
             <span className="lg:sr-only xl:not-sr-only xl:whitespace-nowrap">
@@ -381,19 +475,118 @@ toast({
                   )}
                 />
               ))}
-                                               <FormField
+                  {watch('paymentType')==='salary'&&(
+<>
+<FormField
+        
+        control={form.control}
+        name={"month"}
+        render={({ field }) => (
+          <FormItem style={{ marginBottom: 15 }}>
+            <FormLabel>{t("monthOfSalary")}</FormLabel>
+            <FormControl>{renderInput("month", field)}</FormControl>
+
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+        <FormField
+        
+        control={form.control}
+        name={"grossSalary" as FormKeys}
+        render={({ field }) => (
+          <FormItem style={{ marginBottom: 15 }}>
+            <FormLabel>grossSalary</FormLabel>
+            <FormControl>{renderInput("grossSalary", field)}</FormControl>
+
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+              <FormField
+        
+        control={form.control}
+        name={"reimbursement" as FormKeys}
+        render={({ field }) => (
+          <FormItem style={{ marginBottom: 15 }}>
+            <FormLabel>reimbursement</FormLabel>
+            <FormControl>{renderInput("reimbursement", field)}</FormControl>
+
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+                  <FormField
+        
+        control={form.control}
+        name={"advancePayment" as FormKeys}
+        render={({ field }) => (
+          <FormItem style={{ marginBottom: 15 }}>
+            <FormLabel>les Avances</FormLabel>
+            <FormControl>{renderInput("advancePayment", field)}</FormControl>
+
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+                      <FormField
+        
+        control={form.control}
+        name={"netSalary" as FormKeys}
+        render={({ field }) => (
+          <FormItem style={{ marginBottom: 15 }}>
+            <FormLabel>salaire Net</FormLabel>
+            <FormControl>{renderInput("netSalary", field)}</FormControl>
+
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+</>
+                  )}    
+                   {watch('paymentType')==='advance'&&(
+<>
+<FormField
+        
+        control={form.control}
+        name={"month"}
+        render={({ field }) => (
+          <FormItem style={{ marginBottom: 15 }}>
+            <FormLabel>{t("monthOfSalary")}</FormLabel>
+            <FormControl>{renderInput("month", field)}</FormControl>
+
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+        <FormField
+        control={form.control}
+        name={"amount" as FormKeys}
+        render={({ field }) => (
+          <FormItem style={{ marginBottom: 15 }}>
+            <FormLabel>Avance</FormLabel>
+            <FormControl>{renderInput("amount", field)}</FormControl>
+
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+</>
+)}   
+
+        <FormField
             control={control}
             name="expenses"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{t('payment-methods')}</FormLabel>
-                <FormDescription>{t('add-how-parents-are-going-to-pay')}</FormDescription>
+                <FormLabel>les classes</FormLabel>
+
                 <Table>
   <TableHeader>
     <TableRow>
       <TableHead>group</TableHead>
       <TableHead>number of student</TableHead>
-      <TableHead>Amount</TableHead>
+      <TableHead>Amount per student</TableHead>
     </TableRow>
   </TableHeader>
   <TableBody>

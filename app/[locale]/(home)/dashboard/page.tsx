@@ -342,7 +342,15 @@ export default function Home() {
     qrScanner.current = new QrScanner(videoRef.current!, handleQrScan, {
       highlightScanRegion: true,
       overlay: highlightCodeOutlineRef.current!,
-      maxScansPerSecond:0.5,
+      maxScansPerSecond:10,
+      calculateScanRegion(video) {
+          return{
+            x:0,
+            y:0,
+            height:video.height,
+            width:video.width
+          }
+      },
     });
     await qrScanner.current.start();
     setShowingQrScanner(true);

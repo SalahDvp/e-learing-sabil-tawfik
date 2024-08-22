@@ -62,10 +62,7 @@ const fieldNames: string[] = [
   'field',
   'school',
   "monthlypayment",
-  'debt',
   'paymentDate',
-  'amount',
-  'nextPaymentDate',
 ];
 
 
@@ -78,15 +75,13 @@ type Transaction = {
 };
 
 type FormKeys =
-  | 'amount'
   | 'paymentDate'
   | 'student'
   | 'level'
   | 'field'
   | 'school'
   | 'monthlypayment'
-  | 'debt'
-  | 'nextPaymentDate'
+
 
 type StudentPaymentFormValues = z.infer<any>;
 function addMonthsToDate(date: Date, monthsToAdd: number): Date {
@@ -509,7 +504,7 @@ const onSelected = (selectedStudent: any) => {
       <CardHeader className="flex flex-row items-start bg-muted/50">
         <div className="grid gap-0.5">
           <CardTitle className="group flex items-center gap-2 text-lg">
-            {t('create-payment')} </CardTitle>
+            {t('create-reimbursement')} </CardTitle>
           <CardDescription></CardDescription>
         </div>
 
@@ -560,14 +555,14 @@ const onSelected = (selectedStudent: any) => {
                 <FormLabel>{t('payment-methods')}</FormLabel>
                 <FormDescription>{t('add-how-parents-are-going-to-pay')}</FormDescription>
                 <Table>
-  <TableHeader>
-    <TableRow>
-      <TableHead>Group</TableHead>
-      <TableHead>Subject</TableHead>
-      <TableHead>Amount</TableHead>
-    </TableRow>
-  </TableHeader>
-  <TableBody>
+                <TableHeader>
+                    <TableRow>
+                    <TableHead>Group</TableHead>
+                    <TableHead>Subject</TableHead>
+                    <TableHead>Amount</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
 
                 {filtredclasses.map((option,index) => (
         
@@ -582,33 +577,37 @@ const onSelected = (selectedStudent: any) => {
               />
  
             </TableCell>
-            <TableCell>
-      
-      <Input
-       placeholder={t('enter-price')}
-       value={option.subject}
-      readOnly
-      />
+                                <TableCell>
+                        
+                        <Input
+                        placeholder={t('enter-price')}
+                        value={option.subject}
+                        readOnly
+                        />
 
-    </TableCell>
-            <TableCell>
-      
-              <Input
-               placeholder={t('enter-price')}
-               type="number"
-               value={option.amount}
-              readOnly
-              />
-  
-            </TableCell>
-            <TableCell>
+                        </TableCell>
+                                <TableCell>
+                        
+                                <Input
+                  placeholder={t('enter-price')}
+                  value={option.amount}
+                  onChange={(event) => {
+                    const newAmount = +event.target.value;
+                    const updatedClasses = filtredclasses.map((cls, idx) => 
+                      idx === index ? { ...cls, amount: newAmount } : cls
+                    );
+                    field.onChange(updatedClasses);
+                  }}
+                />
+                                </TableCell>
+                                <TableCell>
 
 
-    </TableCell>
-      </TableRow>
-    
+                    </TableCell>
+                    </TableRow>
+                    
 
-                ))}
+                                ))}
          
          </TableBody>
          <TableFooter>

@@ -763,7 +763,8 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset, cal
    
   
     const newData=await addStudent({...data,studentIndex:students.length+1, 
-      amountLeftToPay: calculatedAmount,
+      debt:0,
+      monthlypayment: calculatedAmount,
       lastPaymentDate: Timestamp.fromDate(currentDate),  // Firebase Timestamp for the current date and time
       monthlyPayments: Array.from({ length: 12 }, (_, i) => ({
         month: new Date(new Date().setMonth(i)).toLocaleString('default', { month: 'long' }),
@@ -796,7 +797,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset, cal
           studentIndex: students.length + 1,  // Basic student details
           classes: updatedClasses,  // Updated classes with new indexes
          
-          amountLeftToPay: calculatedAmount,
+          monthlypayment: calculatedAmount,
 lastPaymentDate: Timestamp.fromDate(currentDate),  // Firebase Timestamp for the current date and time
 monthlyPayments: Array.from({ length: 12 }, (_, i) => ({
   month: new Date(new Date().setMonth(i)).toLocaleString('default', { month: 'long' }),
