@@ -128,29 +128,35 @@ header:() => <div>{t('teacher')}</div>,
       ),
     },
     {
-      accessorKey: "salaryDate",
+      accessorKey: "date",
       header:() => <div>{t('salary-date')}</div>, 
       cell: ({ row }) => (
        
 
-        <div className="capitalize hidden sm:table-cell"> {((row.getValue("salaryDate") as Date)).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
+        <div className="capitalize hidden sm:table-cell"> {((row.getValue("date") as Date)).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
       ),
       
     },
     {
-      accessorKey: "monthOfSalary",
+      accessorKey: "month",
       header:() => <div>{t('month-paid')}</div>, 
       cell: ({ row }) => (
-        <div className="capitalize hidden sm:table-cell">{row.getValue("monthOfSalary")}</div>
+        <div className="capitalize hidden sm:table-cell">{row.getValue("month")}</div>
+      ),
+    },
+    {
+      accessorKey: "paymentType",
+      header:() => <div>transaction type</div>, 
+      cell: ({ row }) => (
+        <div className="capitalize hidden sm:table-cell">{row.getValue("paymentType")}</div>
       ),
     },
 
-
     {
-      accessorKey: "salaryAmount",
+      accessorKey: "amount",
       header: () => <div className="text-right">{t('amount')}</div>,
       cell: ({ row }) => {
-        const amount = parseFloat(row.getValue("salaryAmount"))
+        const amount = parseFloat(row.getValue("amount"))
   
         // Format the amount as a dollar amount
         const formatted = new Intl.NumberFormat("en-US", {
@@ -180,8 +186,6 @@ header:() => <div>{t('teacher')}</div>,
               <DropdownMenuLabel>{t('actions')}</DropdownMenuLabel>
              
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={()=>openEditSheet(teacherSalary)}>
-                {t('view-payment')} </DropdownMenuItem>
                 <DropdownMenuItem onClick={()=>  downloadInvoice({
           toWho: teacherSalary.teacher.name,
           typeofPayment: teacherSalary.typeofTransaction,

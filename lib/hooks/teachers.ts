@@ -59,6 +59,7 @@ export const addTeacher = async (teacher: Teacher) => {
         const collectiveGroups = Object.entries(classesByYear).map(([year, classes]) => (
     {      year,
         students:[],
+        reimbursements:[],
             teacherUID:teacherRef.id,
             teacherName:teacher.name,
             subject: teacher["educational-subject"],
@@ -126,16 +127,22 @@ export const updateTeacher = async(updatedteacher: Teacher,teacherId:string)=>{
         throw error; // Optionally re-throw the error to propagate it further if needed
     }
 }
-export const deleteTeacher = async(teacherId:string)=>{
-    try {
+export const deleteTeacher = async(teacherId:string,classes:any)=>{
+  try {
+    for (const classData of classes) {
+    
+          await deleteDoc(doc(db, "Groups", classData.id)); // Delete the class document
+
+  }
+
           await deleteDoc(doc(db, "Teachers",teacherId));
-        console.log("Teacher deleted successfully:");
-        return true; // Assuming you want to return the ID of the added Teacher
-    } catch (error) {
-        console.error("Error deleting Teacher:", error);
-        // Handle the error here, such as displaying a message to the user or logging it for further investigation
-        throw error; // Optionally re-throw the error to propagate it further if needed
-    }
+      console.log("Teacher deleted successfully:");
+      return true; // Assuming you want to return the ID of the added Teacher
+  } catch (error) {
+      console.error("Error deleting Teacher:", error);
+      // Handle the error here, such as displaying a message to the user or logging it for further investigation
+      throw error; // Optionally re-throw the error to propagate it further if needed
+  }
 }
 export const addGroup=async(added:any)=>{
         const batch = writeBatch(db); // Initialize the batch

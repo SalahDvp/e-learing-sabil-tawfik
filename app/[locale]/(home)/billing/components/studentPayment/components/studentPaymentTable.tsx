@@ -137,7 +137,7 @@ import { exportTableToExcel } from "@/components/excelExport"
       accessorKey: "nextPaymentDate",
       header:() => <div>{t('nextPaymentDate')}</div>, 
       cell: ({ row }) => (
-      <div className="capitalize hidden sm:table-cell"> {((row.getValue("nextPaymentDate") as Date)).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
+        <div className="capitalize hidden sm:table-cell"> {((row.getValue("nextPaymentDate") as Date)).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
       ),
     },
     
@@ -179,22 +179,22 @@ import { exportTableToExcel } from "@/components/excelExport"
         },
       },
       {
-        accessorKey: "Totalamount",
-        header: () => <div className="text-right">{t('Total')}</div>,
-        cell: ({ row }) => {
-          const monthlyPayment = parseFloat(row.getValue("monthlypayment"));
-          const debt = parseFloat(row.getValue("debt"));
-          const totalAmount = monthlyPayment + debt;
-      
-          // Format the total amount as a currency amount
-          const formatted = new Intl.NumberFormat("en-US", {
-            style: "currency",
-            currency: "DZD",
-          }).format(totalAmount);
-      
-          return <div className="text-right font-medium">{formatted}</div>;
-        },
-      },
+  accessorKey: "Totalamount",
+  header: () => <div className="text-right">{t('Total')}</div>,
+  cell: ({ row }) => {
+    const monthlyPayment = parseFloat(row.getValue("monthlypayment"));
+    const debt = parseFloat(row.getValue("debt"));
+    const totalAmount = monthlyPayment + debt;
+
+    // Format the total amount as a currency amount
+    const formatted = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "DZD",
+    }).format(totalAmount);
+
+    return <div className="text-right font-medium">{formatted}</div>;
+  },
+},
   
     {
       id: "actions",

@@ -69,6 +69,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import * as XLSX from 'xlsx';
 type Status = 'accepted' | 'pending' | 'rejected';
 export type TeacherSummary = {
   id: string;
@@ -87,7 +88,7 @@ interface DataTableDemoProps {
     const [openCard, setOpenCard] = React.useState(false)
     const [openPayment,setOpenPayment]=React.useState(false)
     const t=useTranslations()
-    const {teachers,setTeachers,classes}=useData()
+    const {teachers,setTeachers,classes,setClasses}=useData()
     const [openAlert,setOpenAlert]=React.useState(false)
     
 
@@ -205,39 +206,46 @@ interface DataTableDemoProps {
         },
       },
     ];
-
-  const handleExport = () => {
-  
-
+    const transformArrayFields = (field: any[]) => {
+      return field.join(', '); // Join array elements with a comma
+    };
     
-const orderedMonths = [
-  'Sept23', 'Oct23', 'Nov23', 'Dec23',
-  'Jan24', 'Feb24', 'Mar24', 'Apr24',
-  'May24', 'Jun24', 'Jul24','Aug24'
-];
-    const exceldata=teachers.map((teacher:any)=>({[`${t('Name')}`]:teacher.teacher,
-    [`${t('level')}`]:teacher.level,
-    [`${t('class')}`]:teacher.class,
-    [`${t('status')}`]:t(teacher.status),
-    [`${t('joining-date-0')}`]:teacher.joiningDate,
-    ...orderedMonths.reduce((acc: Record<string, string>, month: string) => {
-      const monthStatus = teacher.monthlyPayments23_24[month]?.status;
-      acc[`${month}`] = t(monthStatus);
-      return acc;
-    }, {}),
-    [t('registrationAndInsuranceFee')]:t(teacher.registrationAndInsuranceFee),
-    [t('feedingFee')]:t(teacher.feedingFee),
-    [`${t('amount-left')}`]: new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "DZD",
-    }).format(teacher.amountLeftToPay),
-    [`${t('total-amount-0')}`]: new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "DZD",
-    }).format(teacher.totalAmount),
-
-    }))
-    exportTableToExcel(t('teachers-table'),exceldata);
+    const transformClasses = (classes: any[]) => {
+      return classes.map((classItem: any, index: number) => {
+        const formattedStream = classItem.stream.join(', '); 
+        return `
+          Day: ${classItem.day}
+          Time: ${classItem.start} -> ${classItem.end}
+          year:${classItem.year}
+          field:${formattedStream}
+        `
+      }).join(' | '); // Use '|' as a separator between classes
+    };
+  const handleExport = () => {
+    const formattedTeachers = teachers.map(({name,birthdate,phoneNumber,classes,year,groupUIDs,teacher,id, ...rest }) => ({
+      name,birthdate,phoneNumber,
+      year: transformArrayFields(year), 
+      ...rest,
+      classes:transformClasses(classes)
+    }));
+    
+    const worksheet = XLSX.utils.json_to_sheet(formattedTeachers);
+    worksheet['!cols'] = [
+      { wch: 20 },  // Width for the "name" column
+      { wch: 25 },  // Width for the "birthdate" column (wider)
+      { wch: 20 },  // Width for the "birthplace" column
+      { wch: 20 },  // Width for the "school" column
+      { wch: 20 },  // Width for the "field" column
+      { wch: 100 }   // Width for the "classes" column
+    ];
+    // Create a new workbook
+    const workbook = XLSX.utils.book_new();
+    
+    // Append the worksheet to the workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'teachers');
+    
+    // Generate Excel file and trigger download
+    XLSX.writeFile(workbook, 'teachers_data.xlsx');
   };
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -271,7 +279,34 @@ const orderedMonths = [
       },
     },
   })
-
+  const deleteTeacherAndClasses = async (teacher: any, classes: any) => {
+    try {
+      const classesToDelete = classes.filter((classData: any) => classData.teacherUID === teacher.id);
+  
+      // Delete the teacher and associated classes
+      await deleteTeacher(teacher.id, classesToDelete);
+  
+      // Update the state by removing the deleted classes and teacher
+      setClasses((prevClasses: any) =>
+        prevClasses.filter((classData: any) => !classesToDelete.some((toDelete: any) => toDelete.id === classData.id))
+      );
+      setTeachers((prevTeachers: any) =>
+        prevTeachers.filter((t: any) => t.id !== teacher.id)
+      );
+  
+      // Show a toast notification after successful deletion
+      toast({
+        title: "Teacher Deleted!",
+        description: `The teacher, ${teacher.name}, has been deleted along with their associated classes.`,
+      });
+    } catch (error) {
+      console.error("Error deleting teacher and classes:", error);
+      toast({
+        title: "Error",
+        description: "There was an error deleting the teacher and their classes.",
+      });
+    }
+  };
   return (
     <>
 
@@ -418,18 +453,7 @@ const orderedMonths = [
     </AlertDialogHeader>
     <AlertDialogFooter>
       <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
-      <AlertDialogAction className={buttonVariants({ variant: "destructive" })}  onClick={async() =>{await deleteTeacher(teacher.id); setTeachers((prevStudents:any) =>
-      prevStudents.filter((std:any) => std.id !==teacher.id)
-
-    
-
-
-    )
-    toast({
-      title: "Student Deleted!",
-      description: `The student, ${teacher.name} Has been Deleted`,
-    });
-    }}> 
+      <AlertDialogAction className={buttonVariants({ variant: "destructive" })}  onClick={() =>deleteTeacherAndClasses(teacher,classes)}> 
         
         
         {t('Delete')}</AlertDialogAction>

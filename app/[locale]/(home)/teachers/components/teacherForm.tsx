@@ -97,7 +97,8 @@ export default function TeacherForm() {
   const form = useForm<any>({
     defaultValues:{
       year:[],
-      salaryDate:new Date()
+      salaryDate:new Date(),
+      advancePayment:[]
     }
    
   });
@@ -739,6 +740,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
     const collectiveGroups = Object.entries(classesByYear).map(([year, classes]) => (
 {      year,
   students:[],
+  reimbursements:[],
         teacherUID:teacherId.id,
         teacherName:data.name,
         subject: data["educational-subject"],
