@@ -180,14 +180,15 @@ export const  FetchDataProvider = ({ children }) => {
               ...grp,
               "day": grp.day,
               "end": grp.end,
-              "group": grp.group,
+              "group": classDetail.group,
               "quota": 0,
               "room":  grp.room,
               "start": grp.start,
-              "stream":grp.stream,
-              "subject": grp.subject,
+              "stream":classDetail.stream,
+              "subject": classDetail.subject,
               "classId":cls,
-              year:classDetail.year
+              year:classDetail.year,
+              
             }))
   
   

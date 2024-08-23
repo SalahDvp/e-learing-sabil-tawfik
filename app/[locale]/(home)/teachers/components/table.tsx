@@ -90,8 +90,8 @@ interface DataTableDemoProps {
     const t=useTranslations()
     const {teachers,setTeachers,classes,setClasses}=useData()
     const [openAlert,setOpenAlert]=React.useState(false)
+    console.log(teachers);
     
-
     
     const [teacher,setTeacher]=React.useState<Teacher | null>()
     const openEditSheet = (teacher:Teacher) => {
