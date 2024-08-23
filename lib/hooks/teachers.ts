@@ -54,27 +54,17 @@ export const addTeacher = async (teacher: Teacher) => {
         // Add the teacher document to the "Teachers" collection
         const teacherRef = await addDoc(collection(db, "Teachers"), {...teacher,groupUIDs:[]});
         console.log("Teacher added successfully:", teacherRef.id);
-        const classesByYear = groupClassesByYear(teacher.classes);
+        
 
-        const collectiveGroups = Object.entries(classesByYear).map(([year, classes]) => (
-    {      year,
-        students:[],
-        reimbursements:[],
-            teacherUID:teacherRef.id,
-            teacherName:teacher.name,
-            subject: teacher["educational-subject"],
-            groups: classes.map((cls,index) => ({
-              subject: teacher["educational-subject"],
-              start: cls.start,
-              end:cls.end,
-              day:cls.day,
-              stream: cls.stream,
-              quota: cls.quota,
-              room:cls.room,
-              group:`G${index+1}`,
-              paymentType:cls.paymentType,
-              amount:cls.amount
-            }))}
+        const collectiveGroups = teacher.classes.map((cls) => ({
+          ...cls,
+          year:cls.year,
+          students:[],
+          reimbursements:[],
+          teacherUID:teacherRef.id,
+          teacherName:teacher.name,
+          subject: teacher["educational-subject"],
+          }
 
 
         ));
@@ -83,30 +73,12 @@ export const addTeacher = async (teacher: Teacher) => {
          for (const group of collectiveGroups) {
             const groupRef= await addDoc(collection(db, "Groups"), group);
             groupUIDs.push(groupRef.id);
-            const classesgroupeds = group.groups.map(grp => ({
-                classId: groupRef.id,
-                day: grp.day,
-                end: grp.end,
-                group: grp.group,
-                index: 0,
-                quota: 0,
-                room: grp.room,
-                start: grp.start,
-                stream: grp.stream,
-                subject: grp.subject,
-                year: group.year,
-                paymentType:grp.paymentType,
-                amount:grp.amount
-              }));
-              
-              // If you want to add these objects to an existing array, you can use .push.apply or spread syntax
-              classesgrouped.push(...classesgroupeds);
+            const classesgroupeds = {...group,id: groupRef.id,index: 0,quota: 0}
+            classesgrouped.push(classesgroupeds);
             
         await updateDoc(doc(db, "Teachers", teacherRef.id), {
-            groupUIDs: arrayUnion( groupRef.id),
+            groupUIDs: arrayUnion(groupRef.id),
         });
-        console.log("Groups added successfully");
-        console.log('1st groupUIDs',groupUIDs);
     }
         return {id:teacherRef.id,groupUIDs:groupUIDs,classesgrouped};
     } catch (error) {

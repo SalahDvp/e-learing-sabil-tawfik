@@ -3,7 +3,7 @@
 import {
   ChevronDownIcon,
 } from "@radix-ui/react-icons"
-import React, { useMemo,useCallback } from 'react';
+import React, { useMemo,useCallback, useState } from 'react';
 import { useToast } from "@/components/ui/use-toast"
 import { useTranslations } from "next-intl"
 import {
@@ -42,7 +42,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { PlusCircle } from 'lucide-react';
+import { ChevronDown, PlusCircle, Trash2 } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -69,6 +69,7 @@ import { generateTimeOptions } from '../../settings/components/open-days-table';
 import { setgroups } from 'process';
 import { parse, isBefore, isAfter, isEqual } from 'date-fns';
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Label } from "@/components/ui/label";
 const parseTime = (timeString) => parse(timeString, 'HH:mm', new Date());
 interface FooterProps {
   formData: Teacher;
@@ -98,7 +99,8 @@ export default function TeacherForm() {
     defaultValues:{
       year:[],
       salaryDate:new Date(),
-      advancePayment:[]
+      advancePayment:[],
+      classes:[]
     }
    
   });
@@ -229,7 +231,72 @@ const [schoolType, setSchoolType] = React.useState('');
     const years = type === 'middle' ? middleSchoolYears : highSchoolYears;
     setValue('year', years);
   };
+const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+const rooms = ['Room 1', 'Room 2', 'Room 3', 'Room 4', 'Room 5', 'Room 6', 'Room 7', 'Room 8']
+const paymentTypes = ['monthly', 'session']
+  const [groups, setGroups] = useState<Group[]>([
+    { id: '1', name: 'Group 1', group: '', numberOfSessions: 0, amount: 0, groups: [],stream:[] },
+  ])
 
+  const updateGroup = (groupIndex: number, field: keyof Group, value: any) => {
+    const newGroups = [...groups]
+    newGroups[groupIndex] = { ...newGroups[groupIndex], [field]: value }
+    setGroups(newGroups)
+  }
+
+  const removeGroup = (groupIndex: number) => {
+    const newGroups = [...groups]
+    newGroups.splice(groupIndex, 1)
+    setGroups(newGroups)
+  }
+
+  const addSession = (groupIndex: number) => {
+    const newGroups = [...getValues('classes')]
+    newGroups[groupIndex].groups.push({
+      day: '',
+      start: '',
+      end: '',
+      room: '',
+    })
+    form.setValue(`classes`,newGroups)
+  }
+
+  const updateSessionField = (groupIndex: number, sessionIndex: number, field: keyof Session, value: any) => {
+    const newGroups = [...getValues('classes')]
+    newGroups[groupIndex].groups[sessionIndex] = {
+      ...newGroups[groupIndex].groups[sessionIndex],
+      [field]: value
+    }
+   form.setValue('classes',newGroups) }
+
+  const toggleSessionField = (groupIndex: number, sessionIndex: number, field: string) => {
+    const newGroups = [...groups]
+    const currentFields = newGroups[groupIndex].sessions[sessionIndex].field
+    const updatedFields = currentFields.includes(field)
+      ? currentFields.filter(f => f !== field)
+      : [...currentFields, field]
+    newGroups[groupIndex].field = updatedFields
+    setGroups(newGroups)
+  }
+  const toggleField = (groupIndex: number,field: string,) => {
+    const newGroups = [...getValues('classes')]
+    
+    const currentFields = newGroups[groupIndex].stream
+    const updatedFields = currentFields.includes(field)
+      ? currentFields.filter(f => f !== field)
+      : [...currentFields, field]
+    newGroups[groupIndex].stream = updatedFields
+    console.log(newGroups);
+    
+   form.setValue(`classes`,newGroups)
+  }
+  const removeSession = (groupIndex: number, sessionIndex: number) => {
+    const newGroups = [...getValues('classes')]
+    newGroups[groupIndex].groups.splice(sessionIndex, 1)
+    form.setValue('classes',newGroups)
+  }
+
+  
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -435,82 +502,194 @@ const [schoolType, setSchoolType] = React.useState('');
   </div>
 
 ) : (
-  <div className="w-full h-full">
-         <ScrollArea className="h-[400px]">
-   <Table>
-  <TableCaption>
-  <Button type='button' size="sm" variant="ghost" className="gap-1 w-full" onClick={() => appendClass({ day: '', start: '', end: '', quota: 0, stream: [],paymentType:'',amount:0 })}>
-      <PlusCircle className="h-3.5 w-3.5" />
-      {t('add-group')}
-    </Button>
-  </TableCaption>
-  <TableHeader>
-    <TableRow>
-      <TableHead>{t('day')}</TableHead>
-      <TableHead>{t('start-time')}</TableHead>
-      <TableHead>{t('end-time')}</TableHead>
-      <TableHead>{t('room')}</TableHead>
-      <TableHead>{t('field')}</TableHead>
-      <TableHead>{t('year')}</TableHead>
-      <TableHead>payment Type</TableHead>
-      <TableHead>Amount</TableHead>
-      <TableHead>{t('action')}</TableHead>
-    </TableRow>
-  </TableHeader>
-  <TableBody>
-    {fields.map((group, index) => (
-      <TableRow key={group.id}>
-        <TableCell className="font-medium">
-        <FormField
-                    control={form.control}
-                    key={group.id}
-                    name={`classes.${index}.day`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger
-                              id={`end-${index}`}
-                              aria-label={`Select day`}
-                            >
-                              <SelectValue placeholder={t('select-day')} />
-                            </SelectTrigger>
-                          </FormControl>
+<div className="w-full h-full">
+  <ScrollArea className="h-[400px] w-full pr-4">
+    {fields.map((group, groupIndex) => (
+      <div key={groupIndex} className="mb-8">
+        <div className="flex items-center gap-4 mb-4">
+          <h3 className="text-xl font-bold">{group.name}</h3>
+          <div>
+            <FormField
+              control={form.control}
+              key={groupIndex}
+              name={`classes.${groupIndex}.group`} // Use groupIndex to map fields correctly
+              render={({ field }) => (
+                <FormItem className="w-32">
+                  <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Group Code:</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </div>
+          <FormField
+    control={form.control}
+    name={`classes.${groupIndex}.numberOfSessions`}
+    render={({ field }) => (
+      <FormItem className="w-24">
+        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Number of Sessions:</FormLabel>
+        <FormControl>
+          <Input
+            {...field}
+            type="number"
+            placeholder="Sessions"
+            onChange={event => field.onChange(+event.target.value)}
+          />
+        </FormControl>
+      </FormItem>
+    )}
+  />
+                  <div>
+                  <FormField
+    control={form.control}
+    name={`classes.${groupIndex}.paymentType`}
+    render={({ field }) => (
+      <FormItem className="w-[120px]">
+        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Payment Type:</FormLabel>
+        <FormControl>
+          <Select
+   onValueChange={field.onChange}
+   defaultValue={field.value}
+          >
+            <SelectTrigger className="w-[120px]">
+              <SelectValue placeholder="Payment type" />
+            </SelectTrigger>
+            <SelectContent>
+              {paymentTypes.map((type) => (
+                <SelectItem key={type} value={type}>{t(type)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FormControl>
+      </FormItem>
+    )}
+  />
+                  </div>
+                  <div>
+                  <FormField
+    control={form.control}
+    name={`classes.${groupIndex}.amount`}
+    render={({ field }) => (
+      <FormItem className="w-24">
+        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Amount:</FormLabel>
+        <FormControl>
+          <Input
+            {...field}
+            type="number"
+            placeholder="Amount"
+            onChange={event => field.onChange(+event.target.value)}
+          />
+        </FormControl>
+      </FormItem>
+    )}
+  />
+                  </div>
+                  <div className="flex flex-col">
 
-                          <SelectContent>
-                            {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => (
-                              <SelectItem key={day} value={day}>
-                              {t(`${day}`)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-        </TableCell>
-        <TableCell className="font-medium">
-        <FormField
-                    control={form.control}
-                    key={group.id}
-                    name={`classes.${index}.start`}
-                    render={({ field }) => (
-                      <FormItem>
+                  <Label htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">fields:</Label>
+                  <DropdownMenu >
+                            <DropdownMenuTrigger asChild       className="w-24">
+                            <Button variant="outline" className="w-[150px] overflow-hidden text-ellipsis whitespace-nowrap">
+  {/* {group.stream.length > 0 ? group.stream.join(', ') : 'Select Field'} */}
+  <ChevronDown className="ml-2 h-4 w-4" />
+</Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="w-56">
+                            {['متوسط','علوم تجريبية', 'تقني رياضي', 'رياضيات', 'تسيير واقتصاد ', 'لغات اجنبية ', 'اداب وفلسفة'].map((field) => (
+                                       <DropdownMenuItem
+                                       key={field}
+                                       value={field}
+                                       className={`flex items-center ${group.stream?.includes(field) ? 'selected' : ''}`}
+                                       onClick={() =>toggleField(groupIndex,field) } 
+                                       
+                                     >
+                                       <span className="mr-2"> { t(`${field}`)}</span>
+                                       {group.stream?.includes(field) && <CheckIcon className="h-4 w-4 text-green-500" />}
+                                     </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                  </div>
+                  <div>
+                  <FormField
+    control={form.control}
+    name={`classes.${groupIndex}.year`}
+    render={({ field }) => (
+      <FormItem className="w-[100px]">
+        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Year:</FormLabel>
+        <FormControl>
+          <Select
+      onValueChange={field.onChange}
+      defaultValue={field.value}
+          >
+            <SelectTrigger className="w-[100px]">
+              <SelectValue placeholder="Select year" />
+            </SelectTrigger>
+            <SelectContent>
+              {watch("year").map((yearOption) => (
+                <SelectItem key={yearOption} value={yearOption}>{yearOption}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FormControl>
+      </FormItem>
+    )}
+  />
+
+                  </div>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => removeClass(groupIndex)}
+                    className="ml-auto"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Remove Group
+                  </Button>
+        </div>
+        <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Day</TableHead>
+                      <TableHead>Start Time</TableHead>
+                      <TableHead>End Time</TableHead>
+                      <TableHead>Room</TableHead>
+             
+                      <TableHead>Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {group.groups.map((session, sessionIndex) => (
+                      <TableRow key={`${groupIndex}-${sessionIndex}`}>
+                        <TableCell>
+                          <Select
+                            value={session.day}
+                            onValueChange={(value) => updateSessionField(groupIndex, sessionIndex, 'day', value)}
+                          >
+                            <SelectTrigger className="w-[120px]">
+                              <SelectValue placeholder="Select day" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {days.map((day) => (
+                                <SelectItem key={day} value={day}>{t(day)}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
                         <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
+                          onValueChange={(e)=>updateSessionField(groupIndex, sessionIndex, 'start', e)}
+                          value={session.start}
                         >
-                          <FormControl>
+            
                             <SelectTrigger
-                              id={`end-${index}`}
-                              aria-label={`Select end time`}
+                              id={`start-${index}`}
+                              aria-label={`Select start time`}
                             >
                               <SelectValue placeholder={t('select-end-time')} />
                             </SelectTrigger>
-                          </FormControl>
 
                           <SelectContent>
                             {timeOptions.map((time) => (
@@ -520,29 +699,19 @@ const [schoolType, setSchoolType] = React.useState('');
                             ))}
                           </SelectContent>
                         </Select>
-                      </FormItem>
-                    )}
-                  />
-        </TableCell>
-        <TableCell className="font-medium">
-        <FormField
-                    control={form.control}
-                    key={group.id}
-                    name={`classes.${index}.end`}
-                    render={({ field }) => (
-                      <FormItem>
+                        </TableCell>
+                        <TableCell>
                         <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
+                          onValueChange={(e)=>updateSessionField(groupIndex, sessionIndex, 'end', e)}
+                          value={session.end}
                         >
-                          <FormControl>
+            
                             <SelectTrigger
                               id={`end-${index}`}
                               aria-label={`Select end time`}
                             >
                               <SelectValue placeholder={t('select-end-time')} />
                             </SelectTrigger>
-                          </FormControl>
 
                           <SelectContent>
                             {timeOptions.map((time) => (
@@ -552,154 +721,69 @@ const [schoolType, setSchoolType] = React.useState('');
                             ))}
                           </SelectContent>
                         </Select>
-                      </FormItem>
-                    )}
-                  />
-        </TableCell>
-       
-        <TableCell className="font-big">
-        <FormField
-                    control={form.control}
-                    key={group.id}
-                    name={`classes.${index}.room`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger
-                              id={`room-${index}`}
-                              aria-label={`Select room`}
-                            >
-                              <SelectValue placeholder={t('select-room')} />
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={session.room}
+                            onValueChange={(value) => updateSessionField(groupIndex, sessionIndex, 'room', value)}
+                          >
+                            <SelectTrigger className="w-[120px]">
+                              <SelectValue placeholder="Select room" />
                             </SelectTrigger>
-                          </FormControl>
-
-                          <SelectContent>
-                            {checkRoomAvailability(watch(`classes.${index}`),['room 1','room 2','room 3','room 4','room 5','room 6','room 7','room 8']).map((room) => (
-                              <SelectItem key={room} value={room}>
-                                {room}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-        </TableCell>
-        <TableCell className="font-medium">
-        <DropdownMenu>
-    <DropdownMenuTrigger asChild>
-      <Button variant="outline" className="ml-auto">
-      {t('select-field')} <ChevronDownIcon className="ml-2 h-4 w-4" />
-      </Button>
-    </DropdownMenuTrigger>
-    <DropdownMenuContent align="end">
-      {['متوسط','علوم تجريبية', 'تقني رياضي', 'رياضيات', 'تسيير واقتصاد ', 'لغات اجنبية ', 'اداب وفلسفة'].map(e => (
-        <DropdownMenuItem
-          key={e}
-          value={e}
-          className={`flex items-center ${group.stream.includes(e) ? 'selected' : ''}`}
-          onClick={() => handleGroupChange(index, 'stream', e) } 
-          
-        >
-          <span className="mr-2"> { t(`${e}`)}</span>
-          {group.stream.includes(e) && <CheckIcon className="h-4 w-4 text-green-500" />}
-        </DropdownMenuItem>
-      ))}
-    </DropdownMenuContent>
-  </DropdownMenu>
-</TableCell>
-<TableCell>
-<FormField
-                    control={form.control}
-                    key={group.id}
-                    name={`classes.${index}.year`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger
-                              id={`year-${index}`}
-                              aria-label={`Select year`}
-                            >
-                              <SelectValue placeholder={t('select-year')} />
-                            </SelectTrigger>
-                          </FormControl>
-
-                          <SelectContent>
-                            {watch("year").map((year:string) => (
-                              <SelectItem key={year} value={year}>
-                                {year}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-                  </TableCell>
-                  <TableCell className="font-medium">
-        <FormField
-                    control={form.control}
-                    key={group.id}
-                    name={`classes.${index}.paymentType`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger
-                              id={`end-${index}`}
-                              aria-label={`Select paymentType`}
-                            >
-                              <SelectValue placeholder='paymentType' />
-                            </SelectTrigger>
-                          </FormControl>
-
-                          <SelectContent>
-                            {['monthly','session'].map((paymentType) => (
-                              <SelectItem key={paymentType} value={paymentType}>
-                              {paymentType}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-        </TableCell>
-     <TableCell className="font-medium">
-        <FormField
-                    control={form.control}
-                    key={group.id}
-                    name={`classes.${index}.amount`}
-                    render={({ field }) => (
-                      <FormItem>
-                   
-                          <FormControl>
-                          <Input {...field} onChange={event => field.onChange(+event.target.value)}/>
-                          </FormControl>
-                      </FormItem>
-                    )}
-                  />
-        </TableCell>
-        <TableCell>
-          <Button type="button" variant="destructive" onClick={() => removeClass(index)}>{t('remove')}</Button>
-        </TableCell>
-      </TableRow>
+                            <SelectContent>
+                            {checkRoomAvailability(watch(`classes.${groupIndex}.groups.${sessionIndex}`),['room 1','room 2','room 3','room 4','room 5','room 6','room 7','room 8']).map((room) => (
+                                <SelectItem key={room} value={room}>{room}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => removeSession(groupIndex, sessionIndex)}
+                          >
+                            Remove
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))} 
+                  </TableBody>
+                </Table>
+                 <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="mt-2 w-full"
+                  onClick={() => addSession(groupIndex)}
+                >
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Add Session
+                </Button> 
+      </div>
     ))}
-  </TableBody>
-</Table>
-
-</ScrollArea>
+    <Button
+      type="button"
+      variant="outline"
+      className="mt-4 w-full"
+      onClick={() => {
+        appendClass({
+          name: `Group ${fields.length + 1}`,
+          group: '',
+          groups:[],
+          numberOfSessions: 0,
+          amount: 0,
+          stream: [],
+          year: '',
+          paymentType: ''
+        });
+      }}
+    >
+      <PlusCircle className="h-4 w-4 mr-2" />
+      Add New Group
+    </Button>
+  </ScrollArea>
 </div>
 )}
               </div>
@@ -733,31 +817,20 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
 
   const {toast}=useToast()
   const onSubmit = async(data:any) => {
+console.log(data);
 
     const teacherId = await addTeacher(data)
-    const classesByYear = groupClassesByYear(data.classes);
-  
-    const collectiveGroups = Object.entries(classesByYear).map(([year, classes]) => (
-{      year,
-  students:[],
-  reimbursements:[],
-        teacherUID:teacherId.id,
+    const collectiveGroups = data.classes.map((cls) => ({
+      ...cls,
+      year:cls.year,
+      students:[],
+      reimbursements:[],
+      teacherUID:teacherId.id,
         teacherName:data.name,
-        subject: data["educational-subject"],
-        groups: classes.map((cls,index) => ({
-          subject: data["educational-subject"],
-          start: cls.start,
-          end:cls.end,
-          day:cls.day,
-          stream: cls.stream,
-          quota: cls.quota,
-          room:cls.room,
-          group:`G${index+1}`,
-          paymentType:cls.paymentType,
-          amount:cls.amount
-        }))}
-   
-        
+      subject: data["educational-subject"],
+      }
+
+
     ));
     
     const updatedCollectiveGroups = collectiveGroups.map((group, index) => ({
@@ -771,6 +844,10 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
       title: "Teacher Added!",
       description: `The Teacher, ${data.name} added successfully`,
     });
+    reset({  year:[],
+      salaryDate:new Date(),
+      advancePayment:[],
+      classes:[]})
   };
   const t=useTranslations()
 
@@ -864,4 +941,3 @@ function CheckIcon(props:any) {
             </svg>
           )
         }
-        
