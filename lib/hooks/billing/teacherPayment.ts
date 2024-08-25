@@ -29,10 +29,10 @@ export const addTeacherSalary = async (transaction:any) => {
         await updateDoc(doc(db, "Billing", "payouts"), {
             teachersExpenses: increment(transaction.amount),
         });
-        // await updateDoc(doc(db, "Billing","analytics"), {
-        //     totalExpenses:increment(transaction.amount),
-        //     [`data.${month.abbreviation}.expenses`]: increment(transaction.amount)
-        // });
+        await updateDoc(doc(db, "Billing","analytics"), {
+            totalExpenses:increment(transaction.amount),
+            [`data.${month.abbreviation}.expenses`]: increment(transaction.amount)
+        });
         if (transaction.paymentType==='advance') {
             await updateDoc(doc(db,"Teachers",transaction.teacher.id),{
                 advancePayment:arrayUnion({date:transaction.date,amount:transaction.amount})

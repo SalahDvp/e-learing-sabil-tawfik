@@ -56,28 +56,28 @@ const generateQrCode = async (data: string) => {
     return existingIds;
   };
   
-  const generateUniqueIds = async (count: number) => {
-    const existingIds = await fetchExistingIds("Qrs","NYX2q0LyHKjO79FkhhOs");
+  const generateUniqueIds = async (count: number): Promise<string[]> => {
+    // const existingIds = await fetchExistingIds("Qrs", "NYX2q0LyHKjO79FkhhOs");
     const uniqueIds = new Set<string>();
   
     while (uniqueIds.size < count) {
       const newId = generateFirestoreId();
-      if (!existingIds.has(newId)) {
-        uniqueIds.add(newId);
-      }
+      // if (!existingIds.has(newId)) {
+      uniqueIds.add(newId);
+      // }
     }
   
     return Array.from(uniqueIds);
   };
   
   const generateIdsAndQRCodes = async (count: number) => {
-    const ids = generateUniqueIds(count);
-    
+    const ids = await generateUniqueIds(count); // Await the result here
+  
     const idsAndQRCodesPromises = ids.map(async (id) => {
       const qrCode = await generateQrCode(id);
       return { id, qrCode };
     });
-    
+  
     return Promise.all(idsAndQRCodesPromises);
   };
   const addQRCodesToPDF = async (pdfBytes, qrCodeTexts) => {
@@ -144,7 +144,7 @@ export const Component = ()   => {
   
   useEffect(() => {
     const fetchData = async () => {
-      const result = await generateIdsAndQRCodes(5);
+      const result = await generateIdsAndQRCodes(10);
       setData(result);
     };
     
@@ -178,9 +178,9 @@ qrs:uniqueIds
   
   return (
    <div className="max-w-6xl mx-auto border rounded-lg shadow-lg">
-      <button onClick={handleDownload}>
+      {/* <button onClick={handleDownload}>
       Download PDF with QR Code
-    </button>
+    </button> */}
        
    <div className="max-h-[500px] overflow-auto">
   
@@ -194,7 +194,7 @@ qrs:uniqueIds
        <TableBody>
        {data.map((item) => (
         <TableRow key={item.id}>
-          <TableCell className="font-medium sticky left-0 bg-background">{item.id}</TableCell>
+          <TableCell className="font-medium sticky left-0 bg-background"></TableCell>
           <TableCell>
             <button onClick={() => handleQrCodeClick(item.id)}>
               <img src={item.qrCode} className="w-24 h-24 text-muted-foreground" alt="QR Code" />

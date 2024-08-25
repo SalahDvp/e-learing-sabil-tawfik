@@ -1,3 +1,4 @@
+
 'use client'
 
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ import { date, z } from "zod";
 import { useData } from "@/context/admin/fetchDataContext";
 import { addPaymentTransaction } from "@/lib/hooks/billing/student-billing";
 import {updateStudentFinance}  from '@/lib/hooks/students';
+import {updatesessionsLeft} from '@/lib/hooks/billing/student-billing";'
 import { uploadFilesAndLinkToCollection } from "@/context/admin/hooks/useUploadFiles";
 import { getMonthInfo } from "@/lib/hooks/billing/teacherPayment";
 import { useTranslations } from "next-intl";
@@ -245,6 +247,13 @@ const onSelected = (selectedStudent: any) => {
 };
 
 
+const [selectedStudentId, setSelectedStudentId] = useState(null);
+
+  // Ensure selectedStudentId is set through some interaction
+  const handleStudentSelection = (studentId) => {
+    setSelectedStudentId(studentId);
+  };
+
 
 
 
@@ -306,9 +315,11 @@ const onSelected = (selectedStudent: any) => {
           const classss = selectedStudent.classesUIDs.flatMap((clsUID) => {
             return classes
               .filter((clss) => clsUID.id === clss.id)
-              .flatMap((cls) => cls.groups.filter((grp) => grp.group === clsUID.group));
+             // .flatMap((cls) => cls.groups.filter((grp) => grp.group === clsUID.group));
           });
           form.setValue('filtredclasses',classss)
+          console.log('classss',classss);
+          handleStudentSelection(selectedStudent.id)
         }
       }}
     />
@@ -462,8 +473,9 @@ const onSelected = (selectedStudent: any) => {
     const transactionArray = [transactionData];
   
     // Save the data with the `transaction` array
-  await addPaymentTransaction(transactionData,data.id);
-  await updateStudentFinance(transactionData.paymentDate,transactionData.nextPaymentDate,transactionData.debt,data.id);
+ // await addPaymentTransaction(transactionData,data.id);
+ // await updateStudentFinance(transactionData.paymentDate,transactionData.nextPaymentDate,transactionData.debt,data.id);
+//await updatesessionsLeft(data.id)
 
     // Handle file uploads and update the UI accordingly
    /* const uploaded = await uploadFilesAndLinkToCollection(
@@ -559,7 +571,7 @@ const onSelected = (selectedStudent: any) => {
                     <TableRow>
                     <TableHead>Group</TableHead>
                     <TableHead>Subject</TableHead>
-                    <TableHead>Amount</TableHead>
+                    <TableHead>Sessions</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -572,7 +584,7 @@ const onSelected = (selectedStudent: any) => {
                  
               <Input
 
-                defaultValue={`${option.day},${option.start}-${option.end}`}
+                defaultValue={option.group}
                 readOnly
               />
  
@@ -588,17 +600,33 @@ const onSelected = (selectedStudent: any) => {
                         </TableCell>
                                 <TableCell>
                         
-                                <Input
-                  placeholder={t('enter-price')}
-                  value={option.amount}
-                  onChange={(event) => {
-                    const newAmount = +event.target.value;
-                    const updatedClasses = filtredclasses.map((cls, idx) => 
-                      idx === index ? { ...cls, amount: newAmount } : cls
-                    );
-                    field.onChange(updatedClasses);
-                  }}
-                />
+            <Input
+      placeholder={t('enter-sessions-left')}
+      defaultValue={
+        filtredclasses[index]?.students.find((student) => student.id === selectedStudentId)?.sessionsLeft || ''
+      }
+      onChange={(event) => {
+        const newSessionsLeft = +event.target.value;
+
+        // Updating the correct student within the selected class
+        const updatedClasses = filtredclasses.map((cls, idx) =>
+          idx === index
+            ? {
+                ...cls,
+                students: cls.students.map((student) =>
+                  student.id === selectedStudentId
+                    ? { ...student, sessionsLeft: newSessionsLeft }
+                    : student
+                ),
+              }
+            : cls
+        );
+
+        // Calling field.onChange with updated classes array
+        field.onChange(updatedClasses);
+      }}
+    />
+
                                 </TableCell>
                                 <TableCell>
 

@@ -70,14 +70,14 @@ const generateTableData = (classes: any[]) => {
       const dates = getNextFourDates(group.day, group.start, group.end);
 
       cls.students.forEach(student => {
-        if (student.group === group.group) {
+        if (student.group === cls.group) {
           const row = {
             index: student.index,
-            group: group.group,
+            group: cls.group,
             name:student.name,
             ...dates.reduce((acc, date) => {
               const [yearStrOnly,monthStr,dayStr] = date.split('-');
-              const dateKey = `${yearStrOnly}-${monthStr}-${dayStr}-${group.group}`;
+              const dateKey = `${yearStrOnly}-${monthStr}-${dayStr}`;
               const attendanceEntry = cls.Attendance?.[dateKey];
                
                 
@@ -116,6 +116,7 @@ const generateColumns = (dates: string[]): ColumnDef<any>[] => {
       header: () => <div>Group</div>,
       cell: ({ row }) => <div>{row.getValue("group")}</div>,
     },
+
     ...dates.map(date => ({
       accessorKey: date,
       header: () => <div>{date}</div>,
@@ -129,22 +130,28 @@ export const ArchiveDataTable = ({teacher}) => {
   const {classes,teachers}=useData()
   const teacherClasses = useMemo(() => classes.filter((cls) => cls.teacherUID === teacher.id), [classes, teacher.id]);
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
-console.log(teacherClasses);
 
   const dates = useMemo(() => {
-
-    
-    return     selectedGroup ?Array.from(new Set(
-      teacherClasses.flatMap(cls => 
-        cls.groups
-          .filter(group => group.group === selectedGroup) // Show all if selectedGroup is null, otherwise filter
-          .flatMap(group => getNextFourDates(group.day, group.start, group.end))
-      )
-    )):
-    Array.from(new Set(
-      teacherClasses.flatMap(cls => 
-        cls.groups
-          .flatMap(group => getNextFourDates(group.day, group.start, group.end)))))
+    const allDates = selectedGroup
+      ? Array.from(new Set(
+          teacherClasses
+            .filter(group => group.group === selectedGroup)
+            .flatMap(cls => 
+              cls.groups.flatMap(group => getNextFourDates(group.day, group.start, group.end))
+            )
+        ))
+      : Array.from(new Set(
+          teacherClasses.flatMap(cls => 
+            cls.groups.flatMap(group => getNextFourDates(group.day, group.start, group.end))
+          )
+        ));
+  
+    // Sort dates chronologically
+    return allDates.sort((a, b) => {
+      const dateA = new Date(a.split('-')[0]);
+      const dateB = new Date(b.split('-')[0]);
+      return dateA.getTime() - dateB.getTime();
+    });
   }, [teacherClasses, selectedGroup]);
   const data = useMemo(() => generateTableData(teacherClasses), [teacherClasses]);
   const columns = useMemo(() => generateColumns(dates), [dates,selectedGroup]);
@@ -219,7 +226,7 @@ console.log(teacherClasses);
                     </TabsTrigger>
                     {teacher.classes!= null &&(teacher.classes.map((group,index) => (
                     <TabsTrigger key={index} value={index} onClick={() =>  handleTabClick(group.group)  }>
-                     {t(`${group.day}`)},{group.start}-{group.end}
+                     {group.group}
                     </TabsTrigger>
                   )))}
                 </TabsList>

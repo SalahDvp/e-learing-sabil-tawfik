@@ -100,7 +100,6 @@ const steps: StepItem[] = [
   { label: "Step 3" },
 
 ];
-
 const years=[
   "1AM",
   "2AM",
@@ -108,7 +107,11 @@ const years=[
   "4AM",
   "1AS",
   "2AS",
-  "3AS"
+  "3AS",
+"L1",
+"L2",
+"L3",
+"M1"
 ]
 const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
   const camera = useRef<null | { takePhoto: () => string }>(null);
@@ -190,7 +193,8 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
           .filter(cls =>
             cls.subject === invoice.subject &&
             cls.year === watch('year') &&
-            cls.teacherName === invoice.name
+            cls.teacherName === invoice.name && 
+            cls.group === invoice.group
           )
           .map(cls => cls.amount) // Extract the amount from each matching class
       )
@@ -302,6 +306,9 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
     if (["1AM", "2AM", "3AM", "4AM"].includes(e)) {
       setValue("field", "متوسط");
     }
+    if(["L1","L2","L3","M1"].includes(e)) {
+      setValue("field", "جامعي");
+    }
   }}
    defaultValue={field.value}
               >
@@ -327,8 +334,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
   )}
 />
 
-
-{!["1AM","2AM","3AM","4AM"].includes(watch('year')) && (<FormField
+{!["1AM","2AM","3AM","4AM","L1","L2","L3","M1"].includes(watch('year')) && (<FormField
   control={control}
   name="field"
   render={({ field }) => (
@@ -507,12 +513,26 @@ value={classes.find(type => type.id === watch(`classes.${index}.id`))?.id}
   </SelectContent>
 </Select>
 
-    
+
+
     
     
     
     
     </TableCell>
+    <TableCell>
+  {classes.find(cls => cls.id === watch(`classes.${index}.id`))?.groups.map((group, idx) => (
+      <Input
+      key={idx} 
+        type="text"
+        value={`${t(group.day)}, ${group.start} - ${group.end}`}
+        readOnly
+        className="col-span-3"
+      />
+
+  ))}
+</TableCell>
+    
     <TableCell className="font-medium"> 
               <Select value={invoice.cs} onValueChange={(value)=>handleGroupChange(index,'cs',value)}>
       <SelectTrigger className="">
@@ -534,10 +554,11 @@ value={classes.find(type => type.id === watch(`classes.${index}.id`))?.id}
 
     <TableCell className="font-medium">
 
+    
     <Input
   type="text"
  defaultValue={invoice?.amount}
-  className="col-span-3 w-24"
+  className="col-span-3 w-24 mb-2"
   readOnly
 />
 </TableCell>

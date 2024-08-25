@@ -1,37 +1,86 @@
-
-
-import { db } from "@/firebase/firebase-config"
-import { addDoc, collection, deleteDoc, doc, updateDoc ,setDoc,increment} from "firebase/firestore"
+import { db } from "@/firebase/firebase-config";
+import { addDoc, collection, doc, getDoc, increment, setDoc, updateDoc } from "firebase/firestore";
 import { PaymentRegistrationSchema } from "@/validators/paymentSchema";
 import { z } from "zod";
 import { getMonthInfo } from "./teacherPayment";
 
-type PaymentFormValues = z.infer<typeof  PaymentRegistrationSchema> & {documents?:any};
-export const addPayment = async (transaction:PaymentFormValues) => {
-    try {
-        const month=getMonthInfo(transaction.paymentDate)
-        const paymentTransRef = await addDoc(collection(db, "Billing","payouts","Payout"), transaction);
-    
-        // Reference to the added document
-        const key = transaction.typeofPayment; 
-        console.log("Payout Salary added successfully:",paymentTransRef.id );  
-        await updateDoc(doc(db, "Billing", "payouts"), {
-            
-            [`${key}Expenses`]: increment(transaction.paymentAmount),
-            
-        });
-        await updateDoc(doc(db, "Billing","analytics"), {
-            totalExpenses:increment(transaction.paymentAmount),
-            [`data.${month.abbreviation}.expenses`]: increment(transaction.paymentAmount)
+const months = [
+  { abbreviation: 'Jan', name: 'January' },
+  { abbreviation: 'Feb', name: 'February' },
+  { abbreviation: 'Mar', name: 'March' },
+  { abbreviation: 'Apr', name: 'April' },
+  { abbreviation: 'May', name: 'May' },
+  { abbreviation: 'Jun', name: 'June' },
+  { abbreviation: 'Jul', name: 'July' },
+  { abbreviation: 'Aug', name: 'August' },
+  { abbreviation: 'Sep', name: 'September' },
+  { abbreviation: 'Oct', name: 'October' },
+  { abbreviation: 'Nov', name: 'November' },
+  { abbreviation: 'Dec', name: 'December' }
+];
 
+type PaymentFormValues = z.infer<typeof PaymentRegistrationSchema> & { documents?: any };
+
+export const addPayment = async (transaction: PaymentFormValues) => {
+  try {
+    const month = getMonthInfo(transaction.paymentDate);
+    const paymentTransRef = await addDoc(collection(db, "Billing", "payouts", "Payout"), transaction);
+
+    // Reference to the added document
+    const key = transaction.typeofPayment;
+    console.log("Payout Salary added successfully:", paymentTransRef.id);
+
+    await updateDoc(doc(db, "Billing", "payouts"), {
+      [`${key}Expenses`]: increment(transaction.paymentAmount),
+    });
+
+    const docRef = doc(db, "Billing", "analytics");
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      // Initialize the document with an array of month objects
+      const data = {
+        totalExpenses: 0,
+        totalIncome: 0,
+        data: months.map(monthh => ({
+          month: monthh.name,
+          expenses: 0,
+          income: 0
+        }))
+      };
+
+      await setDoc(docRef, data);
+    } else {
+      // Retrieve the existing data array
+      const existingData = docSnap.data()?.data || [];
+
+      // Find the index of the current month in the array
+      const monthIndex = existingData.findIndex((m: any) => m.month === month.fullName);
+
+      if (monthIndex !== -1) {
+        // Update the specific month's expenses
+        existingData[monthIndex].expenses += transaction.paymentAmount;
+      } else {
+        // Add a new entry if the month wasn't found
+        existingData.push({
+          month: month.fullName,
+          expenses: transaction.paymentAmount,
+          income: 0,
         });
-            return paymentTransRef.id; 
-    } catch (error) {
-        console.error("Error adding Payout Salary:", error);
-        // Handle the error here, such as displaying a message to the user or logging it for further investigation
-        throw error; // Optionally re-throw the error to propagate it further if needed
+      }
+
+      // Update the totalExpenses and the data array
+      await updateDoc(docRef, {
+        totalExpenses: increment(transaction.paymentAmount),
+        data: existingData
+      });
     }
-    
+
+    return paymentTransRef.id;
+  } catch (error) {
+    console.error("Error adding Payout Salary:", error);
+    throw error;
+  }
 };
 export const updatePayment = async(updatedtransaction:PaymentFormValues,transactionID:string,oldAmount:number)=>{
     try {
@@ -46,7 +95,7 @@ export const updatePayment = async(updatedtransaction:PaymentFormValues,transact
                 });
                 await updateDoc(doc(db, "Billing","analytics"), {
                     totalExpenses:increment(updatedtransaction.paymentAmount-oldAmount),
-                    [`data.${month.abbreviation}.expenses`]: increment(updatedtransaction.paymentAmount-oldAmount)
+                    [`data.${month.name}.expenses`]: increment(updatedtransaction.paymentAmount-oldAmount)
         
                 });
             }

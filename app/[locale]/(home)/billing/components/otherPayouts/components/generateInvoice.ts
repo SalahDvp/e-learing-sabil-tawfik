@@ -33,13 +33,20 @@ export function downloadInvoice(paymentData:any,id:string,titles:any[],words:any
         fillColor: '#3366ff'
       }
     });
-  
+
+
+    let paymentDate = new Date(paymentData.paymentDate);
+    if (isNaN(paymentDate.getTime())) {
+        console.error('Invalid paymentDate:', paymentData.paymentDate);
+        paymentDate = new Date(); // Fallback to current date or handle error as needed
+    }
+
     autoTable(doc, {
       body: [
         [
           {
             content: `ReferenceID #${id}`
-            +`\nDate: ${format(paymentData.paymentDate, 'dd/MM/yyyy')}`,
+            + `\nDate: ${format(paymentDate, 'dd/MM/yyyy')}`,
             styles: {
               halign: 'right'
             }

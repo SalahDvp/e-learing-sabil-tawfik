@@ -1,5 +1,5 @@
 import { db } from "@/firebase/firebase-config"
-import { addDoc, collection, deleteDoc, doc, increment ,arrayUnion, updateDoc ,setDoc} from "firebase/firestore"
+import { addDoc, collection, deleteDoc, doc, increment ,arrayUnion, updateDoc ,setDoc,getDoc} from "firebase/firestore"
 import { studentPaymentSchema } from "@/validators/studentPaymentSchema";
 import { z } from "zod";
 function getMonthInfo(date:Date) {
@@ -11,6 +11,7 @@ function getMonthInfo(date:Date) {
   }
 type StudentPaymentFormValues = z.infer<any> & {documents?:any[]};
 export const addPaymentTransaction = async (transaction: any, studentID: string) => {
+    const month = getMonthInfo(transaction.paymentDate);
     try {
         // Validate studentID
         if (!studentID) {
@@ -31,15 +32,68 @@ export const addPaymentTransaction = async (transaction: any, studentID: string)
             // months: arrayUnion(...months) // Uncomment and modify if using months
         });
 
-        console.log("Transaction successfully added to Firestore!");
+        const analyticsRef = doc(db, "Billing", "analytics");
+    const analyticsDoc = await getDoc(analyticsRef);
 
-        return transactionRef.id; // Return the ID of the document
-    } catch (error) {
-        console.error("Error adding transaction:", error);
-        // Handle the error here, such as displaying a message to the user or logging it for further investigation
-        throw error; // Optionally re-throw the error to propagate it further if needed
+    if (!analyticsDoc.exists()) {
+      // Initialize the document with an array of month objects if it doesn't exist
+      const data = {
+        totalExpenses: 0,
+        totalIncome: 0,
+        data: months.map(month => ({
+          month: month.Fullname,
+          expenses: 0,
+          income: 0
+        }))
+      };
+      await setDoc(analyticsRef, data);
+    } else {
+      // Retrieve the existing data array
+      const existingData = analyticsDoc.data()?.data || [];
+
+      // Find the index of the current month in the array
+      const monthIndex = existingData.findIndex((m: any) => m.month === month.Fullname);
+
+      if (monthIndex !== -1) {
+        // Update the specific month's income
+        existingData[monthIndex].income += transaction.amount;
+      } else {
+        // Add a new entry if the month wasn't found
+        existingData.push({
+          month: month.Fullname,
+          expenses: 0,
+          income: transaction.amount,
+        });
+      }
+   
+      // Update the totalIncome and the data array
+      await updateDoc(analyticsRef, {
+        totalIncome: increment(transaction.amount),
+        data: existingData
+      });
     }
-};
+
+    console.log("Transaction successfully added to Firestore!");
+
+    return transactionRef.id; // Return the ID of the document
+  } catch (error) {
+    console.error("Error adding transaction:", error);
+    throw error; // Optionally re-throw the error to propagate it further if needed
+  }
+}
+
+
+export async function updatesessionsLeft(paymentDate,nextPaymentDate,debt,studentId){
+  
+
+        await updateDoc(doc(db,'Students',studentId),{
+              debt:debt,
+              lastPaymentDate:paymentDate,
+              nextPaymentDate:nextPaymentDate
+  
+  
+        });
+    }
 export const updateStudentInvoice = async(updatedtransaction:StudentPaymentFormValues,transactionID:string,oldSalary:number)=>{
     try {
         const month=getMonthInfo(updatedtransaction.paymentDate)
@@ -54,7 +108,7 @@ export const updateStudentInvoice = async(updatedtransaction:StudentPaymentFormV
         })
         await updateDoc(doc(db, "Billing","analytics"), {
 
-            [`data.${month.abbreviation}.income`]: increment(updatedtransaction.paymentAmount-oldSalary),
+            [`data.${month.Fullname}.income`]: increment(updatedtransaction.paymentAmount-oldSalary),
             totalIncome: increment(updatedtransaction.paymentAmount-oldSalary),
         });
     }

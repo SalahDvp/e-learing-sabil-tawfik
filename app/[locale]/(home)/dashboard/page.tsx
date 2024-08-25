@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/popover"
 import { pdf } from "@react-pdf/renderer";
 import StudentInvoice from'../students/components/studentInvoice'
-import { doc, getDoc, setDoc, updateDoc, arrayUnion } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, arrayUnion, increment } from "firebase/firestore";
 import { db } from "@/firebase/firebase-config";
 import { AutoComplete } from "@/components/ui/autocomplete";
  
@@ -95,7 +95,8 @@ const checkClassTime = (scanTime: Date, student: any, groupClasses: any[]): any[
             id: matchingClasses.id,
             studentIndex: matchingClasses.index,
             studentGroup: matchingClasses.group,
-            name: groupClass.teacherName
+            name: groupClass.teacherName,
+            sessionsLeft:matchingClasses.sessionsLeft
           });
         }
         // }
@@ -115,7 +116,7 @@ export default function Home() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const highlightCodeOutlineRef = useRef<HTMLDivElement>(null);
   const qrScanner = useRef<QrScanner | null>(null);
-  const {students,classes,setClasses}=useData()
+  const {students,classes,setClasses,setStudents}=useData()
   const [showingQrScanner, setShowingQrScanner] = useState(false);
   const [studentData, setStudentData] = useState<Student | null>(null);
   const [currentClass, setCurrentClass] = useState<String| any>();
@@ -150,7 +151,7 @@ export default function Home() {
   }
   const onpressed=(id)=>{
     const parsedData = students.find((student) => student.value === id || student.newId===id);
-    console.log("uiddd",id);
+
     
     if (!parsedData) {
       setAlertText("Invalid QR code");
@@ -167,7 +168,7 @@ export default function Home() {
 
     
       setCurrentClasses(classInfo)
-      console.log(classInfo);
+
       
       
     } else {
@@ -179,7 +180,7 @@ export default function Home() {
   }
   const handleQrScan = (result) => {
     if (processedQrCodes.current.has(result.data)) {
-      console.log("This student has already scanned their code in the past hour.");
+
       
       setAlertText("This student has already scanned their code in the past hour.");
       setOpenAlert(true);
@@ -227,102 +228,123 @@ export default function Home() {
   };
   const onConfirm = async () => {
     try {
-      const updatedClasses = [...classes]; // Create a copy of the current classes
+      const updatedClasses = [...classes];
+      const updatedStudents = [...students];
   
-      // Iterate over each selected class and group
-      for (const [subject, selectedClass] of Object.entries(selectedClasses)) {
-        // Find the index of the class to update
-        const classIndex = updatedClasses.findIndex(cls => cls.id === selectedClass.id);
-        if (classIndex === -1) {
-          console.error(`Class not found for subject: ${subject}`);
-          continue;
-        }
-  
+      const processAttendance = async (selectedClass: any, classIndex: number) => {
         const clsid = updatedClasses[classIndex].id;
   
-        // Get the current date and format it for UID
-        const currentDate = new Date();
-        const year = currentDate.getFullYear();
-        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-        const day = String(currentDate.getDate()).padStart(2, '0');
-        const dateTimeUID = `${year}-${month}-${day}`; // Use the selected class group
+        // Get the current date for UID
+        const dateTimeUID = new Date().toISOString().split('T')[0];
   
-        // Get the current attendance list for the given class
         const currentAttendanceList = updatedClasses[classIndex]?.Attendance?.[dateTimeUID] || {
           start: '',
           end: '',
           attendanceList: [],
-          group: selectedClass.group, // Use the selected class group
+          group: selectedClass.group,
           id: dateTimeUID
         };
   
-        // Check if the student already exists in the attendance list
+        // Check if student already exists
         const studentExists = currentAttendanceList.attendanceList.some(
           attendance => attendance.index === selectedClass.studentIndex
         );
-  
         if (studentExists) {
-          setAlertText("This student has already scanned their code in the past hour.");
+          setAlertText("This student has already scanned their code.");
           setOpenAlert(true);
-          continue;
+          return;
         }
+ 
   
-        // Update the attendance list
+        // Update attendance list
         currentAttendanceList.attendanceList.push({
           index: selectedClass.studentIndex,
-          group: selectedClass.studentGroup, // Use the selected class group
+          group: selectedClass.studentGroup,
           name: studentData?.name,
-          status: 'present'
+          status: 'present',
+          id: studentData?.id
         });
   
-        // Update the class with the new attendance list
         updatedClasses[classIndex] = {
           ...updatedClasses[classIndex],
+          students: updatedClasses[classIndex].students.map(std => std.id === studentData?.id
+            ? { ...std, sessionsLeft: std.sessionsLeft>0 ? std.sessionsLeft - 1:std.sessionsLeft }
+            : std
+          ),
           Attendance: {
             ...updatedClasses[classIndex].Attendance,
             [dateTimeUID]: currentAttendanceList
           }
         };
-        setClasses(updatedClasses);
-        // Perform the appropriate Firebase operation based on existence
+  
+        updatedStudents.forEach(std => {
+          if (std.id === studentData?.id) {
+            std.classes = std.classes.map(cls => cls.id === clsid
+              ? { ...cls, sessionsLeft: cls.sessionsLeft>0 ? cls.sessionsLeft - 1:cls.sessionsLeft}
+              : cls
+            );
+          }
+        });
+  
         const attendanceDocRef = doc(db, 'Groups', clsid, 'Attendance', dateTimeUID);
         const docSnapshot = await getDoc(attendanceDocRef);
-        
+  
+        if (selectedClass.sessionsLeft <= 0) {
+          const debtToRemove = updatedClasses[classIndex].amount / updatedClasses[classIndex].numberOfSessions;
+          await updateDoc(doc(db, 'Students', studentData.id), {
+            debt: increment(debtToRemove)
+          });
+        }
+  
         if (docSnapshot.exists()) {
-          // If the document exists, update it
           await updateDoc(attendanceDocRef, {
             attendanceList: arrayUnion({
               name: studentData?.name,
-              group: selectedClass.studentGroup, // Use the selected class group
+              group: selectedClass.studentGroup,
               index: selectedClass.studentIndex,
               status: 'present',
               id: studentData?.id
             })
           });
         } else {
-          // If the document doesn't exist, create it
-          const date = parseDateTimeRange(`${year}-${month}-${day}-${selectedClass.start}-${selectedClass.end}`);
-          await setDoc(
-            attendanceDocRef,
-            {
-              group: selectedClass.group, // Use the selected class group
-              end: date.endDateTime,
-              id: dateTimeUID,
-              start: date.startDateTime,
-              attendanceList: [{
-                name: studentData?.name,
-                group: selectedClass.studentGroup, // Use the selected class group
-                index: selectedClass.studentIndex,
-                status: 'present',
-                id: studentData?.id
-              }]
-            }
-          );
+          const date = parseDateTimeRange(dateTimeUID);
+          await setDoc(attendanceDocRef, {
+            group: selectedClass.group,
+            end: date.endDateTime,
+            id: dateTimeUID,
+            start: date.startDateTime,
+            attendanceList: [{
+              name: studentData?.name,
+              group: selectedClass.studentGroup,
+              index: selectedClass.studentIndex,
+              status: 'present',
+              id: studentData?.id
+            }]
+          });
         }
   
-        // Optionally generate a bill if needed
-        generateBillIfNeeded({ name: studentData?.name, subject: selectedClass.subject, year: selectedClass.year });
-      }
+        await updateDoc(doc(db, 'Groups', clsid), { students: updatedClasses[classIndex].students });
+  
+        generateBillIfNeeded({
+          name: studentData?.name,
+          subject: selectedClass.subject,
+          year: selectedClass.year
+        });
+      };
+  
+      // Process each selected class
+      await Promise.all(Object.entries(selectedClasses).map(([subject, selectedClass]) => {
+        const classIndex = updatedClasses.findIndex(cls => cls.id === selectedClass.id);
+        if (classIndex === -1) {
+          console.error(`Class not found for subject: ${subject}`);
+          return Promise.resolve(); // Skip this entry
+        }
+        return processAttendance(selectedClass, classIndex);
+      }));
+  
+      // Update state
+      setClasses(updatedClasses);
+      setStudents(updatedStudents);
   
       // Play success audio
       audioRefSuccess.current?.play();
@@ -331,7 +353,7 @@ export default function Home() {
       setCurrentClass(undefined);
       setCurrentClasses(undefined);
       setStudentData(null);
-      setSelectedClasses({})
+      setSelectedClasses({});
     } catch (error) {
       console.error('Error updating attendance:', error);
       alert('An error occurred while updating attendance. Please try again.');
@@ -376,8 +398,7 @@ export default function Home() {
       }
     });
   };
-  console.log('currentClasses ',currentClasses);
-  console.log('selectedClasses ',selectedClasses);
+
   
   return (
     <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto p-4 md:p-8">
@@ -486,42 +507,50 @@ export default function Home() {
   <div className="grid gap-2">
   <span className="text-muted-foreground">{t('avaliable-classes')}:</span>
   {Array.isArray(currentClasses) && currentClasses.length > 0 && (
-    <RadioGroup className="grid grid-cols-3 gap-4">
-      {currentClasses.map((classObj, index) => (
-        <div key={index}>
-          {classObj.studentGroup.split(',').map((group) => (
-            <div key={`${classObj.id}-${group}`}>
-              <RadioGroupItem
-                value={`${classObj.id}-${group}`}
-                onClick={() => handleSelection(classObj, group)}
-                id={`${classObj.id}-${group}`}
-                className="peer sr-only"
-                checked={
-                  selectedClasses[classObj.id]?.id === classObj.id &&
-                  selectedClasses[classObj.id]?.group === group
-                } // check if the current group is selected for this class
-              />
-              <Label
-                htmlFor={`${classObj.id}-${group}`}
-                className={`flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary 
-                ${
-                  selectedClasses[classObj.id]?.id === classObj.id &&
-                  selectedClasses[classObj.id]?.group === group
-                    ? 'border-primary'
-                    : ''
-                }`}
-              >
-                <span className="font-semibold">{classObj.subject}</span>
-                <span>{classObj.name}</span>
-                <span>{`Group: ${group}`}</span>
-                <span>{classObj.day}, {classObj.start} - {classObj.end}</span>
-              </Label>
-            </div>
-          ))}
-        </div>
-      ))}
-    </RadioGroup>
-  )}
+  <RadioGroup className="grid grid-cols-2 gap-4">
+    {currentClasses.map((classObj, index) => (
+      <div key={index}>
+        {classObj.studentGroup.split(',').map((group) => (
+          <div key={`${classObj.id}-${group}`}>
+            <RadioGroupItem
+              value={`${classObj.id}-${group}`}
+              onClick={() =>{ if (classObj.sessionsLeft <= 0) {
+                setAlertText("L’étudiant a terminé toutes ses séances. En confirmant, cela sera ajouté à sa dette.");
+                setOpenAlert(true);
+                audioRefError.current?.play();
+              };
+               handleSelection(classObj, group)}}
+              id={`${classObj.id}-${group}`}
+              className="peer sr-only"
+              checked={
+                selectedClasses[classObj.id]?.id === classObj.id &&
+                selectedClasses[classObj.id]?.group === group
+              } // check if the current group is selected for this class
+            />
+            <Label
+              htmlFor={`${classObj.id}-${group}`}
+     
+              className={`flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary
+              ${classObj.sessionsLeft <= 0? 'bg-red-500 text-white' : ''}
+              ${
+                selectedClasses[classObj.id]?.id === classObj.id &&
+                selectedClasses[classObj.id]?.group === group
+                  ? 'border-primary'
+                  : ''
+              }`}
+            >
+              <span className="font-semibold">{classObj.subject}</span>
+              <span>{classObj.name}</span>
+              <span>{`Group: ${group}`}</span>
+              <span>{`Séances restantes: ${classObj.sessionsLeft}`}</span>
+              <span>{`${classObj.day}, ${classObj.start} - ${classObj.end}`}</span>
+            </Label>
+          </div>
+        ))}
+      </div>
+    ))}
+  </RadioGroup>
+)}
 </div>
 
 {Object.keys(selectedClasses).length > 0 ? (

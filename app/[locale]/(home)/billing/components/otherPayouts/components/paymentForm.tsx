@@ -191,8 +191,8 @@ export default function PaymentForm() {
         data: {
           ...prevState.data,
           [month.abbreviation]: {
-            ...prevState.data[month.abbreviation],
-            expenses:prevState.data[month.abbreviation].expenses + data.paymentAmount
+            ...prevState?.data[month?.abbreviation],
+            expenses:prevState.data[month.abbreviation]?.expenses + data.paymentAmount
           }
         },
         totalExpenses: prevState.totalExpenses +  data.paymentAmount

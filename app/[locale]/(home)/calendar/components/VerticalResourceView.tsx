@@ -132,9 +132,9 @@ const VerticalResourceView = () => {
         const classId = classItem.id; // Extract the class ID from classItem
         const color=getRandomColor()
         return groups.flatMap((group) => {
-          const { day, start, end, room, subject } = group;
+          const { day, start, end, room } = group;
   
-          if (!start || !end || !room || !subject) {
+          if (!start || !end || !room) {
             console.error('Missing required event properties:', group);
             return []; // Skip this event if any required property is missing
           }
@@ -161,7 +161,7 @@ const VerticalResourceView = () => {
           return {
             start: startDate.toISOString(),
             end: endDate.toISOString(),
-            title: subject, // Add your event title here
+            title: classItem.subject, // Add your event title here
             resource: resourceNumber, // Set your resource ID if needed
             color:color,
             recurring: {
@@ -172,7 +172,7 @@ const VerticalResourceView = () => {
             },
             extraInfo:{
               classId:classItem.id,
-              group:group.group,
+              group:classItem.group,
               subject:classItem.subject,
               year:classItem.year,
               teacher:classItem.teacherName
@@ -212,10 +212,10 @@ const VerticalResourceView = () => {
       }
   
       // Use optional chaining and default value for safety
-      const attendanceDetail = attendance.Attendance?.[`${formattedDate}-${group}`] || { attendanceList: [] };
+      const attendanceDetail = attendance.Attendance?.[`${formattedDate}`] || { attendanceList: [] };
  const {Attendance,...rest}=attendance
       // Update the selected event with details and extra info
-      setSelectedEvent({ ...args.event.extraInfo, ...attendanceDetail,...rest,attendanceId:`${formattedDate}-${group}` });
+      setSelectedEvent({ ...args.event.extraInfo, ...attendanceDetail,...rest,attendanceId:`${formattedDate}` });
   
       // Open the event card
       setOpenCard(true);

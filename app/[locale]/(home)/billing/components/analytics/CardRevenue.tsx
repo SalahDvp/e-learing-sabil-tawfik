@@ -1,5 +1,6 @@
 
 
+
 import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import {
   Card,
@@ -21,7 +22,7 @@ const getMonthAbbreviation = (fullMonth: string) => {
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
-  const monthIndex = monthNames.findIndex((month) => month.toLowerCase() === fullMonth.toLowerCase());
+  const monthIndex = monthNames.findIndex((month) => month.toLowerCase() === fullMonth?.toLowerCase());
   return monthIndex !== -1 ? monthNames[monthIndex].slice(0, 3) : '';
 };
 

@@ -535,7 +535,7 @@
   "educational-subject": "مادة تعليمية",
   "end-time": "وقت النهاية",
   "finish": "ينهي",
-  "hight-school": "مدرسة هايت",
+  "hight-school": "مدرسة ثانوية",
   "middle-school": "المدرسة المتوسطة",
   "prev": "السابق",
   "room": "غرفة",
@@ -561,12 +561,12 @@
   "select-room": "اختر الغرفة",
   "select-end-time": "حدد نهاية التعادل",
   "introducing-our-dynamic-teacher-dashboard-for-seamless-management-and-insightful-analysis": "",
-
   "Monday": "الاثنين",
   "Tuesday": "الثلاثاء",
   "Wednesday": "الأربعاء",
   "Thursday": "الخميس",
   "Friday": "الجمعة",
   "Saturday": "السبت",
-  "Sunday": "الأحد"
+  "Sunday": "الأحد",
+  "University": "جامعة"
 }
