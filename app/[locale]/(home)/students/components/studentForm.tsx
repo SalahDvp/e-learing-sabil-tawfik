@@ -155,58 +155,49 @@ export default function StudentForm() {
     
     return selectedClass ? {id:selectedClass.id,index:selectedClass.students?selectedClass.students.length+1:1,group:selectedGroup.group}: {id:"",index:0,group:""};
   };
-  const handleGroupChange = (index: number, field: 'name' | 'id' | 'subject' | 'time', value: string | number) => {
+  const handleGroupChange = (index: number, field: 'name' | 'id' | 'subject' | 'group', value: string | number, classess) => {
     const classes = [...getValues('classes')];
-    const classesUids=getValues('classesUIDs')?[...getValues('classesUIDs')]:[]
+    const classesUids = getValues('classesUIDs') ? [...getValues('classesUIDs')] : [];
   
     if (field === 'subject') {
-      const updatedClass = { id: '', name: '', subject: value, time: '', cs:classes[index].cs};
-      classes[index] = updatedClass;
-      setValue(`classes`, classes);
-      console.log(value);
+      console.log("Updating subject:", value);
+      classes[index] = { id: '', name: '', subject: value, group: '', cs: classes[index].cs };
     } else if (field === 'name') {
-      const updatedClass = { id: '', name: value, subject: classes[index].subject, time: '', cs:classes[index].cs};
-      classes[index] = updatedClass;
-      setValue(`classes`, classes);
-    } else if (field === 'time') {
-      const subject = classes[index].subject;
-      const name = classes[index].name;
-      const parsedString=JSON.parse(value)
-      const [dayPart, timePart] = parsedString.split(',');
-      const [start, end] = timePart.split('-');
+      console.log("Updating name:", value);
+      classes[index] = { id: '', name: value, subject: classes[index].subject, group: '', cs: classes[index].cs };
+    } else if (field === 'group') {
+      const selectedClassId = classess.find((cls) => cls.id === value);
+      if (!selectedClassId) {
+        console.error("Selected class not found.");
+        return;
+      }
   
-      // Assuming getClassId is a synchronous function
-      const selectedClassId = getClassId(subject, name, dayPart, start, end);
-  
+      console.log(selectedClassId);
+      
       const updatedClass = {
         ...classes[index],
         group: selectedClassId.group,
-        time: value,
-        start,
-        end,
-        day: dayPart,
+        groups: selectedClassId.groups,
         id: selectedClassId.id,
-        index: selectedClassId.index,
-        cs:classes[index].cs
-        
-      };
-      const updatedClassUIDs = {
-        ...classesUids[index],
-        id:selectedClassId.id,
-        group:selectedClassId.group
+        index: selectedClassId.students.length + 1, 
+        cs: classes[index].cs,
+        amount:selectedClassId.amount,
+        sessionsLeft:selectedClassId.numberOfSessions
       };
   
+      const updatedClassUIDs = classesUids[index] || {};
+      updatedClassUIDs.id = selectedClassId.id;
+      updatedClassUIDs.group = selectedClassId.group;
+  
       classes[index] = updatedClass;
-      classesUids[index]=updatedClassUIDs
-      setValue(`classes`, classes);
-      setValue(`classesUIDs`, classesUids);
+      classesUids[index] = updatedClassUIDs;
     } else {
-
-      const updatedClass = { id: classes[index].id, name: classes[index].name, subject: classes[index].subject, time:classes[index].time, cs:value};
-      classes[index] = updatedClass;
-      setValue(`classes`, classes);
-
+      console.log("Updating other field:", field, value);
+      classes[index] = { id: classes[index].id, name: classes[index].name, subject: classes[index].subject, group: classes[index].group, cs: value };
     }
+  
+    setValue(`classes`, classes);
+    setValue(`classesUIDs`, classesUids);
   };
   const videoRef = useRef<HTMLVideoElement>(null);
   const highlightCodeOutlineRef = useRef<HTMLDivElement>(null);
@@ -279,14 +270,7 @@ export default function StudentForm() {
             cls.year === watch('year') &&
             cls.teacherName === invoice.name
           )
-          .flatMap(cls =>
-            cls.groups
-              .filter(group =>
-                group.stream.includes(watch('field')) &&
-                JSON.stringify(`${group.day},${group.start}-${group.end}`) === invoice.time
-              )
-              .map(group => group.amount)
-          )
+          .map(cls => cls.amount) // Extract the amount from each matching class
       )
       .flat() // Flatten the array to get all amounts in a single array
       .reduce((acc, amount) => acc + amount, 0); // Sum up all amounts
@@ -556,14 +540,14 @@ export default function StudentForm() {
   <div className="w-full h-full">
      <ScrollArea className="h-[400px]">
     <Table>
-      <TableCaption>        <Button type='button' size="sm" variant="ghost" className="gap-1 w-full"  onClick={()=>appendClass({id:'',name:'',subject:'',time:'',cs:'false'})}>
+      <TableCaption>        <Button type='button' size="sm" variant="ghost" className="gap-1 w-full"  onClick={()=>appendClass({id:'',name:'',subject:'',group:'',cs:'false'})}>
                       <PlusCircle className="h-3.5 w-3.5" />
                       {t('add group')}</Button></TableCaption>
       <TableHeader>
         <TableRow>
         <TableHead>{t('Subject')}</TableHead>
           <TableHead>{t("Name")}</TableHead>
-          <TableHead>{t("Time")}</TableHead>
+          <TableHead>{t("group")}</TableHead>
           <TableHead>{t('CS')}</TableHead>
           <TableHead>{t('Amount')}</TableHead>
           <TableHead>{t('Action')}</TableHead>
@@ -594,40 +578,68 @@ export default function StudentForm() {
         <SelectValue placeholder="Select a Group" />
       </SelectTrigger>
       <SelectContent>
-      {invoice.subject? ( <SelectGroup>
-          <SelectLabel>{t('Groups')}</SelectLabel>
-          {Array.from(new Set(classes
-                        .filter(cls => cls.subject === invoice.subject && cls.year=== watch('year') &&   cls.groups.some(group => group.stream.includes(watch('field'))))
-                      )).map(cls => (
-                        <SelectItem key={cls.teacherName} value={cls.teacherName}>
-                          {cls.teacherName}
-                        </SelectItem>
-                      ))}
-        </SelectGroup>):(<p className="text-sm text-muted-foreground">Select Subject first</p>)}
-      </SelectContent>
+  {invoice.subject ? (
+    <SelectGroup>
+      <SelectLabel>{t('Groups')}</SelectLabel>
+      {Array.from(
+        new Set(
+          classes
+            .filter(
+              cls =>
+                cls.subject === invoice.subject &&
+                cls.year === watch('year') &&
+                cls.stream.some(streamm => streamm.includes(watch('field')))
+            )
+            .map(cls => cls.teacherName) // Map to teacherName to get a list of names
+        )
+      ).map(name => (
+        <SelectItem key={name} value={name}>
+          {name}
+        </SelectItem>
+      ))}
+    </SelectGroup>
+  ) : (
+    <p className="text-sm text-muted-foreground">Select Subject first</p>
+  )}
+</SelectContent>
+
     </Select></TableCell>
-            <TableCell> <Select value={invoice.time} onValueChange={(value)=>handleGroupChange(index,'time',value)}>
-      <SelectTrigger className="">
-        <SelectValue placeholder="Select a time" />
-      </SelectTrigger>
-      <SelectContent>
-      {invoice.subject && invoice.name? ( <SelectGroup>
-          <SelectLabel>{t('times')}</SelectLabel>
-          {classes.find(cls => 
-    cls.subject === invoice.subject && 
-    cls.year === watch('year') && 
-    cls.teacherName === invoice.name
-  )?.groups
-    .filter(group => group.stream.includes(watch('field'))) // Filter groups based on stream.includes
-    .map((group, index) => (
-      <SelectItem key={index} value={JSON.stringify(`${group.day},${group.start}-${group.end}`)}>
-        {t(`${group.day}`)},{group.start}-{group.end}
-      </SelectItem>
-    ))
-}
-        </SelectGroup>):(<p className="text-sm text-muted-foreground">Select Subject and name first</p>)}
-      </SelectContent>
-    </Select></TableCell>
+            <TableCell> 
+              
+            <Select 
+value={classes.find(type => type.id === watch(`classes.${index}.id`))?.id}
+  onValueChange={(value) => {handleGroupChange(index, 'group', value,classes)
+  }}
+>
+  <SelectTrigger >
+  <SelectValue placeholder="Select a group" />
+  </SelectTrigger>
+  <SelectContent>
+    {invoice.subject && invoice.name ? (
+      <SelectGroup>
+        <SelectLabel>{t('groups')}</SelectLabel>
+        {classes.filter(cls => 
+          cls.subject === invoice.subject && 
+          cls.year === watch('year') && 
+          cls.teacherName === invoice.name
+        ).map((groupp, index) => (
+          <SelectItem key={groupp.id} value={groupp.id}>
+            {groupp.group}
+          </SelectItem>
+        ))}
+      </SelectGroup>
+    ) : (
+      <p className="text-sm text-muted-foreground">Select Subject and name first</p>
+    )}
+  </SelectContent>
+</Select>
+
+    
+    
+    
+    
+    
+    </TableCell>
     <TableCell className="font-medium"> 
               <Select value={invoice.cs} onValueChange={(value)=>handleGroupChange(index,'cs',value)}>
       <SelectTrigger className="">
@@ -649,25 +661,12 @@ export default function StudentForm() {
 
     <TableCell className="font-medium">
 
-<Input
-            type="text"
-            value={classes
-              .filter(cls =>
-                cls.subject === invoice.subject &&
-                cls.year === watch('year') &&
-                cls.teacherName === invoice.name
-              )
-              .flatMap(cls =>
-                cls.groups
-                  .filter(group =>
-                    group.stream.includes(watch('field')) &&
-                    JSON.stringify(`${group.day},${group.start}-${group.end}`) === invoice.time
-                  )
-                  .map(group => group.amount + ' DA')
-              )}
-            className="col-span-3 w-24"
-            readOnly/>
-
+    <Input
+  type="text"
+ defaultValue={invoice?.amount}
+  className="col-span-3 w-24"
+  readOnly
+/>
 </TableCell>
 
     <TableCell>   
@@ -766,10 +765,6 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset, cal
       debt:0,
       monthlypayment: calculatedAmount,
       lastPaymentDate: Timestamp.fromDate(currentDate),  // Firebase Timestamp for the current date and time
-      monthlyPayments: Array.from({ length: 12 }, (_, i) => ({
-        month: new Date(new Date().setMonth(i)).toLocaleString('default', { month: 'long' }),
-        status: "notPaid"
-      })),  // All months with "notPaid" status
       nextPaymentDate: Timestamp.fromDate(new Date(new Date().setMonth(new Date().getMonth() + 1))),  // Current date + 1 month
       registrationAndInsuranceFee: 'notPaid',
       totalAmount: calculatedAmount
@@ -794,18 +789,13 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset, cal
         ...prev,
         {
           ...data,
-          studentIndex: students.length + 1,  // Basic student details
-          classes: updatedClasses,  // Updated classes with new indexes
-         
-          monthlypayment: calculatedAmount,
-lastPaymentDate: Timestamp.fromDate(currentDate),  // Firebase Timestamp for the current date and time
-monthlyPayments: Array.from({ length: 12 }, (_, i) => ({
-  month: new Date(new Date().setMonth(i)).toLocaleString('default', { month: 'long' }),
-  status: "notPaid"
-})),  // All months with "notPaid" status
-nextPaymentDate: Timestamp.fromDate(new Date(new Date().setMonth(new Date().getMonth() + 1))),  // Current date + 1 month
-registrationAndInsuranceFee: 'notPaid',
-totalAmount: calculatedAmount
+        studentIndex: students.length + 1,  // Basic student details
+        classes: updatedClasses,  // Updated classes with new indexes
+        monthlypayment: calculatedAmount,
+        lastPaymentDate: Timestamp.fromDate(currentDate),  // Firebase Timestamp for the current date and time
+        nextPaymentDate: Timestamp.fromDate(new Date(new Date().setMonth(new Date().getMonth() + 1))),  // Current date + 1 month
+        registrationAndInsuranceFee: 'notPaid',
+        totalAmount: calculatedAmount
           
         
         }
@@ -829,7 +819,8 @@ totalAmount: calculatedAmount
                 index: matchingClass.newIndex, // The new index for the student
                 year: data.year, // The year of the student
                 group: cls.group,
-                cs:matchingClass.cs// The group of the class
+                cs:matchingClass.cs,
+                seesionsLeft:matchingClass.numberOfSessions,
               },
             ],
           };
@@ -838,7 +829,6 @@ totalAmount: calculatedAmount
         return cls;
       })
     );
-  
     nextStep()
     toast({
       title: "Student Added!",
@@ -878,7 +868,7 @@ totalAmount: calculatedAmount
             <div>
               <div className="font-medium">{classItem.subject}</div>
               <div className="text-sm text-muted-foreground">
-                {classItem.name}, {classItem.time}
+                {classItem.name}, {classItem.group}
               </div>
             </div>
           </div>

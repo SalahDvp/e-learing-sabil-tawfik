@@ -135,7 +135,7 @@ interface DataTableDemoProps {
         header: () => <div>{t('field')}</div>,
         cell: ({ row }) => {
           const classes = row.original.classes || [];
-          const streams = classes.flatMap((classItem: any) => classItem.stream || []);
+          const streams = classes.flatMap((classItem: any) => classItem?.stream || []);
           const uniqueStreams = Array.from(new Set(streams)).sort();
   
           return (
@@ -166,10 +166,13 @@ interface DataTableDemoProps {
   {classes.map((classItem: any, index: number) => (
     <div key={index} style={{ maxWidth: '200px', marginBottom: '5px' }}>
       <div className="font-medium">{classItem.subject}</div>
-      <div className="text-sm text-muted-foreground">
-        <div>{t(`${classItem.day}`)}</div>
-        <div>{`${classItem.start} -> ${classItem.end}`}</div>
-      </div>
+      {classItem.groups.map((cls)=>(
+     <div className="text-sm text-muted-foreground">
+     <div>{t(`${cls.day}`)}</div>
+     <div>{`${cls.start} -> ${cls.end}`}</div>
+   </div>
+      ))}
+ 
     </div>
   ))}
 </div>

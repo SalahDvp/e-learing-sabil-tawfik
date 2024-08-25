@@ -183,7 +183,7 @@ const t=useTranslations()
                     </TabsTrigger>
                     {teacher.classes!= null &&(teacher.classes.map((group,index) => (
                     <TabsTrigger key={index} value={index} onClick={() =>    table.getColumn("group")?.setFilterValue(group.group)}>
-                     {t(`${group.day}`)},{group.start}-{group.end}
+                    {group.group}
                     </TabsTrigger>
                   )))}
                 </TabsList>

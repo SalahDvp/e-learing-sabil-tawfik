@@ -41,7 +41,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Key, PlusCircle } from 'lucide-react';
+import { ChevronDown, Key, PlusCircle, Trash2 } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -67,6 +67,7 @@ import { useData } from "@/context/admin/fetchDataContext";
 import { generateTimeOptions } from '../../settings/components/open-days-table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { parse, isBefore, isAfter, isEqual, startOfMinute } from 'date-fns';
+import { Label } from '@/components/ui/label';
 const parseTime = (timeString) => parse(timeString, 'HH:mm', new Date());
 interface FooterProps {
   formData: Teacher;
@@ -224,15 +225,43 @@ const subjects = [
   
 
 ];
-const years=[
-  "1AM",
-  "2AM",
-  "3AM",
-  "4AM",
-  "1AS",
-  "2AS",
-  "3AS"
-]
+const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+  const addSession = (groupIndex: number) => {
+    const newGroups = [...getValues('classes')]
+    newGroups[groupIndex].groups.push({
+      day: '',
+      start: '',
+      end: '',
+      room: '',
+    })
+    form.setValue(`classes`,newGroups)
+  }
+
+  const updateSessionField = (groupIndex: number, sessionIndex: number, field: keyof Session, value: any) => {
+    const newGroups = [...getValues('classes')]
+    newGroups[groupIndex].groups[sessionIndex] = {
+      ...newGroups[groupIndex].groups[sessionIndex],
+      [field]: value
+    }
+   form.setValue('classes',newGroups) }
+
+  const toggleField = (groupIndex: number,field: string,) => {
+    const newGroups = [...getValues('classes')]
+    
+    const currentFields = newGroups[groupIndex].stream
+    const updatedFields = currentFields.includes(field)
+      ? currentFields.filter(f => f !== field)
+      : [...currentFields, field]
+    newGroups[groupIndex].stream = updatedFields
+    console.log(newGroups);
+    
+   form.setValue(`classes`,newGroups)
+  }
+  const removeSession = (groupIndex: number, sessionIndex: number) => {
+    const newGroups = [...getValues('classes')]
+    newGroups[groupIndex].groups.splice(sessionIndex, 1)
+    form.setValue('classes',newGroups)
+  }
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-[1400px]">
@@ -409,82 +438,216 @@ const years=[
 
 ) : (
 
-  <div className="w-full h-full">
-      <ScrollArea className="h-[400px]">
-   <Table>
-  <TableCaption>
-  <Button type='button' size="sm" variant="ghost" className="gap-1 w-full" onClick={() =>  appendClass({ day: '', start: '', end: '', quota: 0, stream: [],paymentType:'',amount:0 })}>
-      <PlusCircle className="h-3.5 w-3.5" />
-      {t('add-group')}
-    </Button>
-  </TableCaption>
-  <TableHeader>
-    <TableRow>
-    <TableHead>{t('day')}</TableHead>
-      <TableHead>{t('start-time')}</TableHead>
-      <TableHead>{t('end-time')}</TableHead>
-      <TableHead>{t('room')}</TableHead>
-      <TableHead>{t('field')}</TableHead>
-      <TableHead>{t('year')}</TableHead>
-      <TableHead>payment Type</TableHead>
-      <TableHead>Amount</TableHead>
-      <TableHead>{t('action')}</TableHead>
-    </TableRow>
-  </TableHeader>
-  <TableBody>
-    {fields.map((group, index) => (
-      <TableRow key={group.id}>
-        <TableCell className="font-medium">
-        <FormField
-                    control={form.control}
-                    key={group.id}
-                    name={`classes.${index}.day`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger
-                              id={`end-${index}`}
-                              aria-label={`Select day`}
-                            >
-                              <SelectValue placeholder={t('select-day')} />
+<div className="w-full h-full">
+  <ScrollArea className="h-[400px] w-full pr-4">
+    {fields.map((group, groupIndex) => (
+      <div key={groupIndex} className="mb-8">
+        <div className="flex items-center gap-4 mb-4">
+          <h3 className="text-xl font-bold">{group.name}</h3>
+          <div>
+            <FormField
+              control={form.control}
+              key={groupIndex}
+              name={`classes.${groupIndex}.group`} // Use groupIndex to map fields correctly
+              render={({ field }) => (
+                <FormItem className="w-32">
+                  <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Group Code:</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </div>
+          <FormField
+    control={form.control}
+    name={`classes.${groupIndex}.numberOfSessions`}
+    render={({ field }) => (
+      <FormItem className="w-24">
+        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Number of Sessions:</FormLabel>
+        <FormControl>
+          <Input
+            {...field}
+            type="number"
+            placeholder="Sessions"
+            onChange={event => field.onChange(+event.target.value)}
+          />
+        </FormControl>
+      </FormItem>
+    )}
+  />
+                  <div>
+                  <FormField
+    control={form.control}
+    name={`classes.${groupIndex}.paymentType`}
+    render={({ field }) => (
+      <FormItem className="w-[120px]">
+        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Payment Type:</FormLabel>
+        <FormControl>
+          <Select
+   onValueChange={field.onChange}
+   defaultValue={field.value}
+          >
+            <SelectTrigger className="w-[120px]">
+              <SelectValue placeholder="Payment type" />
+            </SelectTrigger>
+            <SelectContent>
+              {['monthly','session'].map((type) => (
+                <SelectItem key={type} value={type}>{t(type)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FormControl>
+      </FormItem>
+    )}
+  />
+                  </div>
+                  <div>
+                  <FormField
+    control={form.control}
+    name={`classes.${groupIndex}.amount`}
+    render={({ field }) => (
+      <FormItem className="w-24">
+        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Amount:</FormLabel>
+        <FormControl>
+          <Input
+            {...field}
+            type="number"
+            placeholder="Amount"
+            onChange={event => field.onChange(+event.target.value)}
+          />
+        </FormControl>
+      </FormItem>
+    )}
+  />
+                  </div>
+                  <div className="flex flex-col">
+
+                  <Label htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">fields:</Label>
+                  <DropdownMenu >
+                            <DropdownMenuTrigger asChild       className="w-24">
+                            <Button variant="outline" className="w-[150px] overflow-hidden text-ellipsis whitespace-nowrap">
+  {/* {group.stream.length > 0 ? group.stream.join(', ') : 'Select Field'} */}
+  <ChevronDown className="ml-2 h-4 w-4" />
+</Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="w-56">
+                            {['متوسط','علوم تجريبية', 'تقني رياضي', 'رياضيات', 'تسيير واقتصاد ', 'لغات اجنبية ', 'اداب وفلسفة'].map((field) => (
+                                       <DropdownMenuItem
+                                       key={field}
+                                       value={field}
+                                       className={`flex items-center ${group.stream?.includes(field) ? 'selected' : ''}`}
+                                       onClick={() =>toggleField(groupIndex,field) } 
+                                       
+                                     >
+                                       <span className="mr-2"> { t(`${field}`)}</span>
+                                       {group.stream?.includes(field) && <CheckIcon className="h-4 w-4 text-green-500" />}
+                                     </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                  </div>
+                  <div>
+                  <FormField
+    control={form.control}
+    name={`classes.${groupIndex}.year`}
+    render={({ field }) => (
+      <FormItem className="w-[100px]">
+        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Year:</FormLabel>
+        <FormControl>
+          <Select
+      onValueChange={field.onChange}
+      defaultValue={field.value}
+          >
+            <SelectTrigger className="w-[100px]">
+              <SelectValue placeholder="Select year" />
+            </SelectTrigger>
+            <SelectContent>
+              {watch("year").map((yearOption) => (
+                <SelectItem key={yearOption} value={yearOption}>{yearOption}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FormControl>
+      </FormItem>
+    )}
+  />
+
+                  </div>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => removeClass(groupIndex)}
+                    className="ml-auto"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Remove Group
+                  </Button>
+        </div>
+        <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Day</TableHead>
+                      <TableHead>Start Time</TableHead>
+                      <TableHead>End Time</TableHead>
+                      <TableHead>Room</TableHead>
+             
+                      <TableHead>Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {group.groups.map((session, sessionIndex) => (
+                      <TableRow key={`${groupIndex}-${sessionIndex}`}>
+                        <TableCell>
+                          <Select
+                            value={session.day}
+                            onValueChange={(value) => updateSessionField(groupIndex, sessionIndex, 'day', value)}
+                          >
+                            <SelectTrigger className="w-[120px]">
+                              <SelectValue placeholder="Select day" />
                             </SelectTrigger>
-                          </FormControl>
+                            <SelectContent>
+                              {days.map((day) => (
+                                <SelectItem key={day} value={day}>{t(day)}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                        <Select
+                          onValueChange={(e)=>updateSessionField(groupIndex, sessionIndex, 'start', e)}
+                          value={session.start}
+                        >
+            
+                            <SelectTrigger
+                              id={`start-${index}`}
+                              aria-label={`Select start time`}
+                            >
+                              <SelectValue placeholder={t('select-end-time')} />
+                            </SelectTrigger>
 
                           <SelectContent>
-                            {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => (
-                              <SelectItem key={day} value={day}>
-                                {t(`${day}`)}
+                            {timeOptions.map((time) => (
+                              <SelectItem key={time} value={time}>
+                                {time}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
-                      </FormItem>
-                    )}
-                  />
-        </TableCell>
-        <TableCell className="font-medium">
-        <FormField
-                    control={form.control}
-                    key={group.id}
-                    name={`classes.${index}.start`}
-                    render={({ field }) => (
-                      <FormItem>
+                        </TableCell>
+                        <TableCell>
                         <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
+                          onValueChange={(e)=>updateSessionField(groupIndex, sessionIndex, 'end', e)}
+                          value={session.end}
                         >
-                          <FormControl>
+            
                             <SelectTrigger
                               id={`end-${index}`}
                               aria-label={`Select end time`}
                             >
                               <SelectValue placeholder={t('select-end-time')} />
                             </SelectTrigger>
-                          </FormControl>
 
                           <SelectContent>
                             {timeOptions.map((time) => (
@@ -494,187 +657,69 @@ const years=[
                             ))}
                           </SelectContent>
                         </Select>
-                      </FormItem>
-                    )}
-                  />
-        </TableCell>
-        <TableCell className="font-medium">
-        <FormField
-                    control={form.control}
-                    key={group.id}
-                    name={`classes.${index}.end`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger
-                              id={`end-${index}`}
-                              aria-label={`Select end time`}
-                            >
-                              <SelectValue placeholder={t('select-end-time')}/>
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={session.room}
+                            onValueChange={(value) => updateSessionField(groupIndex, sessionIndex, 'room', value)}
+                          >
+                            <SelectTrigger className="w-[120px]">
+                              <SelectValue placeholder="Select room" />
                             </SelectTrigger>
-                          </FormControl>
-
-                          <SelectContent>
-                            {timeOptions.map((time) => (
-                              <SelectItem key={time} value={time}>
-                                {time}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-        </TableCell>
-       
-        <TableCell className="font-big">
-        <FormField
-                    control={form.control}
-                    key={group.id}
-                    name={`classes.${index}.room`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        
-                        >
-                          <FormControl>
-                            <SelectTrigger
-                              id={`room-${index}`}
-                              aria-label={`Select room`}
-                            >
-                              <SelectValue placeholder={t('select-room')}/>
-                            </SelectTrigger>
-                          </FormControl>
-
-                          <SelectContent>
-                          {['room 1','room 2','room 3','room 4','room 5','room 6','room 7','room 8'].map((room) => (
-                              <SelectItem key={room} value={room}>
-                                {room}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-        </TableCell>
-        <TableCell className="font-medium">
-        <DropdownMenu>
-    <DropdownMenuTrigger asChild>
-      <Button variant="outline" className="ml-auto">
-      {t('select-field')}<ChevronDownIcon className="ml-2 h-4 w-4" />
-      </Button>
-    </DropdownMenuTrigger>
-    <DropdownMenuContent align="end">
-      {['متوسط','علوم تجريبية', 'تقني رياضي', 'رياضيات', 'تسيير واقتصاد ', 'لغات اجنبية ', 'اداب وفلسفة'].map(e => (
-        <DropdownMenuItem
-          key={e}
-          value={e}
-          className={`flex items-center ${group.stream.includes(e) ? 'selected' : ''}`}
-          onClick={() => handleGroupChange(index, 'stream', e) } 
-          
-        >
-          <span className="mr-2">{e}</span>
-          {group.stream.includes(e) && <CheckIcon className="h-4 w-4 text-green-500" />}
-        </DropdownMenuItem>
-      ))}
-    </DropdownMenuContent>
-  </DropdownMenu>
-</TableCell>
-<TableCell>
-<FormField
-                    control={form.control}
-                    key={group.id}
-                    name={`classes.${index}.year`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger
-                              id={`year-${index}`}
-                              aria-label={`Select year`}
-                            >
-                              <SelectValue placeholder={t('select-year')}  />
-                            </SelectTrigger>
-                          </FormControl>
-
-                          <SelectContent>
-                            {watch("year").map((year:string) => (
-                              <SelectItem key={year} value={year}>
-                                {year}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-                  </TableCell>
-                  <TableCell className="font-medium">
-        <FormField
-                    control={form.control}
-                    key={group.id}
-                    name={`classes.${index}.paymentType`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger
-                              id={`end-${index}`}
-                              aria-label={`Select paymentType`}
-                            >
-                              <SelectValue placeholder='paymentType' />
-                            </SelectTrigger>
-                          </FormControl>
-
-                          <SelectContent>
-                            {['monthly','session'].map((paymentType) => (
-                              <SelectItem key={paymentType} value={paymentType}>
-                              {paymentType}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-        </TableCell>
-     <TableCell className="font-medium">
-        <FormField
-                    control={form.control}
-                    key={group.id}
-                    name={`classes.${index}.amount`}
-                    render={({ field }) => (
-                      <FormItem>
-                   
-                          <FormControl>
-                          <Input {...field} onChange={event => field.onChange(+event.target.value)}/>
-                          </FormControl>
-                      </FormItem>
-                    )}
-                  />
-        </TableCell>
-        <TableCell>
-          <Button type="button" variant="destructive" onClick={() => removeClass(index)}>{t('remove')}</Button>
-        </TableCell>
-      </TableRow>
+                            <SelectContent>
+                            {['room 1','room 2','room 3','room 4','room 5','room 6','room 7','room 8'].map((room) => (
+                                <SelectItem key={room} value={room}>{room}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => removeSession(groupIndex, sessionIndex)}
+                          >
+                            Remove
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))} 
+                  </TableBody>
+                </Table>
+                 <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="mt-2 w-full"
+                  onClick={() => addSession(groupIndex)}
+                >
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Add Session
+                </Button> 
+      </div>
     ))}
-  </TableBody>
-</Table>
-</ScrollArea>
-
+    <Button
+      type="button"
+      variant="outline"
+      className="mt-4 w-full"
+      onClick={() => {
+        appendClass({
+          name: `Group ${fields.length + 1}`,
+          group: '',
+          groups:[],
+          numberOfSessions: 0,
+          amount: 0,
+          stream: [],
+          year: '',
+          paymentType: ''
+        });
+      }}
+    >
+      <PlusCircle className="h-4 w-4 mr-2" />
+      Add New Group
+    </Button>
+  </ScrollArea>
 </div>
 
 )}
@@ -712,167 +757,96 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
 
 
 
-  function compareClasses(dataClasses: Class[], teacherClasses: Class[]): UpdateResult {
-  const result: UpdateResult = {
-    added: [],
-    removed: [],
-    updated: [],
-    newAdded:[]
-  };
-
-  const dataClassMap = new Map(dataClasses.map((cls, index) => [index, { ...cls, index }]));
-  const teacherClassMap = new Map(teacherClasses.map((cls, index) => [index, { ...cls, index }]));
-
-  // Collect all existing groups to find the highest group number
-  const existingGroups = new Set<string>();
-  teacherClasses.forEach(cls => {
-
-    if (cls.group && cls.group.startsWith('G')) {
-      existingGroups.add(cls.group);
-    }
-  });
-
-  dataClasses.forEach(cls => {
-    if (cls.group && cls.group.startsWith('G')) {
-      existingGroups.add(cls.group);
-    }
-  });
-
-  // Determine the highest group number in use
-  let highestGroupNumber = 0;
-  existingGroups.forEach(group => {
-    const groupNumber = parseInt(group.slice(1), 10);
-    if (groupNumber > highestGroupNumber) {
-      highestGroupNumber = groupNumber;
-    }
-  });
-
-
-
-  // Find added and updated classes
-  for (const [key, dataClass] of dataClassMap) {
-     
-      
-    if (!('group' in dataClass)) {
-      const classId = classes.find(cls => cls.teacherName === teacher.name && cls.year === dataClass.year);
-    
-      if (classId) {
-        highestGroupNumber++;
-        console.log("the clas is ",dataClass);
-        
-        result.added.push({
-          ...dataClass,
-          classId: classId.id,
-          group: `G${highestGroupNumber}`,
-          subject: classId.subject
-        });
-        
-        // Ensure that newAdded is not updated with the same dataClass
-        const yearExistsInAdded = result.added.some(item => item.year === dataClass.year);
-        if (!yearExistsInAdded) {
-          result.newAdded.push(dataClass);
-        }
-      } else {
-        // If no classId is found, only add to newAdded
-        const yearExists = result.newAdded.some(item => item.year === dataClass.year);
-        if (!yearExists) {
-          result.newAdded.push(dataClass);
-        }
-      }
-    }
-    else  {
-      const teacherClass = teacherClasses.find(cls => cls.group === dataClass.group && cls.year === dataClass.year);
-
-      
-      if (teacherClass) {
-        const hasChanges = (
-          teacherClass.start !== dataClass.start ||
-          teacherClass.end !== dataClass.end ||
-          teacherClass.day !== dataClass.day ||
-          teacherClass.room !== dataClass.room ||
-          teacherClass.paymentType !== dataClass.paymentType ||
-          teacherClass.amount !== dataClass.amount
-        );
+  function compareClasses(oldClasses,newClasses): UpdateResult {
+    const updated=[]
+    const oldClassIds = oldClasses.map(cls => cls.id);
+    const newClassIds = newClasses.map(cls => cls.id);
   
-        if (hasChanges) {
-          // Update the database with the new values
-          result.updated.push({
-            ...dataClass,
-            start: dataClass.start,
-            end: dataClass.end,
-            day: dataClass.day,
-            room: dataClass.room,
-            paymentType:dataClass.paymentType,
-            amount:dataClass.amount,
-          });
-          
-        }
+    // Find added classes
+    const addedClasses = newClasses.filter(cls => !oldClassIds.includes(cls.id));
+  
+    // Find removed classes
+    const removedClasses = oldClasses.filter(cls => !newClassIds.includes(cls.id));
+    
+    newClasses.forEach(newCls => {
+      if (oldClassIds.includes(newCls.id)) {
+        updated.push(newCls);
       }
-    }
-  }
+    });
+  
+    return { addedClasses, removedClasses, updatedClasses: updated };
 
-
-  teacherClasses.forEach(teacherClass => {
-    const exists = dataClasses.some(dataClass => dataClass.classId ===teacherClass.classId && dataClass.group === teacherClass.group);
-    if (!exists) {
-      result.removed.push(teacherClass);
-    }
-  });
-  return result;
 }
 
-  async function processStudentChanges(result,data) {
-    const { added, removed, updated,newAdded } = result;
+  async function processStudentChanges(result) {
+    const { addedClasses, removedClasses, updatedClasses } = result;
   
     // Add students to classes
-    if (added && Array.isArray(added)) {
-      await addGroup(added)
-      for (const clss of added) {
-        
-
-        setClasses(prevClasses => 
-          prevClasses.map(cls =>
-            cls.id === clss.classId ? {
-              ...cls,
-              groups: [...cls.groups, clss] // Create a new array with the existing items plus the new one
-            } : cls
+    if (addedClasses && Array.isArray(addedClasses)) {
+      for (const clss of addedClasses) {
+        console.log(clss);
+    
+        const clssId = await addGroup({
+          ...clss,
+          year: clss.year,
+          students: [],
+          reimbursements: [],
+          teacherUID: formData.id,
+          teacherName: formData.name,
+          subject: formData["educational-subject"],
+        }, formData.id);
+    
+        setClasses(prevClasses => [
+          ...prevClasses,
+          {
+            ...clss,
+            id: clssId,
+            Attendance: {},
+            students: [],
+            reimbursements: [],
+            subject: formData['educational-subject'],
+            teacherName: formData.name,
+            teacherUID: formData.id
+          }
+        ]);
+    
+        setTeachers(prevTeachers =>
+          prevTeachers.map(tchr =>
+            tchr.id === formData.id
+              ? {
+                  ...tchr,
+                  classes: [
+                    ...tchr.classes,
+                    {
+                      ...clss,
+                      id: clssId,
+                      Attendance: {},
+                      students: [],
+                      reimbursements: [],
+                      subject: formData['educational-subject'],
+                      teacherName: formData.name,
+                      teacherUID: formData.id
+                    }
+                  ],
+                  groupUIDs: [...tchr.groupUIDs, clssId]  // Correctly add the new group UID
+                }
+              : tchr
           )
         );
-  
-  setTeachers(prevTeachers => 
-    prevTeachers.map(tchr =>
-  tchr.id === teacher.id ? {
-  ...tchr,
-  classes: [...tchr.classes, {...clss}]
-  } : tchr
-  )
-  );
       }
     }
   
   //   // Remove students from classes
-    if (removed && Array.isArray(removed)) {
-      for (const clss of removed) {
-        const studentsToRemove = classes
-        .find(cls => cls.id === clss.classId)
-        ?.students
-        .filter(std => std.group === clss.group) || [];
-        await removeGroupFromDoc(clss,studentsToRemove)
+    if (removedClasses && Array.isArray(removedClasses)) {
+      for (const clss of removedClasses) {
+        await removeGroupFromDoc(clss,clss.students)
           
-       setClasses(prevClasses => 
-          prevClasses.map(cls =>
-      cls.id === clss.id ? {
-        ...cls,
-        students: cls.students.filter(std => std.group !== clss.group),
-        groups:cls.groups.filter(grp=>grp.group===clss.group)
-      } : cls
-    )
-  );
-  setTeachers(prevTeachers =>
+       setClasses(prevClasses => prevClasses.filter(cls => cls.id === clss.id));
+       setTeachers(prevTeachers =>
     prevTeachers.map(tchr =>
       tchr.id === teacher.id
         ? {
-           ...formData
+           ...formData,classes:tchr.classes.filter((cls)=>cls.id!=clss.id),groupUIDs:tchr.groupUIDs.filter((grp)=>grp!=clss.id)
           }
         : tchr
     )
@@ -881,11 +855,12 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
 
   setStudents(prevStudents =>
     prevStudents.map(std => {
-      if (studentsToRemove.some(st => st.id === std.id)) {
+      if (clss.students.some(st => st.id === std.id)) {
         // If the student is in studentsToRemove, update their classes
         return {
           ...std,
-          classes: std.classes.filter(cls => cls.day !== clss.day &&  cls.start !== clss.start  && cls.end !== clss.end)
+          classes: std.classes.filter(cls => cls.id !=clss.id),
+          classesUIDs:std.classesUIDs.filter(cls => cls.id !=clss.id),
         };
       }
       return std; // Return the student as is if not in studentsToRemove
@@ -896,20 +871,15 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
         }
       }
   
-      if (updated && Array.isArray(updated)) {
-        for (const classupdate of updated) {        
+      if (updatedClasses && Array.isArray(updatedClasses)) {
+        for (const classupdate of updatedClasses) {        
 
-            await updateClassGroup(classupdate.classId,classupdate.group,classupdate);
+            await updateClassGroup(classupdate.id,classupdate);
           
             setClasses(prevClasses =>
               prevClasses.map(cls => {
                 if (cls.id === classupdate.classId) {
-                  return {
-                    ...cls,
-                    groups: cls.groups.map(group =>
-                      group.group === classupdate.group ? {...classupdate } : group
-                    )
-                  };
+                  return {...classupdate};
                 }
                 return cls;
               })
@@ -920,25 +890,21 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
                   return {
                     ...cls,
                     classes: cls.classes.map(cls =>
-                      cls.classId === classupdate.classId && cls.group === classupdate.group ? {...classupdate } : cls
+                      cls.classId === classupdate.classId ? {...classupdate } : cls
                     )
                   };
                 }
                 return cls;
               })
             );
-            const studentsToRemove = classes
-            .find(cls => cls.id === classupdate.classId)
-            ?.students
-            .filter(std => std.group === classupdate.group) || [];
             setStudents(prevStudents =>
               prevStudents.map(std => {
-                if (studentsToRemove.some(st => st.id === std.id)) {
+                if (classupdate.students.some(st => st.id === std.id)) {
                   // If the student is in studentsToRemove, update their classes
                   return {
                     ...std,
                     classes: std.classes.map(cls =>
-                      cls.id === classupdate.classId && cls.group === classupdate.group ? {...classupdate } : cls
+                      cls.id === classupdate.classId? {...classupdate } : cls
                     )
                   };
                 }
@@ -947,63 +913,14 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
             );
         }
     }
-    if (newAdded && Array.isArray(newAdded)) {
-      const finalResult=[]
-      const groupedClasses = newAdded.reduce((acc, current) => {
-        if (!acc[current.year]) {
-          acc[current.year] = [];
-        }
-        // Add the `group` field with the value 'G' followed by the index + 1
-        const index = acc[current.year].length;
-        acc[current.year].push({
-          ...current,
-          group: `G${index + 1}`,
-          quota:0,
-          subject:formData['educational-subject']
-        });
-        return acc;
-      }, {});
-      for (const [year, classesArray] of Object.entries(groupedClasses)) {
-        try {
-//addtodatabase
- const classesReturned=await addNewClasses({groups:classesArray,students:[],reimbursements:[],subject:formData['educational-subject'],teacherName:formData.name,teacherUID:teacher.id,year:year},teacher.id)
-
- setClasses((prevClasses:any[])=>[...prevClasses,classesReturned])
- setTeachers(prevTeachers =>
-  prevTeachers.map(tchr =>
-    tchr.id === teacher.id
-      ? {
-          ...tchr,
-          classes: [
-            ...tchr.classes,
-            ...classesReturned.groups.map((item, index) => ({
-              ...item,
-              classId: classesReturned.classId  // Add classId to each item
-            }))
-          ],
-          groupUIDs: [
-            ...tchr.groupUIDs,
-            ...classesReturned.classId  // Append ids to groupUIDs
-          ]
-        }
-      : tchr
-  )
-);
-
-        } catch (error) {
-          console.error(`Error writing document for year ${year}:`, error);
-        }
-      }
-     
-    }
   }
   const {toast}=useToast()
   const onSubmit = async(data:Teacher) => {
-  const result=compareClasses(data.classes,teacher.classes)
+  const result=compareClasses(teacher.classes,data.classes)
  
   
-  await processStudentChanges(result,data)
-  const { classes, ...teacherData } = data;
+  await processStudentChanges(result)
+    const { classes, ...teacherData } = data;
 
   // Ensure only name, year, birthdate, and phone number are updated
   const teacherInfoToUpdate = {

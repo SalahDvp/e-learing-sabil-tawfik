@@ -116,71 +116,46 @@ export const deleteTeacher = async(teacherId:string,classes:any)=>{
       throw error; // Optionally re-throw the error to propagate it further if needed
   }
 }
-export const addGroup=async(added:any)=>{
-        const batch = writeBatch(db); // Initialize the batch
-    
-        // Update Firestore documents in batch
-        for (const clss of added) {
-          const classDocRef = doc(db, 'Groups', clss.classId);
-          const { classId, year,index, ...rest } = clss;
-    
-          batch.update(classDocRef, {
-            groups: arrayUnion(rest)
-          })   
-        }
-    
-        // Commit the batch
-        await batch.commit();    
+export const addGroup=async(added:any,teacherId)=>{
+const classDocRef = collection(db, 'Groups');
+ const id=await addDoc(classDocRef,added)  
+ await updateDoc(doc(db,'Teachers',teacherId),{
+    groupUIDs:arrayUnion(id.id)
+ })
+return  id.id
+
 }
 export const removeGroupFromDoc = async (clss,studentArray) => {
     try {
         // Reference to the specific document in the Groups collection
-        const docRef = doc(db, 'Groups', clss.classId);
+        const docRef = doc(db, 'Groups', clss.id);
         
-        // Update the document to remove the specified group from the groups array
-        await updateDoc(docRef, {
-            groups: arrayRemove({day:clss.day,end:clss.end,group:clss.group,quota:clss.quota,room:clss.room,start:clss.start,stream:clss.stream,subject:clss.subject,paymentType:clss.paymentType,amount:clss.amount})
-        });
         studentArray.map(async(std)=>{
             await updateDoc(doc(db,'Students',std.id),{
-                classesUIDs:arrayRemove({id:clss.classId,group:std.group})
+                classesUIDs:arrayRemove({id:clss.id,group:clss.group})
             })
         })
-        console.log(`Group removed successfully from document ID: ${docId}`);
+        await updateDoc(doc(db,'Teachers',clss.teacherUID),{
+            groupUIDs:arrayRemove(clss.id)
+        })
+        await deleteDoc(docRef);
+
     } catch (error) {
     }}
-    export async function updateClassGroup(groupId,group, updatedGroupDetails) {
-        console.log("updated",updatedGroupDetails);
-        
-        // Reference to the document
+    export async function updateClassGroup(groupId,updatedGroupDetails) {
+
         const userRef = doc(db, 'Groups',groupId);
       
         // Fetch the document
         const userDoc = await getDoc(userRef);
         
         if (userDoc.exists()) {
-          // Get the existing array
-          const userData = userDoc.data();
-          let tasks = userData.groups || [];
       
-          // Find the index of the task you want to update
-          const taskIndex = tasks.findIndex(task => task.group === group);
-      
-          if (taskIndex !== -1) {
-            const { classId, year, ...filteredDetails } = updatedGroupDetails;
-      
-            // Update the specific task
-            tasks[taskIndex] = {...filteredDetails};
-      
-            // Write back the updated array to Firestore
-            await updateDoc(userRef, { groups: tasks });
+            await updateDoc(userRef, {...updatedGroupDetails});
             console.log('Task updated successfully!');
           } else {
             console.log('Task not found.');
           }
-        } else {
-          console.log('User not found.');
-        }
       }
       export const addNewClasses = async (clss:any,teacherId:string) => {
         try {
