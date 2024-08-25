@@ -137,53 +137,49 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
     
     return selectedClass ? {id:selectedClass.id,index:selectedClass.students?selectedClass.students.length+1:1,group:selectedGroup.group}: {id:"",index:0,group:""};
   };
-  const handleGroupChange = (index: number, field: 'name' | 'id' | 'subject' | 'time', value: string | number) => {
+  const handleGroupChange = (index: number, field: 'name' | 'id' | 'subject' | 'group', value: string | number, classess) => {
     const classes = [...getValues('classes')];
-    const classesUids=getValues('classesUIDs')?[...getValues('classesUIDs')]:[]
+    const classesUids = getValues('classesUIDs') ? [...getValues('classesUIDs')] : [];
   
     if (field === 'subject') {
-      const updatedClass = { id: '', name: '', subject: value, time: '' };
-      classes[index] = updatedClass;
-      setValue(`classes`, classes);
-      console.log(value);
+      console.log("Updating subject:", value);
+      classes[index] = { id: '', name: '', subject: value, group: '', cs: classes[index].cs };
     } else if (field === 'name') {
-      const updatedClass = { id: '', name: value, subject: classes[index].subject, time: '' };
-      classes[index] = updatedClass;
-      setValue(`classes`, classes);
-    } else if (field === 'time') {
-      const subject = classes[index].subject;
-      const name = classes[index].name;
-      const parsedString=JSON.parse(value)
-      const [dayPart, timePart] = parsedString.split(',');
-      const [start, end] = timePart.split('-');
+      console.log("Updating name:", value);
+      classes[index] = { id: '', name: value, subject: classes[index].subject, group: '', cs: classes[index].cs };
+    } else if (field === 'group') {
+      const selectedClassId = classess.find((cls) => cls.id === value);
+      if (!selectedClassId) {
+        console.error("Selected class not found.");
+        return;
+      }
   
-      // Assuming getClassId is a synchronous function
-      const selectedClassId = getClassId(subject, name, dayPart, start, end);
-  
+      console.log(selectedClassId);
+      
       const updatedClass = {
         ...classes[index],
         group: selectedClassId.group,
-        time: value,
-        start,
-        end,
-        day: dayPart,
+        groups: selectedClassId.groups,
         id: selectedClassId.id,
-        index: selectedClassId.index,
-      };
-      const updatedClassUIDs = {
-        ...classesUids[index],
-        id:selectedClassId.id,
-        group:selectedClassId.group
+        index: selectedClassId.students.length + 1, 
+        cs: classes[index].cs,
+        amount:selectedClassId.amount,
+        sessionsLeft:selectedClassId.numberOfSessions
       };
   
+      const updatedClassUIDs = classesUids[index] || {};
+      updatedClassUIDs.id = selectedClassId.id;
+      updatedClassUIDs.group = selectedClassId.group;
+  
       classes[index] = updatedClass;
-      classesUids[index]=updatedClassUIDs
-      setValue(`classes`, classes);
-      setValue(`classesUIDs`, classesUids);
+      classesUids[index] = updatedClassUIDs;
     } else {
-      classes[index][field] = value;
-      setValue(`classes.${index}`, classes[index]);
+      console.log("Updating other field:", field, value);
+      classes[index] = {...classes[index], cs: value };
     }
+  
+    setValue(`classes`, classes);
+    setValue(`classesUIDs`, classesUids);
   };
 
 
@@ -196,14 +192,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
             cls.year === watch('year') &&
             cls.teacherName === invoice.name
           )
-          .flatMap(cls =>
-            cls.groups
-              .filter(group =>
-                group.stream.includes(watch('field')) &&
-                JSON.stringify(`${group.day},${group.start}-${group.end}`) === invoice.time
-              )
-              .map(group => group.amount)
-          )
+          .map(cls => cls.amount) // Extract the amount from each matching class
       )
       .flat() // Flatten the array to get all amounts in a single array
       .reduce((acc, amount) => acc + amount, 0); // Sum up all amounts
@@ -422,26 +411,26 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
 </div>
 ) : (
   <div className="w-full h-full">
-       <ScrollArea className="h-[400px]">
+     <ScrollArea className="h-[400px]">
     <Table>
-      <TableCaption>        <Button type='button' size="sm" variant="ghost" className="gap-1 w-full"  onClick={()=>appendClass({id:'',name:'',subject:'',time:''})}>
+      <TableCaption>        <Button type='button' size="sm" variant="ghost" className="gap-1 w-full"  onClick={()=>appendClass({id:'',name:'',subject:'',group:'',cs:'false'})}>
                       <PlusCircle className="h-3.5 w-3.5" />
                       {t('add group')}</Button></TableCaption>
       <TableHeader>
         <TableRow>
         <TableHead>{t('Subject')}</TableHead>
-          <TableHead >{t('Name')}</TableHead>
-          <TableHead>{t('Time')}</TableHead>
+          <TableHead>{t("Name")}</TableHead>
+          <TableHead>{t("group")}</TableHead>
           <TableHead>{t('CS')}</TableHead>
           <TableHead>{t('Amount')}</TableHead>
           <TableHead>{t('Action')}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {fields.map((invoice: { id: React.Key | null | undefined; subject: any; name: any; time: any; cs: any; amount:any },index: number) => (
+        {fields.map((invoice,index) => (
           <TableRow key={invoice.id}>
                         <TableCell className="font-medium"> 
-              <Select  value={invoice.subject} onValueChange={(value: string | number)=>handleGroupChange(index,'subject',value)}>
+              <Select  value={invoice.subject} onValueChange={(value)=>handleGroupChange(index,'subject',value)}>
       <SelectTrigger className="">
         <SelectValue placeholder="Select a Subject" />
       </SelectTrigger>
@@ -457,47 +446,75 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
       </SelectContent>
     </Select></TableCell>
             <TableCell className="font-medium"> 
-              <Select  value={invoice.name} onValueChange={(value: string | number)=>handleGroupChange(index,'name',value)}>
+              <Select  value={invoice.name} onValueChange={(value)=>handleGroupChange(index,'name',value)}>
       <SelectTrigger className="">
         <SelectValue placeholder="Select a Group" />
       </SelectTrigger>
       <SelectContent>
-      {invoice.subject? ( <SelectGroup>
-          <SelectLabel>{t('Groups')}</SelectLabel>
-          {Array.from(new Set(classes
-                        .filter((cls: { subject: any; year: any; groups: any[]; }) => cls.subject === invoice.subject && cls.year=== watch('year') &&   cls.groups.some((group: { stream: string | any[]; }) => group.stream.includes(watch('field'))))
-                      )).map(cls => (
-                        <SelectItem key={cls.teacherName} value={cls.teacherName}>
-                          {cls.teacherName}
-                        </SelectItem>
-                      ))}
-        </SelectGroup>):(<p className="text-sm text-muted-foreground">Select Subject first</p>)}
-      </SelectContent>
+  {invoice.subject ? (
+    <SelectGroup>
+      <SelectLabel>{t('Groups')}</SelectLabel>
+      {Array.from(
+        new Set(
+          classes
+            .filter(
+              cls =>
+                cls.subject === invoice.subject &&
+                cls.year === watch('year') &&
+                cls.stream.some(streamm => streamm.includes(watch('field')))
+            )
+            .map(cls => cls.teacherName) // Map to teacherName to get a list of names
+        )
+      ).map(name => (
+        <SelectItem key={name} value={name}>
+          {name}
+        </SelectItem>
+      ))}
+    </SelectGroup>
+  ) : (
+    <p className="text-sm text-muted-foreground">Select Subject first</p>
+  )}
+</SelectContent>
+
     </Select></TableCell>
-            <TableCell> <Select value={invoice.time} onValueChange={(value: string | number)=>handleGroupChange(index,'time',value)}>
-      <SelectTrigger className="">
-        <SelectValue placeholder="Select a time" />
-      </SelectTrigger>
-      <SelectContent>
-      {invoice.subject && invoice.name? ( <SelectGroup>
-          <SelectLabel>{t('times')}</SelectLabel>
-          {classes.find((cls: { subject: any; year: any; teacherName: any; }) => 
-    cls.subject === invoice.subject && 
-    cls.year === watch('year') && 
-    cls.teacherName === invoice.name
-  )?.groups
-    .filter((group: { stream: string | any[]; }) => group.stream.includes(watch('field'))) // Filter groups based on stream.includes
-    .map((group: { day: any; start: any; end: any; }, index: React.Key | null | undefined) => (
-      <SelectItem key={index} value={JSON.stringify(`${group.day},${group.start}-${group.end}`)}>
-        {t(`${group.day}`)},{group.start}-{group.end}
-      </SelectItem>
-    ))
-}
-        </SelectGroup>):(<p className="text-sm text-muted-foreground">{t('Select Subject and name first')}</p>)}
-      </SelectContent>
-    </Select></TableCell>
+            <TableCell> 
+              
+            <Select 
+value={classes.find(type => type.id === watch(`classes.${index}.id`))?.id}
+  onValueChange={(value) => {handleGroupChange(index, 'group', value,classes)
+  }}
+>
+  <SelectTrigger >
+  <SelectValue placeholder="Select a group" />
+  </SelectTrigger>
+  <SelectContent>
+    {invoice.subject && invoice.name ? (
+      <SelectGroup>
+        <SelectLabel>{t('groups')}</SelectLabel>
+        {classes.filter(cls => 
+          cls.subject === invoice.subject && 
+          cls.year === watch('year') && 
+          cls.teacherName === invoice.name
+        ).map((groupp, index) => (
+          <SelectItem key={groupp.id} value={groupp.id}>
+            {groupp.group}
+          </SelectItem>
+        ))}
+      </SelectGroup>
+    ) : (
+      <p className="text-sm text-muted-foreground">Select Subject and name first</p>
+    )}
+  </SelectContent>
+</Select>
+
+    
+    
+    
+    
+    
+    </TableCell>
     <TableCell className="font-medium"> 
-              <Select value={invoice.cs} onValueChange={(value: string | number)=>handleGroupChange(index,'cs',value)}>
+              <Select value={invoice.cs} onValueChange={(value)=>handleGroupChange(index,'cs',value)}>
       <SelectTrigger className="">
         <SelectValue placeholder="Select a cs" />
       </SelectTrigger>
@@ -513,31 +530,17 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
         </SelectGroup>
       </SelectContent>
     </Select></TableCell>
-  
+
+
     <TableCell className="font-medium">
 
     <Input
-            type="text"
-            value={classes
-              .filter(cls =>
-                cls.subject === invoice.subject &&
-                cls.year === watch('year') &&
-                cls.teacherName === invoice.name
-              )
-              .flatMap(cls =>
-                cls.groups
-                  .filter(group =>
-                    group.stream.includes(watch('field')) &&
-                    JSON.stringify(`${group.day},${group.start}-${group.end}`) === invoice.time
-                  )
-                  .map(group => group.amount + ' DA')
-              )}
-            className="col-span-3 w-24"
-            readOnly/>
-
- 
+  type="text"
+ defaultValue={invoice?.amount}
+  className="col-span-3 w-24"
+  readOnly
+/>
 </TableCell>
-
 
     <TableCell>   
        <Button  type="button" variant="destructive" onClick={()=>removeClass(index)}>{t('remove')}</Button></TableCell>
@@ -642,26 +645,28 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,stud
       updated: []
     };
   
-    const dataClassMap = new Map(dataClasses.map(cls => [cls.id, cls]));
-    const studentClassMap = new Map(studentClasses.map(cls => [cls.id, cls]));
+    // Create maps for quick lookup by class ID
+    const dataClassMap = new Map<string, Class>(dataClasses.map(cls => [cls.id, cls]));
+    const studentClassMap = new Map<string, Class>(studentClasses.map(cls => [cls.id, cls]));
   
     // Find added and updated classes
-    for (const [id, dataClass] of dataClassMap) {
-      const studentClass = studentClassMap.get(id);
-      if (!studentClass) {
-        // Class is in dataClasses but not in studentClasses (added)
-        result.added.push(dataClass);
-      } else if (dataClass.group !== studentClass.group) {
-        // Class is in both but with different sections (updated)
-        result.updated.push(dataClass);
+    for (const newClass of dataClasses) {
+      const existingClass = studentClassMap.get(newClass.id);
+  
+      if (!existingClass) {
+        // Class is in new data but not in student's current classes, so it's added
+        result.added.push(newClass);
+      } else if (existingClass.cs !== newClass.cs) {
+        // Class exists in both, but the `cs` value has changed
+        result.updated.push(newClass);
       }
     }
   
     // Find removed classes
-    for (const [id, studentClass] of studentClassMap) {
-      if (!dataClassMap.has(id)) {
-        // Class is in studentClasses but not in dataClasses (removed)
-        result.removed.push(studentClass);
+    for (const oldClass of studentClasses) {
+      if (!dataClassMap.has(oldClass.id)) {
+        // Class is in student's current classes but not in new data, so it's removed
+        result.removed.push(oldClass);
       }
     }
   
@@ -681,7 +686,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,stud
           prevClasses.map((cls: { id: any; students: any; }) =>
       cls.id === id ? {
         ...cls,
-        students: [...cls.students, { group, id,cs, index:index, name, year:student.year }]
+        students: [...cls.students, { group, id,cs, index:index, name, year:student.year,sessionsLeft:cls.sessionsLeft }]
       } : cls
     )
   );
@@ -733,16 +738,14 @@ std.id === student.id ? {
 
          // Change groups for specific students
     if (updated && Array.isArray(updated)) {
-      for (const { id,group } of updated) {
+      for (const { id,group,cs } of updated) {
  
    const classToUpdate = classes.find((cls: { id: any; }) => cls.id === id);
-   if(student.photo != formData.photo){
-    await updateStudentPicture(student.id,formData.photo)
-  }
-  student.id
+
+
    const updatedStudents = classToUpdate.students.map((std: { id: any; }) =>
     std.id === student.id
-      ? { ...std, group: group }  // Update the student with the new group
+      ? { ...std, cs:cs }  // Update the student with the new group
       : std
   );
   await changeStudentGroup(id,student.id,updatedStudents,data.classesUIDs)
@@ -751,7 +754,7 @@ std.id === student.id ? {
             cls.id === id? {
               ...cls,
               students: cls.students.map((std: { id: any; }) =>
-                std.id === student.id? { ...std, group: group } : student
+                std.id === student.id? { ...std, cs:cs} : student
               )
             } : cls
           )
@@ -771,6 +774,7 @@ std.id === student.id ? {
     const t=useTranslations()
   const onSubmit = async (data: Student) => {
  const result=compareClasses(data.classes,student.classes)
+
  
     
 await  processStudentChanges(result,data)
@@ -785,7 +789,9 @@ const StudentInfoToUpdate = {
   school:data.school
 };
 
-
+if(student.photo != formData.photo){
+  await updateStudentPicture(student.id,formData.photo)
+}
 // Update the teacher in Firestore
 await updateStudent(StudentInfoToUpdate,student.id);
 setStudents((prev: Student[]) => 
