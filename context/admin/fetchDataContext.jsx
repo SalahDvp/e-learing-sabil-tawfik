@@ -176,7 +176,10 @@ export const  FetchDataProvider = ({ children }) => {
           }
           const result = teacher.groupUIDs.flatMap(cls => {
             const classDetail = classesData.find(clss => clss.id === cls);
-            return classDetail});
+
+              const { Attendance, ...rest } = classDetail;
+              return rest;
+                    });
           return {
             ...teacher,
             classes: result
@@ -214,6 +217,8 @@ export const  FetchDataProvider = ({ children }) => {
                 index: studentDetail.index,
                 name: classDetail.teacherName,
                 subject: classDetail.subject,
+                sessionsLeft:studentDetail.sessionsLeft,
+                amount:classDetail.amount
               };
             });
   

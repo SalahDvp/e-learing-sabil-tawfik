@@ -208,7 +208,7 @@ export const formatDateToYYYYMMDD = (date: Date): string => {
   
     const classDocRef = doc(db, 'Groups', classId);
     await updateDoc(classDocRef, {
-      students: arrayUnion({ group, id:studentID, index, name:studentName, year,cs })
+      students: arrayUnion({ group, id:studentID, index, name:studentName, year,cs,sessionsLeft:student.sessionsLeft})
     });
   
     const studentDocRef = doc(db, 'Students', studentId);
@@ -221,7 +221,7 @@ export const formatDateToYYYYMMDD = (date: Date): string => {
     const { id, group,index,name,year,cs } = student;
   
     const studentDocRef = doc(db, 'Students', studentId);  
-  console.log("dqwdqdwqwdqwd", group, studentId, index, name, year,cs );
+
   
       await updateDoc(studentDocRef, {
         classesUIDs: arrayRemove({ id, group })
@@ -229,7 +229,7 @@ export const formatDateToYYYYMMDD = (date: Date): string => {
   
       const classDocRef = doc(db, 'Groups', id);
       await updateDoc(classDocRef, {
-        students: arrayRemove({ group:student.group, id:studentId, index:student.index, name:studentName, year:student.year,cs:student.cs })
+        students: arrayRemove({ group:student.group, id:studentId, index:student.index, name:studentName, year:student.year,cs:student.cs,sessionsLeft:student.sessionsLeft })
       });
      }
     

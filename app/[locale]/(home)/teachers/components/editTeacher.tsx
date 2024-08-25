@@ -918,6 +918,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
   const onSubmit = async(data:Teacher) => {
   const result=compareClasses(teacher.classes,data.classes)
  
+  console.log(result);
   
   await processStudentChanges(result)
     const { classes, ...teacherData } = data;

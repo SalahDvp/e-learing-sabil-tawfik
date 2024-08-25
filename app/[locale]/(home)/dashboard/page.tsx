@@ -167,6 +167,8 @@ export default function Home() {
 
     
       setCurrentClasses(classInfo)
+      console.log(classInfo);
+      
       
     } else {
       setAlertText("No current class found for this student to attend.");
@@ -243,7 +245,7 @@ export default function Home() {
         const year = currentDate.getFullYear();
         const month = String(currentDate.getMonth() + 1).padStart(2, '0');
         const day = String(currentDate.getDate()).padStart(2, '0');
-        const dateTimeUID = `${year}-${month}-${day}-${selectedClass.group}`; // Use the selected class group
+        const dateTimeUID = `${year}-${month}-${day}`; // Use the selected class group
   
         // Get the current attendance list for the given class
         const currentAttendanceList = updatedClasses[classIndex]?.Attendance?.[dateTimeUID] || {
@@ -329,6 +331,7 @@ export default function Home() {
       setCurrentClass(undefined);
       setCurrentClasses(undefined);
       setStudentData(null);
+      setSelectedClasses({})
     } catch (error) {
       console.error('Error updating attendance:', error);
       alert('An error occurred while updating attendance. Please try again.');
@@ -358,10 +361,20 @@ export default function Home() {
   const [selectedClasses, setSelectedClasses] = useState({});
 
   const handleSelection = (classObj, group) => {
-    setSelectedClasses((prev) => ({
-      ...prev,
-      [classObj.subject]: { ...classObj, group }, // store the selected class and group by subject
-    }));
+    setSelectedClasses((prev) => {
+      // Check if the classObj already exists in the current state
+      if (prev[classObj.id]) {
+        // If it exists, remove it from the selected classes
+        const { [classObj.id]: _, ...rest } = prev;
+        return rest;
+      } else {
+        // If it doesn't exist, add it to the selected classes
+        return {
+          ...prev,
+          [classObj.id]: { ...classObj, group }, // store the selected class and group by ID
+        };
+      }
+    });
   };
   console.log('currentClasses ',currentClasses);
   console.log('selectedClasses ',selectedClasses);
@@ -476,7 +489,7 @@ export default function Home() {
     <RadioGroup className="grid grid-cols-3 gap-4">
       {currentClasses.map((classObj, index) => (
         <div key={index}>
-          {classObj.group.split(',').map((group) => (
+          {classObj.studentGroup.split(',').map((group) => (
             <div key={`${classObj.id}-${group}`}>
               <RadioGroupItem
                 value={`${classObj.id}-${group}`}
@@ -484,16 +497,16 @@ export default function Home() {
                 id={`${classObj.id}-${group}`}
                 className="peer sr-only"
                 checked={
-                  selectedClasses[classObj.subject]?.id === classObj.id &&
-                  selectedClasses[classObj.subject]?.group === group
+                  selectedClasses[classObj.id]?.id === classObj.id &&
+                  selectedClasses[classObj.id]?.group === group
                 } // check if the current group is selected for this class
               />
               <Label
                 htmlFor={`${classObj.id}-${group}`}
                 className={`flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary 
                 ${
-                  selectedClasses[classObj.subject]?.id === classObj.id &&
-                  selectedClasses[classObj.subject]?.group === group
+                  selectedClasses[classObj.id]?.id === classObj.id &&
+                  selectedClasses[classObj.id]?.group === group
                     ? 'border-primary'
                     : ''
                 }`}
@@ -514,7 +527,7 @@ export default function Home() {
 {Object.keys(selectedClasses).length > 0 ? (
   <div className="mt-4 flex justify-end">
     <Button
-      onClick={() => { setStudentData(null); setCurrentClass(undefined); setCurrentClasses(undefined); }}
+      onClick={() => { setStudentData(null); setCurrentClass(undefined); setCurrentClasses(undefined); setSelectedClasses({})}}
       variant='outline'
     >
       {t('reset')}
@@ -529,7 +542,7 @@ export default function Home() {
 ) : (
   <div className="mt-4 flex justify-end">
     <Button
-      onClick={() => { setStudentData(null); setCurrentClass(undefined); setCurrentClasses(undefined); }}
+      onClick={() => { setStudentData(null); setCurrentClass(undefined); setCurrentClasses(undefined);setSelectedClasses({}) }}
       variant='outline'
     >
       {t('reset')}
