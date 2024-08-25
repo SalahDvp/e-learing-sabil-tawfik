@@ -49,7 +49,7 @@ export async function uploadAndLinkToCollection(
       }
   
       // Gather all necessary data before starting the transaction
-      const classUpdates: { classID: string, newIndex: number, group: string,cs:string }[] = [];
+      const classUpdates: { classID: string, newIndex: number, group: string,cs:string,sessionsLeft:number }[] = [];
       
       for (const cls of student.classes) {
         const classRef = doc(db, 'Groups', cls.id);
@@ -62,14 +62,12 @@ export async function uploadAndLinkToCollection(
           const newIndex = highestIndex + 1;
   
           // Collect data for use in the transaction
-          classUpdates.push({ classID: cls.id, newIndex, group: cls.group ,cs:cls.cs});
+          classUpdates.push({ classID: cls.id, newIndex, group: cls.group ,cs:cls.cs,sessionsLeft:classData.numberOfSessions});
         } else {
           console.log('No such document for class ID:', cls.id);
           // Handle missing class documents if necessary
         }
       }
-  
-      // Use a transaction to ensure atomic updates to class documents
       const result = await runTransaction(db, async (transaction) => {
         for (const update of classUpdates) {
           const classRef = doc(db, 'Groups', update.classID);
@@ -80,7 +78,8 @@ export async function uploadAndLinkToCollection(
               index: update.newIndex,
               year: student.year,
               group: update.group ,
-              cs:update.cs// Use group from the collected data
+              cs:update.cs,
+              sessionsLeft:update.sessionsLeft,
             })
           });
         }
@@ -91,11 +90,6 @@ export async function uploadAndLinkToCollection(
   
 
       const transactionRef = doc(db, "Billing", "payments", "Invoices", student.id);
-
-            // Filter out undefined values
-            
-          
-
             await setDoc(transactionRef, {
             monthlypayment:student.monthlypayment,
             debt:0,
@@ -111,7 +105,6 @@ export async function uploadAndLinkToCollection(
 
             },
             transaction:[]
-            
             });
 
       return result;

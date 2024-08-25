@@ -232,24 +232,6 @@ const [schoolType, setSchoolType] = React.useState('');
     setValue('year', years);
   };
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-const rooms = ['Room 1', 'Room 2', 'Room 3', 'Room 4', 'Room 5', 'Room 6', 'Room 7', 'Room 8']
-const paymentTypes = ['monthly', 'session']
-  const [groups, setGroups] = useState<Group[]>([
-    { id: '1', name: 'Group 1', group: '', numberOfSessions: 0, amount: 0, groups: [],stream:[] },
-  ])
-
-  const updateGroup = (groupIndex: number, field: keyof Group, value: any) => {
-    const newGroups = [...groups]
-    newGroups[groupIndex] = { ...newGroups[groupIndex], [field]: value }
-    setGroups(newGroups)
-  }
-
-  const removeGroup = (groupIndex: number) => {
-    const newGroups = [...groups]
-    newGroups.splice(groupIndex, 1)
-    setGroups(newGroups)
-  }
-
   const addSession = (groupIndex: number) => {
     const newGroups = [...getValues('classes')]
     newGroups[groupIndex].groups.push({
@@ -269,15 +251,6 @@ const paymentTypes = ['monthly', 'session']
     }
    form.setValue('classes',newGroups) }
 
-  const toggleSessionField = (groupIndex: number, sessionIndex: number, field: string) => {
-    const newGroups = [...groups]
-    const currentFields = newGroups[groupIndex].sessions[sessionIndex].field
-    const updatedFields = currentFields.includes(field)
-      ? currentFields.filter(f => f !== field)
-      : [...currentFields, field]
-    newGroups[groupIndex].field = updatedFields
-    setGroups(newGroups)
-  }
   const toggleField = (groupIndex: number,field: string,) => {
     const newGroups = [...getValues('classes')]
     
@@ -556,7 +529,7 @@ const paymentTypes = ['monthly', 'session']
               <SelectValue placeholder="Payment type" />
             </SelectTrigger>
             <SelectContent>
-              {paymentTypes.map((type) => (
+            {['monthly','session'].map((type) => (
                 <SelectItem key={type} value={type}>{t(type)}</SelectItem>
               ))}
             </SelectContent>
@@ -826,7 +799,7 @@ console.log(data);
       students:[],
       reimbursements:[],
       teacherUID:teacherId.id,
-        teacherName:data.name,
+      teacherName:data.name,
       subject: data["educational-subject"],
       }
 

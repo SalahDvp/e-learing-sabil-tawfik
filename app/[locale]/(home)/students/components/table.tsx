@@ -213,10 +213,15 @@ interface DataTableDemoProps {
                 <div key={index} style={{ maxWidth: '200px', marginBottom: '5px' }}>
                   <div className="font-medium">{classItem.subject}</div>
                   <div className="text-sm ">
-                    {classItem.name},{classItem.time}
+                    {classItem.name},      {classItem.groups.map((cls)=>(
+     <div className="text-sm text-muted-foreground">
+     <div>{t(`${cls.day}`)}</div>
+     <div>{`${cls.start} -> ${cls.end}`}</div>
+   </div>
+      ))}
                   </div>
                   <div className="text-sm ">
-                    index: {classItem.index},group: {classItem.group}
+                    N: {classItem.index},group: {classItem.group}
                   </div>
                 </div>
               ))}

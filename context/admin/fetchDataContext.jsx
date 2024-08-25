@@ -176,23 +176,7 @@ export const  FetchDataProvider = ({ children }) => {
           }
           const result = teacher.groupUIDs.flatMap(cls => {
             const classDetail = classesData.find(clss => clss.id === cls);
-            return classDetail.groups.map(grp=>({
-              ...grp,
-              "day": grp.day,
-              "end": grp.end,
-              "group": classDetail.group,
-              "quota": 0,
-              "room":  grp.room,
-              "start": grp.start,
-              "stream":classDetail.stream,
-              "subject": classDetail.subject,
-              "classId":cls,
-              year:classDetail.year,
-              
-            }))
-  
-  
-          });
+            return classDetail});
           return {
             ...teacher,
             classes: result
@@ -219,20 +203,17 @@ export const  FetchDataProvider = ({ children }) => {
               const studentDetail = classDetail.students.find(std => std.id === student.id);
               if (!studentDetail) return [];
   
-              const groupDetail = classDetail.groups.find(grp => grp.group === cls.group);
+              const groupDetail = classDetail.groups
               if (!groupDetail) return [];
   
               return {
                 cs: studentDetail.cs,
-                day: groupDetail.day,
-                end: groupDetail.end,
-                start: groupDetail.start,
-                group: groupDetail.group,
+                groups:groupDetail,
+                group: classDetail.group,
                 id: cls.id,
                 index: studentDetail.index,
                 name: classDetail.teacherName,
                 subject: classDetail.subject,
-                time: `"${groupDetail.day},${groupDetail.start}-${groupDetail.end}"`
               };
             });
   
