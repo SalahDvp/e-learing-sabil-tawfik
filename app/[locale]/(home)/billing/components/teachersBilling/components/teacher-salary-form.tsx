@@ -65,19 +65,14 @@ type TeacherSalaryFormValues=z.infer<typeof teacherPaymentRegistrationSchema>;
   const getGroupsByTeacher = (classes, teacherId) => {
     return classes
       .filter(cls => cls.teacherUID === teacherId) // Filter classes by teacherId
-      .flatMap(cls => // Flatten the array of groups
-        cls.groups.map(group => {
-          const studentCount = cls.students.filter(student => student.group === group.group).length;
-          return {
-            start: group.start,
-            end: group.end,
-            day: group.day,
-            groupcode: group.group,
-            amount: group.amount,
-            students: studentCount
-          };
-        })
-      )
+      .map(cls => {
+        const studentCount = cls.students.length;
+        return {
+          groupcode: cls.group,
+          amount: cls.amount,
+          students: studentCount
+        };
+      });
   };
   const getReimbursementByTeacher = (classes, teacherId) => {
     const currentDate = new Date();
@@ -136,7 +131,7 @@ type TeacherSalaryFormValues=z.infer<typeof teacherPaymentRegistrationSchema>;
 
       case "percentage":       
         return expenses.reduce(
-          (total, expense) => total + (expense.amount*expense.students) * teacher.amount/100,
+          (total, expense) => total + (expense.amount*1) * teacher.amount/100,
           0
         );
 
@@ -371,21 +366,50 @@ const [teacherModal,setTeacherModal]=useState(false)
         return <Input {...field} />;
     }
   };
-
-  async function onSubmit(data:any) {
-   // const month=getMonthInfo(data.salaryDate)
-
-      // setAnalytics((prevState:any) => ({
-      //   data: {
-      //     ...prevState.data,
-      //     [month.abbreviation]: {
-      //       ...prevState.data[month.abbreviation],
-      //       expenses:prevState.data[month.abbreviation].expenses + data.salaryAmount
-      //     }
-      //   },
-      //   totalExpenses: prevState.totalExpenses +  data.salaryAmount
-      // }));
+  const getTotalForCurrentMonth = (classData) => {
+    const startOfCurrentMonth = startOfMonth(new Date());
+    const endOfCurrentMonth = endOfMonth(new Date());
   
+    let totalAmount = 0;
+  
+    // Loop through each class in the array
+    classData.forEach(classObj => {
+      const { amount, numberOfSessions, Attendance } = classObj;
+  
+      // Calculate the ratio
+      const ratio = amount / numberOfSessions;
+  
+      // Loop through each attendance record within the class
+      Object.keys(Attendance).forEach(dateKey => {
+        const attendanceRecord = Attendance[dateKey];
+        const date = parseISO(dateKey);
+  
+        // Check if the date falls within the current month
+        if (date >= startOfCurrentMonth && date <= endOfCurrentMonth) {
+          const attendanceCount = attendanceRecord.attendanceList.length;
+          totalAmount += attendanceCount * ratio;
+        }
+      });
+    });
+  
+    // Multiply the total amount by teacher's amount divided by 100
+    const finalAmount = totalAmount * (teacherAmount / 100);
+  
+    return finalAmount;
+  };
+  async function onSubmit(data:any) {
+   const month=getMonthInfo(data.date)
+
+   setAnalytics((prevState: any) => ({
+    data: {
+      ...prevState.data,
+      [month.abbreviation]: {
+        ...prevState.data[month.abbreviation],
+        expenses: (prevState.data[month.abbreviation]?.expenses || 0) + data.amount
+      }
+    },
+    totalExpenses: prevState.totalExpenses + data.amount
+  }));
       const teacherId= await addTeacherSalary({...data,documents:[]})
       const uploaded = await uploadFilesAndLinkToCollection("Billing/payouts/TeachersTransactions", teacherId, filesToUpload);
       setTeachersSalary((prev:TeacherSalaryFormValues[])=>[{...data,id:teacherId,teacher:data.teacher,documents:[],    value:teacherId,
@@ -393,23 +417,23 @@ const [teacherModal,setTeacherModal]=useState(false)
   
         if(printBill){
           
-        //   downloadInvoice({
-        //     toWho: data.teacher.name,
-        //     typeofPayment: data.typeofTransaction,
-        //     paymentAmount: data.salaryAmount,
-        //     salaryMonth:data.monthOfSalary,
-        //    paymentDate: format(data.salaryDate, 'dd/MM/yyyy'),
-        //     status: t(data.status),
+          downloadInvoice({
+            toWho: data.teacher.name,
+            typeofPayment: 'cash',
+            paymentAmount: data.amount,
+            salaryMonth:data.mounth,
+           paymentDate: data.date,
+            status: t('paid'),
           
-        //   },teacherId,[t('teacher'), t('method'), t('amount'), t("monthOfSalary"),t('paymentDate'), t('status')],
-        // {
-        //   amount:t("Amount"), from:t('From:'), shippingAddress:t('shipping-address'), billedTo:t('billed-to'), subtotal:t('Subtotal:'), totalTax:t('total-tax-0'), totalAmount:t('total-amount-3'),invoice:t('payslip')
-        // })
+          },teacherId,[t('teacher'), t('method'), t('amount'), t("monthOfSalary"),t('paymentDate'), t('status')],
+        {
+          amount:t("Amount"), from:t('From:'), shippingAddress:t('shipping-address'), billedTo:t('billed-to'), subtotal:t('Subtotal:'), totalTax:t('total-tax-0'), totalAmount:t('total-amount-3'),invoice:t('payslip')
+        })
         } 
 if(data.paymentType==='advance'){
   setTeachers((prevTeachers) =>
     prevTeachers.map((teacher) => {
-      if (teacher.id === teacherId) {
+      if (teacher.id === teacher.name) {
         return {
           ...teacher,
           advancePayment: [
@@ -599,7 +623,7 @@ toast({
                  
               <Input
 
-                defaultValue={`${option.day},${option.start}-${option.end}`}
+                defaultValue={option.groupcode}
                 readOnly
               />
  

@@ -113,7 +113,11 @@ const years=[
   "4AM",
   "1AS",
   "2AS",
-  "3AS"
+  "3AS",
+"L1",
+"L2",
+"L3",
+"M1"
 ]
 const isFirestoreId = (id) => {
   // Check if id is a string and has a length of 20 characters
@@ -268,7 +272,8 @@ export default function StudentForm() {
           .filter(cls =>
             cls.subject === invoice.subject &&
             cls.year === watch('year') &&
-            cls.teacherName === invoice.name
+            cls.teacherName === invoice.name &&
+            cls.group === invoice.group
           )
           .map(cls => cls.amount) // Extract the amount from each matching class
       )
@@ -428,6 +433,9 @@ export default function StudentForm() {
     if (["1AM", "2AM", "3AM", "4AM"].includes(e)) {
       setValue("field", "متوسط");
     }
+    if(["L1","L2","L3","M1"].includes(e)) {
+  setValue("field", "جامعي");
+}
   }}
    defaultValue={field.value}
               >
@@ -454,7 +462,7 @@ export default function StudentForm() {
 />
 
 
-{!["1AM","2AM","3AM","4AM"].includes(watch('year')) && (<FormField
+{!["1AM","2AM","3AM","4AM","L1","L2","L3","M1"].includes(watch('year')) && (<FormField
   control={control}
   name="field"
   render={({ field }) => (
@@ -548,6 +556,7 @@ export default function StudentForm() {
         <TableHead>{t('Subject')}</TableHead>
           <TableHead>{t("Name")}</TableHead>
           <TableHead>{t("group")}</TableHead>
+          <TableHead>{t('Time')}</TableHead>
           <TableHead>{t('CS')}</TableHead>
           <TableHead>{t('Amount')}</TableHead>
           <TableHead>{t('Action')}</TableHead>
@@ -604,42 +613,56 @@ export default function StudentForm() {
 </SelectContent>
 
     </Select></TableCell>
-            <TableCell> 
-              
+           
+           
+           
+      <TableCell> 
             <Select 
-value={classes.find(type => type.id === watch(`classes.${index}.id`))?.id}
-  onValueChange={(value) => {handleGroupChange(index, 'group', value,classes)
-  }}
->
-  <SelectTrigger >
-  <SelectValue placeholder="Select a group" />
-  </SelectTrigger>
-  <SelectContent>
-    {invoice.subject && invoice.name ? (
-      <SelectGroup>
-        <SelectLabel>{t('groups')}</SelectLabel>
-        {classes.filter(cls => 
-          cls.subject === invoice.subject && 
-          cls.year === watch('year') && 
-          cls.teacherName === invoice.name
-        ).map((groupp, index) => (
-          <SelectItem key={groupp.id} value={groupp.id}>
-            {groupp.group}
-          </SelectItem>
-        ))}
-      </SelectGroup>
-    ) : (
-      <p className="text-sm text-muted-foreground">Select Subject and name first</p>
-    )}
-  </SelectContent>
-</Select>
+              value={classes.find(type => type.id === watch(`classes.${index}.id`))?.id}
+                onValueChange={(value) => {handleGroupChange(index, 'group', value,classes)
+                }}
+              >
+                    <SelectTrigger >
+                      <SelectValue placeholder="Select a group" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {invoice.subject && invoice.name ? (
+                            <SelectGroup>
+                                <SelectLabel>{t('groups')}</SelectLabel>
+                                    {classes.filter(cls => 
+                                      cls.subject === invoice.subject && 
+                                      cls.year === watch('year') && 
+                                      cls.teacherName === invoice.name
+                                    ).map((groupp, index) => (
+                                      <SelectItem key={groupp.id} value={groupp.id}>
+                                        {groupp.group}
+                                      </SelectItem>
+                                    ))}
+                              </SelectGroup>
+                              ) : (
+                                <p className="text-sm text-muted-foreground">Select Subject and name first</p>
+                              )}
+                      </SelectContent>
+              </Select>
+        </TableCell>
+
+
+        <TableCell>
+  {classes.find(cls => cls.id === watch(`classes.${index}.id`))?.groups.map((group, idx) => (
+      <Input
+      key={idx} 
+        type="text"
+        value={`${t(group.day)}, ${group.start} - ${group.end}`}
+        readOnly
+        className="col-span-3"
+      />
+
+  ))}
+</TableCell>
+    
+
 
     
-    
-    
-    
-    
-    </TableCell>
     <TableCell className="font-medium"> 
               <Select value={invoice.cs} onValueChange={(value)=>handleGroupChange(index,'cs',value)}>
       <SelectTrigger className="">
@@ -664,7 +687,7 @@ value={classes.find(type => type.id === watch(`classes.${index}.id`))?.id}
     <Input
   type="text"
  defaultValue={invoice?.amount}
-  className="col-span-3 w-24"
+  className="col-span-3 w-24 mb-2"
   readOnly
 />
 </TableCell>

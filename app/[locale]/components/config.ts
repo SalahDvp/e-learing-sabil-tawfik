@@ -30,6 +30,11 @@ export const pathnames = {
     "ar": "/middle",
     "fr":"/middle"
   },
+  "/university": {
+    "en": "/university",
+    "ar": "/university",
+    "fr":"/university"
+  },
   "/teachers": {
     "en":"/teachers",
     "ar": "/teachers",

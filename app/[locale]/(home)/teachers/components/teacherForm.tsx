@@ -91,6 +91,7 @@ const steps = [
 
 const middleSchoolYears = ["1AM", "2AM", "3AM", "4AM"];
 const highSchoolYears = ["1AS", "2AS", "3AS"];
+const universitySchoolYears=["L1","L2","L3","M1"]
 
 export default function TeacherForm() {
   const t=useTranslations()
@@ -216,6 +217,13 @@ const subjects = [
   "اقتصاد",
   "العلوم الاسلامية",
   "تاريخ وجغرافيا",
+  "Math",
+  "Algebre",
+  "Analyse",
+  "Physique",
+  "Chimie",
+  "Gestion",
+  "Informatique"
   
 
 ];
@@ -225,12 +233,22 @@ const paymentTypeOptions = {
   hourly: "hourly"
 };
 const [schoolType, setSchoolType] = React.useState('');
+const handleSchoolTypeChange = (type) => {
+  setSchoolType(type);
 
-  const handleSchoolTypeChange = (type) => {
-    setSchoolType(type);
-    const years = type === 'middle' ? middleSchoolYears : highSchoolYears;
+  let years;
+  if (type === 'middle') {
+    years = middleSchoolYears;
+  } else if (type === 'high') {
+    years = highSchoolYears;
+  } else if (type === 'university') {
+    years = universitySchoolYears;
+  }
+
+  if (years) {
     setValue('year', years);
-  };
+  }
+};
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
   const addSession = (groupIndex: number) => {
     const newGroups = [...getValues('classes')]
@@ -360,6 +378,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
                 <SelectContent>
                   <SelectItem value="middle">{t('middle-school')}</SelectItem>
                   <SelectItem value="high">{t('hight-school')}</SelectItem>
+                  <SelectItem value="university">{t('University')}</SelectItem>
                 </SelectContent>
               </Select>
             </FormControl>
@@ -569,7 +588,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="w-56">
-                            {['متوسط','علوم تجريبية', 'تقني رياضي', 'رياضيات', 'تسيير واقتصاد ', 'لغات اجنبية ', 'اداب وفلسفة'].map((field) => (
+                            {["جامعي",'متوسط','علوم تجريبية', 'تقني رياضي', 'رياضيات', 'تسيير واقتصاد ', 'لغات اجنبية ', 'اداب وفلسفة'].map((field) => (
                                        <DropdownMenuItem
                                        key={field}
                                        value={field}

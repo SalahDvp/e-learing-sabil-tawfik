@@ -95,21 +95,21 @@ const removeStudent= async (student,classId,attendanceId) => {
         </div>
       ),
     },
-    {
-      accessorKey: "group",
-      header: () => <div>group</div>,
-      cell: ({ row }) =>{
+//     {
+//       accessorKey: "group",
+//       header: () => <div>group</div>,
+//       cell: ({ row }) =>{
       
-const group=row.getValue("group")
+// const group=row.getValue("group")
        
-const groupDetails=selectedEvent.groups?.find(cls=>cls.group===group)
+// const groupDetails=selectedEvent.groups?.find(cls=>cls.group===group)
 
   
-        return(
-        <div className="hidden sm:table-cell">{row.getValue("group")}:{t(`${groupDetails.day}`)},{groupDetails.start}-{groupDetails.end}</div>
-      ) },
+//         return(
+//         <div className="hidden sm:table-cell">{row.getValue("group")}:{t(`${groupDetails.day}`)},{groupDetails.start}-{groupDetails.end}</div>
+//       ) },
       
-    },
+//     },
     {
       accessorKey: "status",
       header: () => <div>Status</div>,

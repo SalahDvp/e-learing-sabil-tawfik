@@ -40,7 +40,7 @@ export default function DashboardPage() {
             <TabsTrigger value="teachers">{t("teachers")}</TabsTrigger>
               <TabsTrigger value="payouts">{t('payouts')}</TabsTrigger>
               <TabsTrigger value="students">{t("Students")}</TabsTrigger>
-              <TabsTrigger value="analytics">{t('analytics')}</TabsTrigger>
+              <TabsTrigger value="analytics" disabled>{t('analytics')}</TabsTrigger>
             </TabsList>
             <TabsContent value="analytics" className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

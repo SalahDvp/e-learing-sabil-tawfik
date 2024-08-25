@@ -222,6 +222,13 @@ const subjects = [
   "اقتصاد",
   "العلوم الاسلامية",
   "تاريخ وجغرافيا",
+  "Math",
+  "Algebre",
+  "Analyse",
+  "Physique",
+  "Chimie",
+  "Gestion",
+  "Informatique"
   
 
 ];
@@ -532,7 +539,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="w-56">
-                            {['متوسط','علوم تجريبية', 'تقني رياضي', 'رياضيات', 'تسيير واقتصاد ', 'لغات اجنبية ', 'اداب وفلسفة'].map((field) => (
+                            {["جامعي",'متوسط','علوم تجريبية', 'تقني رياضي', 'رياضيات', 'تسيير واقتصاد ', 'لغات اجنبية ', 'اداب وفلسفة'].map((field) => (
                                        <DropdownMenuItem
                                        key={field}
                                        value={field}
@@ -873,12 +880,13 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
   
       if (updatedClasses && Array.isArray(updatedClasses)) {
         for (const classupdate of updatedClasses) {        
-
+          console.log("Dwdqwqw",classupdate);
+          
             await updateClassGroup(classupdate.id,classupdate);
           
             setClasses(prevClasses =>
               prevClasses.map(cls => {
-                if (cls.id === classupdate.classId) {
+                if (cls.id === classupdate.id) {
                   return {...classupdate};
                 }
                 return cls;
@@ -890,7 +898,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
                   return {
                     ...cls,
                     classes: cls.classes.map(cls =>
-                      cls.classId === classupdate.classId ? {...classupdate } : cls
+                      cls.id === classupdate.id ? {...classupdate } : cls
                     )
                   };
                 }
@@ -904,7 +912,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
                   return {
                     ...std,
                     classes: std.classes.map(cls =>
-                      cls.id === classupdate.classId? {...classupdate } : cls
+                      cls.id === classupdate.id? {...classupdate } : cls
                     )
                   };
                 }

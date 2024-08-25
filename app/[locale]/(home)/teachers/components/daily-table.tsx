@@ -92,12 +92,17 @@ export const DailyAtandenceDataTable = ({teacher }: {teacher:any }) => {
       header: () => <div>group</div>,
       cell: ({ row }) =>{
       
-       const groupDetails=teacher.classes.find(cls=>cls.group===row.original.group)
+      
         
         return(
-        <div className="hidden sm:table-cell">{row.getValue("group")}:{t(`${groupDetails?.day}`)},{groupDetails?.start}-{groupDetails?.end}</div>
+        <div className="hidden sm:table-cell">{row.getValue("group")}</div>
       ) },
       
+    },
+    {
+      accessorKey: "sessionsLeft",
+      header: () => <div>sessions Left</div>,
+      cell: ({ row }) => <div>{row.getValue("sessionsLeft")}</div>,
     },
     {
       accessorKey: "field",

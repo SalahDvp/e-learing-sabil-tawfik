@@ -13,7 +13,7 @@ function CardIncome() {
 const t=useTranslations()
 const getMonthAbbreviation = (fullMonth:string) => {
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  const monthIndex = monthNames.findIndex((month) => month.toLowerCase() === fullMonth.toLowerCase());
+  const monthIndex = monthNames.findIndex((month) => month.toLowerCase() === fullMonth?.toLowerCase());
   return monthIndex !== -1 ? monthNames[monthIndex].slice(0, 3) : '';
 };
 const { analytics } = useData();

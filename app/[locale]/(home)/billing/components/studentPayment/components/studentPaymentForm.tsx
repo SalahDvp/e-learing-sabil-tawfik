@@ -484,9 +484,7 @@ const onSelected = (selectedStudent: any) => {
     setInvoices((prev: any) => [
       {
         ...data,
-        name: data.name,
-        paymentDate:data.paymentDate,
-        amount:data.amount
+        transactionArray
       },
       ...prev,
     ]);

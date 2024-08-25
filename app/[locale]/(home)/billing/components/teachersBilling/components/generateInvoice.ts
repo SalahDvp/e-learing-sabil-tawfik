@@ -63,18 +63,7 @@ export function downloadInvoice(paymentData:any,id:string,titles:any[],words:any
               halign: 'left'
             }
           },
-          {
-    
-            content: words.shippingAddress
-            +`\n${paymentData.toWho}`
-            +'\nShipping Address line 1'
-            +'\nShipping Address line 2'
-            +'\nZip code - City'
-            +'\nCountry',
-            styles: {
-              halign: 'left'
-            }
-          },
+         
           {        
             content:words.fromWho
             +'\nSchool erp'
