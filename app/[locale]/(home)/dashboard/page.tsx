@@ -235,7 +235,12 @@ export default function Home() {
         const clsid = updatedClasses[classIndex].id;
   
         // Get the current date for UID
-        const dateTimeUID = new Date().toISOString().split('T')[0];
+        const currentDate = new Date();
+        const year = currentDate.getFullYear();
+        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+        const day = String(currentDate.getDate()).padStart(2, '0');
+        const dateTimeUID = `${year}-${month}-${day}`; // Use the selected class group
+  
   
         const currentAttendanceList = updatedClasses[classIndex]?.Attendance?.[dateTimeUID] || {
           start: '',
@@ -307,7 +312,9 @@ export default function Home() {
             })
           });
         } else {
-          const date = parseDateTimeRange(dateTimeUID);
+          const date = parseDateTimeRange(`${year}-${month}-${day}-${selectedClass.start}-${selectedClass.end}`);
+          console.log("date",date);
+          
           await setDoc(attendanceDocRef, {
             group: selectedClass.group,
             end: date.endDateTime,
@@ -355,7 +362,7 @@ export default function Home() {
       setStudentData(null);
       setSelectedClasses({});
     } catch (error) {
-      console.error('Error updating attendance:', error);
+      console.error('Error updating attendance:', error.message);
       alert('An error occurred while updating attendance. Please try again.');
     }
   };

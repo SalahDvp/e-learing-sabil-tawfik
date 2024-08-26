@@ -128,7 +128,6 @@ type TeacherSalaryFormValues=z.infer<typeof teacherPaymentRegistrationSchema>;
       case "hourly":
         const weeks = differenceInWeeks(new Date(), new Date(teacher.salaryDate.toDate()));
         return weeks * teacher.amount * expenses.length;
-
       case "percentage":       
         return expenses.reduce(
           (total, expense) => total + (expense.amount*1) * teacher.amount/100,

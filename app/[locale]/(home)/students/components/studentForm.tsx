@@ -97,6 +97,13 @@ const classess = [
   "اقتصاد",
   "العلوم الاسلامية",
   "تاريخ وجغرافيا",
+  "Math",
+  "Algebre",
+  "Analyse",
+  "Physique",
+  "Chimie",
+  "Gestion",
+  "Informatique"
 
 ];
 const steps: StepItem[] = [
