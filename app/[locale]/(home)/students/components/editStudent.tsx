@@ -118,7 +118,12 @@ const years=[
 "L1",
 "L2",
 "L3",
-"M1"
+"M1",
+"1AP",
+"2AP",
+"3AP",
+"4AP",
+"5AP"
 ]
 const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
   const camera = useRef<null | { takePhoto: () => string }>(null);
@@ -316,6 +321,9 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
     if(["L1","L2","L3","M1"].includes(e)) {
       setValue("field", "جامعي");
     }
+    if(["1AP","2AP","3AP","4AP","5AP"].includes(e)) {
+      setValue("field", "ابتدائي");
+    }
   }}
    defaultValue={field.value}
               >
@@ -341,7 +349,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
   )}
 />
 
-{!["1AM","2AM","3AM","4AM","L1","L2","L3","M1"].includes(watch('year')) && (<FormField
+{!["1AP","2AP","3AP","4AP","5AP","1AM","2AM","3AM","4AM","L1","L2","L3","M1"].includes(watch('year')) && (<FormField
   control={control}
   name="field"
   render={({ field }) => (

@@ -92,7 +92,7 @@ const steps = [
 const middleSchoolYears = ["1AM", "2AM", "3AM", "4AM"];
 const highSchoolYears = ["1AS", "2AS", "3AS"];
 const universitySchoolYears=["L1","L2","L3","M1"]
-
+const priarySchoolYears=["1AP","2AP","3AP","4AP","5AP"]
 export default function TeacherForm() {
   const t=useTranslations()
   const timeOptions = generateTimeOptions("07:00","22:00", 30);
@@ -244,7 +244,9 @@ const handleSchoolTypeChange = (type) => {
   } else if (type === 'university') {
     years = universitySchoolYears;
   }
-
+ else if (type === "primary") {
+  years = priarySchoolYears;
+}
   if (years) {
     setValue('year', years);
   }
@@ -379,6 +381,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
                   <SelectItem value="middle">{t('middle-school')}</SelectItem>
                   <SelectItem value="high">{t('hight-school')}</SelectItem>
                   <SelectItem value="university">{t('University')}</SelectItem>
+                  <SelectItem value="primary">{t('primary')}</SelectItem>
                 </SelectContent>
               </Select>
             </FormControl>
@@ -588,7 +591,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="w-56">
-                            {["جامعي",'متوسط','علوم تجريبية', 'تقني رياضي', 'رياضيات', 'تسيير واقتصاد ', 'لغات اجنبية ', 'اداب وفلسفة'].map((field) => (
+                            {["ابتدائي","جامعي",'متوسط','علوم تجريبية', 'تقني رياضي', 'رياضيات', 'تسيير واقتصاد ', 'لغات اجنبية ', 'اداب وفلسفة'].map((field) => (
                                        <DropdownMenuItem
                                        key={field}
                                        value={field}

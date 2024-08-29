@@ -10,7 +10,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import QRCode from 'qrcode'
 import { PDFDocument, PDFName, PDFPage, rgb } from 'pdf-lib';
-import fs from 'fs';
+import { saveAs } from "file-saver"; // Import saveAs from file-saver
 import path from 'path';
 import { decode } from 'base64-arraybuffer';
 import { addDoc, collection, doc, getDoc, getDocs } from "firebase/firestore"
@@ -152,35 +152,31 @@ export const Component = ()   => {
   }, []);
   
     const handleDownload = async () => {
-      // Fetch the existing PDF from the public folder
-      const response = await fetch('/Carte-Metidja.pdf');
-      const pdfBytes = await response.arrayBuffer();
-  
-      const uniqueIds =await  generateUniqueIds(500);
-await addDoc(collection(db,'Qrs'),{
-qrs:uniqueIds
-})
-      const updatedPdfBytes = await addQRCodesToPDF(pdfBytes,uniqueIds);
-  
-      // Create a Blob and generate a URL for the PDF
-      const blob = new Blob([updatedPdfBytes], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-  
-      // Create a temporary link element and trigger a download
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'updated-card.pdf';
-      link.click();
-  
-      // Clean up the URL object
-      URL.revokeObjectURL(url);
+      try {
+        // Step 1: Generate Unique IDs
+        const uniqueIds = await generateUniqueIds(150);
+    
+        // Step 2: Save to Firestore
+        await addDoc(collection(db, 'Qrs'), {
+          qrs: uniqueIds
+        });
+    
+        // Step 3: Output the IDs to a JSON file
+        const jsonContent = JSON.stringify({ qrs: uniqueIds }, null, 2);
+        const blob = new Blob([jsonContent], { type: "application/json" });
+        saveAs(blob, 'output.json');
+    
+        console.log("QR codes generated and saved to Firestore and output.json");
+      } catch (error) {
+        console.error("Error processing QR codes:", error);
+      }
     };
   
   return (
    <div className="max-w-6xl mx-auto border rounded-lg shadow-lg">
-      {/* <button onClick={handleDownload}>
+      <button onClick={handleDownload}>
       Download PDF with QR Code
-    </button> */}
+    </button>
        
    <div className="max-h-[500px] overflow-auto">
   

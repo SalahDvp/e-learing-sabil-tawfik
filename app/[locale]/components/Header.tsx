@@ -65,7 +65,11 @@ const t=useTranslations()
           className={`${pathname=== '/middle' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
         >
         CEM </Link>
-  
+        <Link
+          href="/university"
+          className={`${pathname=== '/university' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
+        >
+        {t('primary')} </Link>
         <Link
           href="/teachers"
           className={`${pathname=== '/teachers' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}

@@ -41,7 +41,7 @@ export const addPaymentTransaction = async (transaction: any, studentID: string)
         totalExpenses: 0,
         totalIncome: 0,
         data: months.map(month => ({
-          month: month.Fullname,
+          month: month.fullName,
           expenses: 0,
           income: 0
         }))
@@ -52,7 +52,7 @@ export const addPaymentTransaction = async (transaction: any, studentID: string)
       const existingData = analyticsDoc.data()?.data || [];
 
       // Find the index of the current month in the array
-      const monthIndex = existingData.findIndex((m: any) => m.month === month.Fullname);
+      const monthIndex = existingData.findIndex((m: any) => m.month === month.fullName);
 
       if (monthIndex !== -1) {
         // Update the specific month's income
@@ -60,7 +60,7 @@ export const addPaymentTransaction = async (transaction: any, studentID: string)
       } else {
         // Add a new entry if the month wasn't found
         existingData.push({
-          month: month.Fullname,
+          month: month.fullName,
           expenses: 0,
           income: transaction.amount,
         });
@@ -108,7 +108,7 @@ export const updateStudentInvoice = async(updatedtransaction:StudentPaymentFormV
         })
         await updateDoc(doc(db, "Billing","analytics"), {
 
-            [`data.${month.Fullname}.income`]: increment(updatedtransaction.paymentAmount-oldSalary),
+            [`data.${month.fullName}.income`]: increment(updatedtransaction.paymentAmount-oldSalary),
             totalIncome: increment(updatedtransaction.paymentAmount-oldSalary),
         });
     }
