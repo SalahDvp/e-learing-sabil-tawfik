@@ -15,7 +15,6 @@ import { StudentsNumber } from "./components/area-chart"
 function Dashboard() {
   const [filter,setFilter]=useState("All")
   const t=useTranslations()
-  const {students,classes,profile,levels}= useData()
   const handleFilter = (classType) => {
         setFilter(classType)
   };
@@ -28,9 +27,9 @@ function Dashboard() {
       <div className="flex items-center">
         <TabsList>
           <TabsTrigger value="all" onClick={() => handleFilter("All")}>{t('all')}</TabsTrigger>
-          {levels.map((level) => (
-            <TabsTrigger key={level.level} value={level.level} onClick={() => handleFilter(level.level)}>
-              {level.level}
+          {["جامعي","ثانوي","متوسط","ابتدائي","لغات"].map((level) => (
+            <TabsTrigger key={level} value={level} onClick={() => handleFilter(level)}>
+              {t(`${level}`)}
             </TabsTrigger>
           ))}
         </TabsList>

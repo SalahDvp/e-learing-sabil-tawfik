@@ -31,7 +31,7 @@ export const addTeacherSalary = async (transaction:any) => {
         });
         await updateDoc(doc(db, "Billing","analytics"), {
             totalExpenses:increment(transaction.amount),
-            [`data.${month.abbreviation}.expenses`]: increment(transaction.amount)
+            [`data.${month.fullName}.expenses`]: increment(transaction.amount)
         });
         if (transaction.paymentType==='advance') {
             await updateDoc(doc(db,"Teachers",transaction.teacher.id),{
@@ -60,7 +60,7 @@ export const updateTeacherSalary = async(updatedtransaction:TeacherSalaryFormVal
         });
         await updateDoc(doc(db, "Billing","analytics"), {
             totalExpenses:increment(updatedtransaction.salaryAmount-oldSalary),
-            [`data.${month.abbreviation}.expenses`]: increment(updatedtransaction.salaryAmount-oldSalary)
+            [`data.${month.fullName}.expenses`]: increment(updatedtransaction.salaryAmount-oldSalary)
 
         });
     }

@@ -95,10 +95,24 @@ interface DataTableDemoProps {
       if (!students || !Array.isArray(students)) {
         return [];
       }
-    const orders=students.filter((std)=>std.field != "متوسط")
-      // Sort the students array by studentIndex in ascending order
-      return orders.sort((a, b) => a.studentIndex - b.studentIndex);
-    }, [students]);
+    
+      let filteredStudents = students;
+    
+      if (filter === 'ثانوي') {
+        // Filter students where their field is not equal to any of the given fields
+        const excludedFields = ["جامعي", "متوسط", "ابتدائي", "لغات"];
+        filteredStudents = students.filter((std) => !excludedFields.includes(std.field));
+      } else if (filter === 'All') {
+        // Show all students
+        filteredStudents = students;
+      }
+      else{
+        filteredStudents=students.filter((std)=>std.field === filter)
+      }
+      // Sort the filtered students array by studentIndex in ascending order
+      return filteredStudents.sort((a, b) => a.studentIndex - b.studentIndex);
+    }, [students, filter]);
+    
     const [student,setStudent]=React.useState<Student>({  
       id: '123456',
       level: 'Intermediate',
@@ -133,15 +147,7 @@ interface DataTableDemoProps {
       feedingFee:"Paid",
       classesUIDs:[]
     })
-      // Define your table and set up filtering
-  React.useEffect(() => {
-         
-    if (filter === "All") {
-      table.resetColumnFilters()
-    } else {
-      table.getColumn("level")?.setFilterValue(filter);
-    } 
-  }, [filter]); 
+
     const openEditSheet = (student:Student) => {
       setStudent(student)
       setOpen(true); // Open the sheet after setting the level

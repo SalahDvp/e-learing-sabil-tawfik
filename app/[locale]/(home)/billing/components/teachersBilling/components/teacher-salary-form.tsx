@@ -41,12 +41,14 @@ import { differenceInWeeks, endOfMonth, format, startOfMonth } from "date-fns";
 import { downloadInvoice } from "./generateInvoice";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { updateDoc } from "firebase/firestore";
+import { Timestamp, updateDoc } from "firebase/firestore";
+import ReactToPrint from "react-to-print";
 
 const fieldNames = [
     "teacher",
     "paymentType",
     "date",
+
 
 
 ];
@@ -138,6 +140,107 @@ type TeacherSalaryFormValues=z.infer<typeof teacherPaymentRegistrationSchema>;
         return 0;
     }
   };
+  const ReceiptPrint = React.forwardRef((props, ref) => {
+    const { receipt } = props;
+  
+  
+
+
+  if(receipt.teacher){
+    return (
+  
+  
+   
+        
+      <Card className="mb-6 " ref={ref}>
+        <CardHeader>
+          <CardTitle>Salary Receipt Template</CardTitle>
+        </CardHeader>
+        <CardContent id="print-section">
+          <h3 className="text-lg font-semibold mb-2">Employee's Information:</h3>
+          <Table>
+            <TableBody>
+              <TableRow>
+                <TableCell className="font-medium">Employee's Name:</TableCell>
+                <TableCell>{receipt.teacher.teacherName}</TableCell>
+                <TableCell className="font-medium">Department:</TableCell>
+                <TableCell>{receipt.department}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="font-medium">Employee's ID:</TableCell>
+                <TableCell>{receipt.teacher.name}</TableCell>
+                <TableCell className="font-medium">Date of Issue:</TableCell>
+                <TableCell>{receipt.date.toISOString()}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="font-medium">Employee's Level:</TableCell>
+                <TableCell>{receipt.position}</TableCell>
+                <TableCell className="font-medium">Pay Month:</TableCell>
+                <TableCell>{receipt.month}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+
+          <h3 className="text-lg font-semibold mt-4 mb-2">Employer's Information:</h3>
+          <Table>
+            <TableBody>
+              <TableRow>
+                <TableCell className="font-medium">Employer's Name:</TableCell>
+                <TableCell>{"Smart School"}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="font-medium">Address:</TableCell>
+                <TableCell>{"address"}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="font-medium">Contact Information:</TableCell>
+                <TableCell>{"055555555"}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+
+          <h3 className="text-lg font-semibold mt-4 mb-2">Earnings and Deductions:</h3>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Description</TableHead>
+                <TableHead>Number Students</TableHead>
+                <TableHead>Rate</TableHead>
+                <TableHead>Amount</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {receipt.expenses.map((item, index) => (
+                <TableRow key={index}>
+                  <TableCell>{item.groupcode}</TableCell>
+                  <TableCell>{item.students}</TableCell>
+                  <TableCell>{receipt.teacher.amount}%</TableCell>
+                  <TableCell>DZD{item.students*item.amount*receipt.teacher.amount/100}</TableCell>
+                </TableRow>
+              ))}
+     
+              <TableRow>
+                <TableCell colSpan={3}>Salaire Brute:</TableCell>
+                <TableCell>DZD{receipt.grossSalary}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell colSpan={3} className="font-bold">Les avances:</TableCell>
+                <TableCell className="font-bold">DZD{receipt.advancePayment.toFixed(2)}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell colSpan={3} className="font-bold">Salaire Total:</TableCell>
+                <TableCell className="font-bold">DZD{receipt.netSalary.toFixed(2)}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+  )
+  }else{
+    return null;
+  }
+
+  });
 export default function PaymentForm() {
   const { toast } = useToast();
   const {setTeachersSalary} = useData()
@@ -227,10 +330,10 @@ const [teacherModal,setTeacherModal]=useState(false)
   const [openTypeofpayment, setOpenTypeofpayment] = useState(false);
   const form = useForm<any>({
 
-    defaultValues:{expenses:[]}
+    defaultValues:{expenses:[],date:new Date(),month:format(new Date(), 'MMMM')}
   });
-  const { reset, formState, setValue, getValues,control,register,watch } = form;
-  const { isSubmitting } = formState;
+  const { reset, formState, setValue, getValues,control,register,watch, } = form;
+  const { isSubmitting,} = formState;
   const { fields:expenses, append:appendExpense,remove:removeExpense, } = useFieldArray({
     control: form.control,
     name: "expenses",
@@ -306,7 +409,7 @@ const [teacherModal,setTeacherModal]=useState(false)
                 form.setValue('advancePayment',advancePayment)
                 form.setValue('reimbursement',reimbursement)
                 form.setValue('expenses',result)
-                form.setValue(fieldName, {...selectedTeacher,name:selectedTeacher?.value,id:selectedTeacher?.id,})
+                form.setValue(fieldName, {...selectedTeacher,name:selectedTeacher?.value,id:selectedTeacher?.id,teacherName:selectedTeacher.name})
                 const amount=calculateSalary(selectedTeacher?.paymentType,selectedTeacher,result)
                 form.setValue("grossSalary",amount)
                 const netSalary=amount-advancePayment-reimbursement
@@ -396,38 +499,42 @@ const [teacherModal,setTeacherModal]=useState(false)
   
     return finalAmount;
   };
+  const reactToPrintRef = React.useRef();
   async function onSubmit(data:any) {
    const month=getMonthInfo(data.date)
 
-   setAnalytics((prevState: any) => ({
-    data: {
-      ...prevState.data,
-      [month.abbreviation]: {
-        ...prevState.data[month.abbreviation],
-        expenses: (prevState.data[month.abbreviation]?.expenses || 0) + data.amount
-      }
-    },
-    totalExpenses: prevState.totalExpenses + data.amount
-  }));
+  //  setAnalytics((prevState: any) => ({
+  //   data: {
+  //     ...prevState.data,
+  //     [month.fullName]: {
+  //       ...prevState.data[month.fullName],
+  //       expenses: (prevState.data[month.fullName]?.expenses || 0) + data.amount
+  //     }
+  //   },
+  //   totalExpenses: prevState.totalExpenses + data.amount
+  // }));
       const teacherId= await addTeacherSalary({...data,documents:[]})
       const uploaded = await uploadFilesAndLinkToCollection("Billing/payouts/TeachersTransactions", teacherId, filesToUpload);
       setTeachersSalary((prev:TeacherSalaryFormValues[])=>[{...data,id:teacherId,teacher:data.teacher,documents:[],    value:teacherId,
         label:teacherId,},...prev])
-  
-        if(printBill){
+        setTeachers((prevTeach) =>
+          prevTeach.map((tch) =>
+            tch.id === data.teacher.name
+              ? {
+                  ...tch,
+                  advancePayment: [
+                    ...tch.advancePayment,
+                    { date: Timestamp.fromDate(data.date), amount: data.amount }
+                  ]
+                }
+              : tch
+          )
+        );
+        if(printBill && data.paymentType==='salary'){
           
-          downloadInvoice({
-            toWho: data.teacher.name,
-            typeofPayment: 'cash',
-            paymentAmount: data.amount,
-            salaryMonth:data.mounth,
-           paymentDate: data.date,
-            status: t('paid'),
-          
-          },teacherId,[t('teacher'), t('method'), t('amount'), t("monthOfSalary"),t('paymentDate'), t('status')],
-        {
-          amount:t("Amount"), from:t('From:'), shippingAddress:t('shipping-address'), billedTo:t('billed-to'), subtotal:t('Subtotal:'), totalTax:t('total-tax-0'), totalAmount:t('total-amount-3'),invoice:t('payslip')
-        })
+          if (reactToPrintRef.current) {
+            reactToPrintRef.current.handlePrint();
+          }
         } 
 if(data.paymentType==='advance'){
   setTeachers((prevTeachers) =>
@@ -445,17 +552,81 @@ if(data.paymentType==='advance'){
     })
   );
 }
- 
+
 toast({
               title: t('teacher-salary-added'),
               description: t('teacher-salary-added-successfully'),
             });
-            reset({paymentType:"",expenses:[]});
+            reset({paymentType:"",expenses:[],date:new Date(),month:format(new Date(), 'MMMM')});
           
           }
+          const componentRef = React.useRef(null);
 
+          const onBeforeGetContentResolve = React.useRef(null);
+        
+          const [text, setText] = React.useState("old boring text")
+        
+          React.useEffect(() => {
+            if (
+              text === "New, Updated Text!" &&
+              typeof onBeforeGetContentResolve.current === "function"
+            ) {
+              onBeforeGetContentResolve.current();
+            }
+          }, [onBeforeGetContentResolve.current, text]);
+        
+          const reactToPrintContent = React.useCallback(() => {
+            return componentRef.current;
+          }, [componentRef.current]);
+        
+          const reactToPrintTrigger = React.useCallback(() => {
+            // NOTE: could just as easily return <SomeComponent />. Do NOT pass an `onClick` prop
+            // to the root node of the returned component as it will be overwritten.
+        
+            // Bad: the `onClick` here will be overwritten by `react-to-print`
+            // return <button onClick={() => alert('This will not work')}>Print this out!</button>;
+        
+            // Good
+            return <button>Print using a Functional Component</button>;
+          }, []);
+        
+        
+          const [receipt, setReceipt] = React.useState({
+            employeeName: "John Doe",
+            employeeId: "T12345",
+            position: "Senior Teacher",
+            department: "Education",
+            dateOfIssue: "May 31, 2023",
+            payPeriod: "May 1, 2023 to May 31, 2023",
+            schoolName: "Evergreen Academy",
+            schoolAddress: "123 Learning Lane, Education City, EC 12345",
+            schoolContact: "Phone: (555) 123-4567, Email: info@evergreenacademy.edu",
+            earnings: [
+              { description: "Mathematics 101", hours: 16, rate: 50, amount: 800 },
+              { description: "Physics 202", hours: 16, rate: 60, amount: 960 },
+              { description: "Chemistry 301", hours: 16, rate: 55, amount: 880 },
+            ],
+            deductions: [
+              { description: "Health Insurance", amount: -100 },
+            ],
+            taxRate: 0.15,
+            paymentMethod: "Bank Transfer",
+            bankDetails: "National Bank, Account No. 1234567890",
+            transactionId: "TRN123456789",
+          });
   return (
     <Card className="overflow-hidden" x-chunk="dashboard-05-chunk-4">
+            <div>
+            <ReactToPrint
+        ref={reactToPrintRef}
+        content={reactToPrintContent}
+        documentTitle="AwesomeFileName"
+        removeAfterPrint
+      />
+      <div style={{display:'none'}}>
+        <ReceiptPrint ref={componentRef} receipt={getValues()}/>
+        </div>
+    </div>
       <CardHeader className="flex flex-row items-start bg-muted/50">
         <div className="grid gap-0.5">
           <CardTitle className="group flex items-center gap-2 text-lg">
@@ -468,7 +639,7 @@ toast({
             size="sm"
             variant="outline"
             className="h-8 gap-1"
-            onClick={() => reset({paymentType:"",expenses:[]})}
+            onClick={() =>      reset({paymentType:"",expenses:[],date:new Date(),month:format(new Date(), 'MMMM')})}
           >
             <ResetIcon className="h-3.5 w-3.5" />
             <span className="lg:sr-only xl:not-sr-only xl:whitespace-nowrap">
@@ -519,7 +690,7 @@ toast({
         name={"grossSalary" as FormKeys}
         render={({ field }) => (
           <FormItem style={{ marginBottom: 15 }}>
-            <FormLabel>grossSalary</FormLabel>
+            <FormLabel>Salaire Brute</FormLabel>
             <FormControl>{renderInput("grossSalary", field)}</FormControl>
 
             <FormMessage />
@@ -532,7 +703,7 @@ toast({
         name={"reimbursement" as FormKeys}
         render={({ field }) => (
           <FormItem style={{ marginBottom: 15 }}>
-            <FormLabel>reimbursement</FormLabel>
+            <FormLabel>Les remboursement</FormLabel>
             <FormControl>{renderInput("reimbursement", field)}</FormControl>
 
             <FormMessage />
@@ -609,7 +780,9 @@ toast({
     <TableRow>
       <TableHead>group</TableHead>
       <TableHead>number of student</TableHead>
-      <TableHead>Amount per student</TableHead>
+     <TableHead>Type de salaire</TableHead>
+      {getValues("teacher")?.paymentType==='percentage' && (<TableHead>percentage</TableHead>)}
+      {getValues("teacher")?.paymentType==='percentage' && (<TableHead>Amount per group</TableHead>)}
     </TableRow>
   </TableHeader>
   <TableBody>
@@ -637,18 +810,33 @@ toast({
       />
 
     </TableCell>
+    <TableCell className="font-semibold">
+                 
+                 <Input
+   
+                   defaultValue={getValues("teacher")?.paymentType}
+                   readOnly
+                 />
+    
+               </TableCell>
             <TableCell>
-      
-              <Input
-               placeholder={t('enter-price')}
-               type="number"
-               value={option.amount}
-              readOnly
-              />
-  
-            </TableCell>
-            <TableCell>
+            {getValues("teacher")?.paymentType==='percentage' && (   
+      <Input
+       placeholder={t('enter-price')}
+       type="number"
+       value={getValues("teacher")?.amount}
+      readOnly
+      />)}
 
+    </TableCell>
+    <TableCell>
+            {getValues("teacher")?.paymentType==='percentage' && (   
+      <Input
+       placeholder={t('enter-price')}
+       type="number"
+       value={(option.students*option.amount)*getValues("teacher")?.amount/100}
+      readOnly
+      />)}
 
     </TableCell>
       </TableRow>

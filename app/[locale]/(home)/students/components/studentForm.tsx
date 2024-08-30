@@ -171,16 +171,19 @@ export default function StudentForm() {
     
     return selectedClass ? {id:selectedClass.id,index:selectedClass.students?selectedClass.students.length+1:1,group:selectedGroup.group}: {id:"",index:0,group:""};
   };
-  const handleGroupChange = (index: number, field: 'name' | 'id' | 'subject' | 'group', value: string | number, classess) => {
+  const handleGroupChange = (index: number, field: 'name' | 'id' | 'subject' | 'group' | "amount", value: string | number, classess) => {
     const classes = [...getValues('classes')];
     const classesUids = getValues('classesUIDs') ? [...getValues('classesUIDs')] : [];
   
     if (field === 'subject') {
       console.log("Updating subject:", value);
-      classes[index] = { id: '', name: '', subject: value, group: '', cs: classes[index].cs };
+      classes[index] = {   ...classes[index],id: '', name: '', subject: value, group: '', cs: classes[index].cs };
     } else if (field === 'name') {
       console.log("Updating name:", value);
-      classes[index] = { id: '', name: value, subject: classes[index].subject, group: '', cs: classes[index].cs };
+      classes[index] = {   ...classes[index],id: '', name: value, subject: classes[index].subject, group: '', cs: classes[index].cs };
+    } else if (field === 'amount') {
+
+      classes[index] = {  ...classes[index], id: classes[index].id, name: classes[index].name, subject: classes[index].subject, group: classes[index].group, cs: classes[index].cs,amount:value};
     } else if (field === 'group') {
       const selectedClassId = classess.find((cls) => cls.id === value);
       if (!selectedClassId) {
@@ -209,7 +212,7 @@ export default function StudentForm() {
       classesUids[index] = updatedClassUIDs;
     } else {
       console.log("Updating other field:", field, value);
-      classes[index] = { id: classes[index].id, name: classes[index].name, subject: classes[index].subject, group: classes[index].group, cs: value };
+      classes[index] = {         ...classes[index],id: classes[index].id, name: classes[index].name, subject: classes[index].subject, group: classes[index].group, cs: value,amount:classes[index].amount};
     }
   
     setValue(`classes`, classes);
@@ -700,10 +703,10 @@ export default function StudentForm() {
     <TableCell className="font-medium">
 
     <Input
-  type="text"
- defaultValue={invoice?.amount}
+  type="number"
+  value={invoice?.amount} onChange={(e)=>handleGroupChange(index,'amount',+e.target.value)}
   className="col-span-3 w-24 mb-2"
-  readOnly
+
 />
 </TableCell>
 

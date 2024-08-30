@@ -563,5 +563,10 @@
   "Saturday": "Saturday",
   "Sunday": "Sunday",
   "University": "University",
-  "primary": "primary"
+  "primary": "primary",
+  "جامعي":"University",
+  "ثانوي":"College",
+  "متوسط": "Middle",
+  "ابتدائي":"Primary",
+  "لغات":"Languages"
 }

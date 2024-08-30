@@ -50,26 +50,11 @@ const t=useTranslations()
         >
           {t('calendar')} </Link>
           <Link
-          href="/university"
-          className={`${pathname=== '/university' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
-        >
-        {t('University')} </Link>
-          <Link
           href="/students"
           className={`${pathname=== '/students' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
         >
 
-        Lycee </Link>
-         <Link
-          href="/middle"
-          className={`${pathname=== '/middle' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
-        >
-        CEM </Link>
-        <Link
-          href="/university"
-          className={`${pathname=== '/university' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
-        >
-        {t('primary')} </Link>
+        Etudiants</Link>
         <Link
           href="/teachers"
           className={`${pathname=== '/teachers' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
@@ -128,20 +113,11 @@ const t=useTranslations()
         >
           Calendar </Link>
           <Link
-          href="/university"
-          className={`${pathname=== '/university' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
-        >
-        University </Link>
-        <Link
           href="/students"
           className={`${pathname=== '/students' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
         >
-        Lycee </Link>
-         <Link
-          href="/middle"
-          className={`${pathname=== '/middle' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
-        >
-        CEM </Link>
+
+        Etudiants</Link>
         <Link
           href="/teachers"
           className={`${pathname=== '/teachers' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}

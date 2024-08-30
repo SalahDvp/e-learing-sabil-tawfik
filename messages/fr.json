@@ -569,5 +569,12 @@
   "Saturday": "Samedi",
   "Sunday": "Dimanche",
   "University": "Université",
-  "primary": "primaire"
+  "primary": "primaire",
+  "جامعي":"Université",
+  "ثانوي":"Lycee",
+  "متوسط": "CEM",
+  "ابتدائي":"Primaire",
+  "لغات":"Langue",
+  "paymentType":"type de paiment",
+  "grossSalary":"Salaire brute"
 }

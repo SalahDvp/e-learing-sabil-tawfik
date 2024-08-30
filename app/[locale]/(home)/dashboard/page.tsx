@@ -7,7 +7,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { useData } from "@/context/admin/fetchDataContext";
 import { Student } from "@/validators/auth";
-import { format } from 'date-fns';
+import { addDays, addMinutes, format, isAfter, isBefore, setHours, setMinutes } from 'date-fns';
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup,RadioGroupItem } from "@/components/ui/radio-group";
 import { useTranslations } from 'next-intl';
 import * as React from "react"
-import { Check, ChevronsUpDown } from "lucide-react"
+import { Check, ChevronsUpDown, ScanIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   Command,
@@ -43,7 +43,13 @@ import StudentInvoice from'../students/components/studentInvoice'
 import { doc, getDoc, setDoc, updateDoc, arrayUnion, increment } from "firebase/firestore";
 import { db } from "@/firebase/firebase-config";
 import { AutoComplete } from "@/components/ui/autocomplete";
- 
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { PDFDownloadLink, PDFViewer, Page, Text, View, Document, StyleSheet } from '@react-pdf/renderer'
+import ReactToPrint from 'react-to-print';
+
+import { PrinterIcon } from "lucide-react"
+import { Table, TableBody, TableCell, TableRow,TableHeader,TableHead } from "@/components/ui/table";
 function parseDateTimeRange(dateTimeRange) {
     // Split the string into components
     const parts = dateTimeRange.split('-');
@@ -66,18 +72,29 @@ function parseDateTimeRange(dateTimeRange) {
 }
 const checkClassTime = (scanTime: Date, student: any, groupClasses: any[]): any[] | null => {
   // Get the day of the week for the scan time
-  const scanDay = scanTime.toLocaleString('en-US', { weekday: 'long' });
+  const scanDay = format(scanTime, 'EEEE');
 
   // Extract IDs from student classes into a Set
-  const studentClassIds = new Set(student.classesUIDs.map(cls => cls.id));
+  const studentClassIds = new Set(student.classesUIDs.map((cls: any) => cls.id));
 
   // Filter group classes to get only those that match the student class IDs
-  const relevantGroupClasses = groupClasses.filter(groupClass =>
+  const relevantGroupClasses = groupClasses.filter((groupClass: any) =>
     studentClassIds.has(groupClass.id)
   );
 
   // Array to store matching class objects with group class information
   const matchingClassesWithGroup: any[] = [];
+
+  // Helper function to get the date of the current week for a given weekday
+  const getDateForCurrentWeek = (targetDay: string): Date => {
+    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const targetIndex = daysOfWeek.indexOf(targetDay);
+
+    const currentDayIndex = scanTime.getDay();
+    const diff = targetIndex - currentDayIndex;
+
+    return addMinutes(scanTime, diff * 1440); // Multiplying by 1440 converts days to minutes
+  };
 
   // Loop through each relevant group class
   for (const groupClass of relevantGroupClasses) {
@@ -85,32 +102,41 @@ const checkClassTime = (scanTime: Date, student: any, groupClasses: any[]): any[
       const groupDay = groupElement.day;
 
       if (scanDay.toLowerCase() === groupDay.toLowerCase()) {
-        const matchingClasses = student.classes.find(cls => cls.id === groupClass.id);
+        const matchingClasses = student.classes.find((cls: any) => cls.id === groupClass.id);
 
         if (matchingClasses) {
-          // Add matching class with group information to the result array
-          matchingClassesWithGroup.push({
-            ...groupElement,
-            subject: matchingClasses.subject,
-            id: matchingClasses.id,
-            studentIndex: matchingClasses.index,
-            studentGroup: matchingClasses.group,
-            name: groupClass.teacherName,
-            sessionsLeft:matchingClasses.sessionsLeft
-          });
+          // Calculate the real date for the groupDay in the current week
+          const classStartTime = getDateForCurrentWeek(groupDay);
+
+          // Parse the class start time and set it to the classStartTime date
+          const [hours, minutes] = groupElement.start.split(':');
+          const classStartDateTime = setMinutes(setHours(classStartTime, parseInt(hours, 10)), parseInt(minutes, 10));
+
+          // Calculate the time range (30 min before and after the class start time)
+          const startTimeRange = addMinutes(classStartDateTime, -30); // 30 minutes before
+          const endTimeRange = addMinutes(classStartDateTime, 60); // 30 minutes after
+
+          // Check if scanTime falls within the 30 min before or after the class start time
+          if (isAfter(scanTime, startTimeRange) && isBefore(scanTime, endTimeRange)) {
+            // Add matching class with group information to the result array
+            matchingClassesWithGroup.push({
+              ...groupElement,
+              subject: matchingClasses.subject,
+              id: matchingClasses.id,
+              studentIndex: matchingClasses.index,
+              studentGroup: matchingClasses.group,
+              name: groupClass.teacherName,
+              sessionsLeft:matchingClasses.sessionsLeft
+            });
+          }
         }
-        // }
       }
     }
   }
 
-  // Return array of matching classes with group information if any are found
-  if (matchingClassesWithGroup.length > 0) {
-    return matchingClassesWithGroup;
-  } else {
-    return null;
-  }
+  return matchingClassesWithGroup.length > 0 ? matchingClassesWithGroup : null;
 };
+
 export default function Home() {
   const t=useTranslations()
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -167,7 +193,16 @@ export default function Home() {
     if (classInfo) {
 
     
+      audioRefSuccess.current?.play();
+      const classInfoObject = classInfo.reduce((acc: any, classObj: any) => {
+        acc[classObj.id] = { ...classObj, group: classObj.studentGroup };
+        return acc;
+      }, {});
+      console.log(classInfoObject);
+      
+      onConfirm(classInfoObject,parsedData)
       setCurrentClasses(classInfo)
+      
 
       
       
@@ -205,7 +240,11 @@ export default function Home() {
     
     if (classInfo) {
       audioRefSuccess.current?.play();
-    
+      const classInfoObject = classInfo.reduce((acc: any, classObj: any) => {
+        acc[classObj.id] = { ...classObj, group: classObj.group };
+        return acc;
+      }, {});
+      onConfirm(classInfoObject)
       setCurrentClasses(classInfo)
       
     } else {
@@ -226,7 +265,7 @@ export default function Home() {
 
 
   };
-  const onConfirm = async () => {
+  const onConfirm = async (selectedClasses:any,studentData:any) => {
     try {
       const updatedClasses = [...classes];
       const updatedStudents = [...students];
@@ -313,10 +352,21 @@ export default function Home() {
           });
         } else {
           const date = parseDateTimeRange(`${year}-${month}-${day}-${selectedClass.start}-${selectedClass.end}`);
-          console.log("date",date);
+          const jj={  group: selectedClass.studentGroup,
+            end: date.endDateTime,
+            id: dateTimeUID,
+            start: date.startDateTime,
+            attendanceList: [{
+              name: studentData?.name,
+              group: selectedClass.studentGroup,
+              index: selectedClass.studentIndex,
+              status: 'present',
+              id: studentData?.id
+            }]}
+          console.log("date",jj);
           
           await setDoc(attendanceDocRef, {
-            group: selectedClass.group,
+            group: selectedClass.studentGroup,
             end: date.endDateTime,
             id: dateTimeUID,
             start: date.startDateTime,
@@ -356,19 +406,18 @@ export default function Home() {
       // Play success audio
       audioRefSuccess.current?.play();
   
-      // Clear state
-      setCurrentClass(undefined);
-      setCurrentClasses(undefined);
-      setStudentData(null);
-      setSelectedClasses({});
+      // // Clear state
+      // setCurrentClass(undefined);
+      // setCurrentClasses(undefined);
+      // setStudentData(null);
+      // setSelectedClasses({});
     } catch (error) {
       console.error('Error updating attendance:', error.message);
       alert('An error occurred while updating attendance. Please try again.');
     }
   };
-  
-  
-  
+
+
   const handleButtonClick = async () => {
     videoRef.current!.hidden = false;
     qrScanner.current = new QrScanner(videoRef.current!, handleQrScan, {
@@ -387,6 +436,7 @@ export default function Home() {
     await qrScanner.current.start();
     setShowingQrScanner(true);
   };
+
   const [selectedClasses, setSelectedClasses] = useState({});
 
   const handleSelection = (classObj, group) => {
@@ -400,13 +450,51 @@ export default function Home() {
         // If it doesn't exist, add it to the selected classes
         return {
           ...prev,
-          [classObj.id]: { ...classObj, group }, // store the selected class and group by ID
+          [classObj.id]: { ...classObj, group }, //store the selected class and group by ID
         };
       }
     });
   };
+  const [scannedCode, setScannedCode] = useState<string>('');
 
-  
+
+
+  React.useEffect(() => {
+    if (scannedCode) {
+      console.log("qr scanned",scannedCode);
+      
+      onQrScannedInput(scannedCode);
+    
+    }
+  }, [scannedCode]);
+  const onQrScannedInput=(id)=>{
+    const parsedData = students.find((student) => student.id === id || student.newId===id);
+
+
+    
+    if (!parsedData) {
+      setAlertText("Invalid QR code");
+      setOpenAlert(true);
+      audioRefError.current?.play();
+      return;
+    }
+
+    setStudentData(parsedData);
+    const scanTime = new Date();
+    const classInfo =checkClassTime(scanTime,parsedData,classes);
+    
+    if (classInfo) {
+
+    
+      setCurrentClasses(classInfo)
+
+    } else {
+      setAlertText("No current class found for this student to attend.");
+      setOpenAlert(true);
+
+    }
+    
+  }
   return (
     <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto p-4 md:p-8">
     <div className="flex flex-col gap-6">
@@ -435,28 +523,35 @@ export default function Home() {
         <p className="text-muted-foreground">
           {t('point-your-camera-at-qr-code')}
         </p>
-        <div className="aspect-square bg-background rounded-md overflow-hidden relative">
-          <video hidden={!showingQrScanner} ref={videoRef} className="absolute inset-0 w-full h-full object-cover"></video>
-   
-        </div>
-        {showingQrScanner ? (
         
-            <button
-          onClick={stopScanner}
-              className="mt-4 text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-red-600 dark:hover:bg-red-700 focus:outline-none dark:focus:ring-red-800"
-            >
-              {t('stop-qr-scanner')}
-            </button>
+
+<div className="bg-muted rounded-lg p-6 flex flex-col items-center justify-center gap-4">
+      <Card className="w-full max-w-md mx-auto">
+ <CardHeader>
+   <CardTitle className="text-2xl font-bold text-center">QR Code Scanner</CardTitle>
+ </CardHeader>
+ <CardContent className="space-y-4">
+   <div className="relative">
+   <Input
+     type="text"
+     value={scannedCode}
+     onChange={(e) => {setScannedCode(e.target.value)}}
+     placeholder="Scan QR code here"
+     autoFocus
+   />
+     <ScanIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+   </div>
+
+   <div className="flex justify-center">
+     
+   </div>
+   
+ </CardContent>
+</Card>
+  
+ </div>
  
-        ) : (
-          <button
-          onClick={handleButtonClick}
-          className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
-        >
-          {t('start-qr-scanner')}
-        </button>
-        )}
-      </div>
+    </div>
     </div>
 {studentData ? ( <div className="bg-muted rounded-lg p-6 flex flex-col gap-4">
   <div className="flex items-center gap-4">
