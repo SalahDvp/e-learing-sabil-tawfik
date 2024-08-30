@@ -591,7 +591,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
     )}
   />
                   </div>
-  {schoolType==="secondary" && (<div className="flex flex-col">
+  {schoolType==="high" && (<div className="flex flex-col">
 
                   <Label htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">fields:</Label>
                   <DropdownMenu >
@@ -780,7 +780,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
           groups:[],
           numberOfSessions: 0,
           amount: 0,
-          stream: schoolType==='secondary'?[]:[schoolType],
+          stream: schoolType === 'high'?[]:[schoolType],
           year: '',
           paymentType: ''
         });
