@@ -93,6 +93,7 @@ const middleSchoolYears = ["1AM", "2AM", "3AM", "4AM"];
 const highSchoolYears = ["1AS", "2AS", "3AS"];
 const universitySchoolYears=["L1","L2","L3","M1"]
 const priarySchoolYears=["1AP","2AP","3AP","4AP","5AP"]
+const languageSchoolYears=["A1","A2","B1","B2","C1","C2"]
 export default function TeacherForm() {
   const t=useTranslations()
   const timeOptions = generateTimeOptions("07:00","22:00", 30);
@@ -198,6 +199,7 @@ const checkRoomAvailability = useCallback((newGroup: Group, allRooms: string[]):
 
 const subjects = [
   "Select Option",
+  "تحضيري",
   "رياضيات",
   "علوم",
   "فيزياء",
@@ -237,15 +239,22 @@ const handleSchoolTypeChange = (type) => {
   setSchoolType(type);
 
   let years;
-  if (type === 'middle') {
+  if (type === "متوسط") {
     years = middleSchoolYears;
   } else if (type === 'high') {
     years = highSchoolYears;
-  } else if (type === 'university') {
+  } else if (type === "جامعي") {
     years = universitySchoolYears;
   }
- else if (type === "primary") {
+ else if (type === "ابتدائي") {
   years = priarySchoolYears;
+}
+else if (type === "لغات") {
+  years = languageSchoolYears;
+
+}else if (type ===  "تحضيري") {
+  years = [ "تحضيري"];
+  
 }
   if (years) {
     setValue('year', years);
@@ -378,10 +387,12 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
                   <SelectValue placeholder={t('select-school-type')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="middle">{t('middle-school')}</SelectItem>
+                <SelectItem value= "تحضيري">{t('preSchool')}</SelectItem>
+                <SelectItem value="ابتدائي">{t('primary')}</SelectItem>
+                  <SelectItem value="متوسط">{t('middle-school')}</SelectItem>
                   <SelectItem value="high">{t('hight-school')}</SelectItem>
-                  <SelectItem value="university">{t('University')}</SelectItem>
-                  <SelectItem value="primary">{t('primary')}</SelectItem>
+                  <SelectItem value="جامعي">{t('University')}</SelectItem>
+                  <SelectItem value="لغات">{t('languages')}</SelectItem>
                 </SelectContent>
               </Select>
             </FormControl>
@@ -580,7 +591,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
     )}
   />
                   </div>
-                  <div className="flex flex-col">
+  {schoolType==="secondary" && (<div className="flex flex-col">
 
                   <Label htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">fields:</Label>
                   <DropdownMenu >
@@ -591,7 +602,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="w-56">
-                            {["ابتدائي","جامعي",'متوسط','علوم تجريبية', 'تقني رياضي', 'رياضيات', 'تسيير واقتصاد ', 'لغات اجنبية ', 'اداب وفلسفة'].map((field) => (
+                            {['علوم تجريبية', 'تقني رياضي', 'رياضيات', 'تسيير واقتصاد ', 'لغات اجنبية ', 'اداب وفلسفة'].map((field) => (
                                        <DropdownMenuItem
                                        key={field}
                                        value={field}
@@ -605,7 +616,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
                               ))}
                             </DropdownMenuContent>
                           </DropdownMenu>
-                  </div>
+                  </div>)}
                   <div>
                   <FormField
     control={form.control}
@@ -769,7 +780,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
           groups:[],
           numberOfSessions: 0,
           amount: 0,
-          stream: [],
+          stream: schoolType==='secondary'?[]:[schoolType],
           year: '',
           paymentType: ''
         });

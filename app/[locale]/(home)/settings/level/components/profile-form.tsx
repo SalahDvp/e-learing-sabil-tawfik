@@ -33,8 +33,8 @@ export function ProfileForm() {
  
 
 const t=useTranslations()
-  const form = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileFormSchema),
+  const form = useForm<any>({
+    //resolver: zodResolver(profileFormSchema),
     defaultValues: {
       bio:  "I own a computer.",
       urls:  [
@@ -89,7 +89,7 @@ const t=useTranslations()
   
 
   const {toast} = useToast()
-  const onSubmit = async(data:ProfileFormValues) => {
+  const onSubmit = async(data:any) => {
     await addProfile(data)
     setProfile({...data,id:"GeneralInformation"})
     toast({
@@ -129,6 +129,22 @@ const t=useTranslations()
               </FormControl>
               <FormDescription>
                 {t('this-is-the-name')} </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+<FormField
+          control={form.control}
+          name="RegistrationFee"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t('registration-fee')}</FormLabel>
+              <FormControl>
+              <Input type="number" placeholder="500 DA" {...field} onChange={event => field.onChange(+event.target.value)} />
+              </FormControl>
+              <FormDescription>
+                {t('this-is-the-registration-fee')} </FormDescription>
               <FormMessage />
             </FormItem>
           )}

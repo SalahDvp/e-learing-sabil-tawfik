@@ -78,6 +78,7 @@ const currentDate = new Date();
 
 const subjects =['متوسط','علوم تجريبية', 'تقني رياضي', 'رياضيات', 'تسيير واقتصاد ', 'لغات اجنبية ', 'اداب وفلسفة']
 const classess = [
+  "تحضيري",
   "رياضيات",
   "علوم",
   "فيزياء",
@@ -114,6 +115,13 @@ const steps: StepItem[] = [
 ];
 
 const years=[
+  "تحضيري",
+  "لغات",
+  "1AP",
+"2AP",
+"3AP",
+"4AP",
+"5AP",
   "1AM",
   "2AM",
   "3AM",
@@ -125,11 +133,7 @@ const years=[
 "L2",
 "L3",
 "M1",
-"1AP",
-"2AP",
-"3AP",
-"4AP",
-"5AP"
+
 ]
 const isFirestoreId = (id) => {
   // Check if id is a string and has a length of 20 characters
@@ -145,7 +149,7 @@ const isFirestoreId = (id) => {
 };
 export default function StudentForm() {
   const camera = useRef<null | { takePhoto: () => string }>(null);
-  const {setStudents,teachers,classes,students}=useData()
+  const {setStudents,teachers,classes,students,profile}=useData()
   const t=useTranslations()
   const form = useForm<any>({
     //resolver: zodResolver(StudentSchema),
@@ -281,20 +285,10 @@ export default function StudentForm() {
   };
 
   const calculatedAmount = useMemo(() => {
-    return fields
-      .map((invoice) =>
-        classes
-          .filter(cls =>
-            cls.subject === invoice.subject &&
-            cls.year === watch('year') &&
-            cls.teacherName === invoice.name &&
-            cls.group === invoice.group
-          )
-          .map(cls => cls.amount) // Extract the amount from each matching class
-      )
-      .flat() // Flatten the array to get all amounts in a single array
-      .reduce((acc, amount) => acc + amount, 0); // Sum up all amounts
-  }, [fields, classes, watch]);
+    const amounts = watch("classes");
+    if (!Array.isArray(amounts)) return 0; // Handle cases where "fields" is not an array
+    return fields.reduce((acc, field) => acc + field.amount, 0)
+  }, [watch("classes")]);
   return (
     <Dialog >
       <DialogTrigger asChild className='mr-3'>
@@ -454,6 +448,13 @@ export default function StudentForm() {
  if(["1AP","2AP","3AP","4AP","5AP"].includes(e)) {
   setValue("field", "ابتدائي");
 }
+if(["لغات"].includes(e)) {
+  setValue("field", "لغات");
+}
+if(["تحضيري"].includes(e)) {
+  setValue("field", "تحضيري");
+}
+
   }}
    defaultValue={field.value}
               >
@@ -480,7 +481,7 @@ export default function StudentForm() {
 />
 
 
-{!["1AP","2AP","3AP","4AP","5AP","1AM","2AM","3AM","4AM","L1","L2","L3","M1"].includes(watch('year')) && (<FormField
+{!["تحضيري","لغات","1AP","2AP","3AP","4AP","5AP","1AM","2AM","3AM","4AM","L1","L2","L3","M1"].includes(watch('year')) && (<FormField
   control={control}
   name="field"
   render={({ field }) => (
@@ -566,7 +567,7 @@ export default function StudentForm() {
   <div className="w-full h-full">
      <ScrollArea className="h-[400px]">
     <Table>
-      <TableCaption>        <Button type='button' size="sm" variant="ghost" className="gap-1 w-full"  onClick={()=>appendClass({id:'',name:'',subject:'',group:'',cs:'false'})}>
+      <TableCaption>        <Button type='button' size="sm" variant="ghost" className="gap-1 w-full"  onClick={()=>appendClass({id:'',name:'',subject:'',group:'',cs:'false',amount:0})}>
                       <PlusCircle className="h-3.5 w-3.5" />
                       {t('add group')}</Button></TableCaption>
       <TableHeader>
@@ -614,7 +615,7 @@ export default function StudentForm() {
             .filter(
               cls =>
                 cls.subject === invoice.subject &&
-                cls.year === watch('year') &&
+              (watch('year') === 'لغات' || cls.year === watch('year'))&&
                 cls.stream.some(streamm => streamm.includes(watch('field')))
             )
             .map(cls => cls.teacherName) // Map to teacherName to get a list of names
@@ -649,7 +650,7 @@ export default function StudentForm() {
                                 <SelectLabel>{t('groups')}</SelectLabel>
                                     {classes.filter(cls => 
                                       cls.subject === invoice.subject && 
-                                      cls.year === watch('year') && 
+                                      (watch('year') === 'لغات' || cls.year === watch('year')) && 
                                       cls.teacherName === invoice.name
                                     ).map((groupp, index) => (
                                       <SelectItem key={groupp.id} value={groupp.id}>
@@ -727,7 +728,15 @@ export default function StudentForm() {
 
 
 <div className="flex items-center space-x-2">
-              <span className="text-sm font-semibold">Total:</span> {/* Title before the input */}
+<span className="text-sm font-semibold">Registration Fee:</span> {/* Title before the input */}
+
+<Input
+        type="text"
+        value={profile.RegistrationFee +' DA'}
+        className="col-span-3 w-24"
+        readOnly
+      />
+              <span className="text-sm font-semibold">Montant Total des Classes:</span> {/* Title before the input */}
               <Input
         type="text"
         value={calculatedAmount + ' DA'}
@@ -796,7 +805,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset, cal
       setQr('')
      
   }
-  const {setStudents,setClasses,students,classes}=useData()
+  const {setStudents,setClasses,students,classes,profile}=useData()
   const {toast}=useToast()
   const onSubmit = async(data:any) => {
 
@@ -875,7 +884,78 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset, cal
       title: "Student Added!",
       description: `The student, ${data.name} added successfully`,
     });
-    
+    const billHtml = `
+    <html>
+    <head>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          margin: 0;
+          padding: 0;
+          width: 8cm;
+          height: 8cm;
+        }
+        .bill-container {
+          padding: 10px;
+          border: 1px solid #000;
+        }
+        .bill-item {
+          margin-bottom: 10px;
+        }
+        .bill-item label {
+          font-weight: bold;
+        }
+      </style>
+    </head>
+    <body>
+     <div style="background-color: white; padding: 24px; border-radius: 8px; box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1); width: 100%; max-width: 400px; margin: 0 auto;">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <img src="/placeholder.svg" alt="School Logo" width="40" height="40" style="border-radius: 50%; aspect-ratio: 1; object-fit: cover;" />
+            <h2 style="font-size: 18px; font-weight: 600;">School Name</h2>
+        </div>
+        <div style="font-size: 14px; color: #6c757d;">Receipt No. #1234</div>
+    </div>
+    <div style="display: grid; gap: 8px;">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-weight: 500;">Student Name:</span>
+            <span>John Doe</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-weight: 500;">Registration Fee:</span>
+            <span>$50.00</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-weight: 500;">Date:</span>
+            <span>2023-08-30</span>
+        </div>
+    </div>
+    <hr style="margin: 16px 0;" />
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+        <span style="font-weight: 500;">Total:</span>
+        <span style="font-size: 18px; font-weight: 600;">$50.00</span>
+    </div>
+    <div style="margin-top: 16px; text-align: center; font-size: 14px; color: #6c757d;">Thank you for registering!</div>
+</div>
+    </body>
+    </html>
+  `;
+
+  const printWindow = window.open('', '_blank');
+
+  if (printWindow) {
+    // Write the HTML to the new tab
+    printWindow.document.open();
+    printWindow.document.write(billHtml);
+    printWindow.document.close();
+
+    // Wait for the document to be fully written
+    printWindow.onload = function() {
+      printWindow.focus(); // Focus on the new tab
+      printWindow.print(); // Trigger print dialog
+    };
+  }
+
   };
 
   return (

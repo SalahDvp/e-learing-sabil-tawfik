@@ -71,8 +71,9 @@ interface openModelProps {
   open: boolean; // Specify the type of setOpen
   student:Student
 }
-const subjects =['متوسط','علوم تجريبية', 'تقني رياضي', 'رياضيات', 'تسيير واقتصاد ', 'لغات اجنبية ', 'اداب وفلسفة']
+const subjects =['علوم تجريبية', 'تقني رياضي', 'رياضيات', 'تسيير واقتصاد ', 'لغات اجنبية ', 'اداب وفلسفة']
 const classess = [
+  "تحضيري",
    "رياضيات",
    "علوم",
    "فيزياء",
@@ -108,6 +109,13 @@ const steps: StepItem[] = [
 
 ];
 const years=[
+  "تحضيري",
+  "لغات",
+  "1AP",
+"2AP",
+"3AP",
+"4AP",
+"5AP",
   "1AM",
   "2AM",
   "3AM",
@@ -119,11 +127,7 @@ const years=[
 "L2",
 "L3",
 "M1",
-"1AP",
-"2AP",
-"3AP",
-"4AP",
-"5AP"
+
 ]
 const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
   const camera = useRef<null | { takePhoto: () => string }>(null);
@@ -152,16 +156,19 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
     
     return selectedClass ? {id:selectedClass.id,index:selectedClass.students?selectedClass.students.length+1:1,group:selectedGroup.group}: {id:"",index:0,group:""};
   };
-  const handleGroupChange = (index: number, field: 'name' | 'id' | 'subject' | 'group', value: string | number, classess) => {
+  const handleGroupChange = (index: number, field: 'name' | 'id' | 'subject' | 'group' | "amount", value: string | number, classess) => {
     const classes = [...getValues('classes')];
     const classesUids = getValues('classesUIDs') ? [...getValues('classesUIDs')] : [];
   
     if (field === 'subject') {
       console.log("Updating subject:", value);
-      classes[index] = { id: '', name: '', subject: value, group: '', cs: classes[index].cs };
+      classes[index] = {   ...classes[index],id: '', name: '', subject: value, group: '', cs: classes[index].cs };
     } else if (field === 'name') {
       console.log("Updating name:", value);
-      classes[index] = { id: '', name: value, subject: classes[index].subject, group: '', cs: classes[index].cs };
+      classes[index] = {   ...classes[index],id: '', name: value, subject: classes[index].subject, group: '', cs: classes[index].cs };
+    } else if (field === 'amount') {
+
+      classes[index] = {  ...classes[index], id: classes[index].id, name: classes[index].name, subject: classes[index].subject, group: classes[index].group, cs: classes[index].cs,amount:value};
     } else if (field === 'group') {
       const selectedClassId = classess.find((cls) => cls.id === value);
       if (!selectedClassId) {
@@ -190,7 +197,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
       classesUids[index] = updatedClassUIDs;
     } else {
       console.log("Updating other field:", field, value);
-      classes[index] = {...classes[index], cs: value };
+      classes[index] = {         ...classes[index],id: classes[index].id, name: classes[index].name, subject: classes[index].subject, group: classes[index].group, cs: value,amount:classes[index].amount};
     }
   
     setValue(`classes`, classes);
@@ -199,20 +206,10 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
 
 
   const calculatedAmount = useMemo(() => {
-    return fields
-      .map((invoice) =>
-        classes
-          .filter(cls =>
-            cls.subject === invoice.subject &&
-            cls.year === watch('year') &&
-            cls.teacherName === invoice.name && 
-            cls.group === invoice.group
-          )
-          .map(cls => cls.amount) // Extract the amount from each matching class
-      )
-      .flat() // Flatten the array to get all amounts in a single array
-      .reduce((acc, amount) => acc + amount, 0); // Sum up all amounts
-  }, [fields, classes, watch]);
+    const amounts = watch("classes");
+    if (!Array.isArray(amounts)) return 0; // Handle cases where "fields" is not an array
+    return fields.reduce((acc, field) => acc + field.amount, 0)
+  }, [watch("classes")]);
   return (
     <Dialog open={open} onOpenChange={setOpen} >
  <DialogContent className="sm:max-w-[1300px]">
@@ -310,7 +307,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
       <FormLabel className="text-right">{t("Year")}</FormLabel>
       <FormControl>
       <Select
-   onValueChange={(e: string) => {
+   onValueChange={(e) => {
     // Call the onChange handler with the new value
     field.onChange(e);
 
@@ -319,11 +316,18 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
       setValue("field", "متوسط");
     }
     if(["L1","L2","L3","M1"].includes(e)) {
-      setValue("field", "جامعي");
-    }
-    if(["1AP","2AP","3AP","4AP","5AP"].includes(e)) {
-      setValue("field", "ابتدائي");
-    }
+  setValue("field", "جامعي");
+}    
+ if(["1AP","2AP","3AP","4AP","5AP"].includes(e)) {
+  setValue("field", "ابتدائي");
+}
+if(["لغات"].includes(e)) {
+  setValue("field", "لغات");
+}
+if(["تحضيري"].includes(e)) {
+  setValue("field", "تحضيري");
+}
+
   }}
    defaultValue={field.value}
               >
@@ -349,7 +353,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
   )}
 />
 
-{!["1AP","2AP","3AP","4AP","5AP","1AM","2AM","3AM","4AM","L1","L2","L3","M1"].includes(watch('year')) && (<FormField
+{!["تحضيري","لغات","1AP","2AP","3AP","4AP","5AP","1AM","2AM","3AM","4AM","L1","L2","L3","M1"].includes(watch('year')) && (<FormField
   control={control}
   name="field"
   render={({ field }) => (
@@ -434,7 +438,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
   <div className="w-full h-full">
      <ScrollArea className="h-[400px]">
     <Table>
-      <TableCaption>        <Button type='button' size="sm" variant="ghost" className="gap-1 w-full"  onClick={()=>appendClass({id:'',name:'',subject:'',group:'',cs:'false'})}>
+      <TableCaption>        <Button type='button' size="sm" variant="ghost" className="gap-1 w-full"  onClick={()=>appendClass({id:'',name:'',subject:'',group:'',cs:'false',amount:0})}>
                       <PlusCircle className="h-3.5 w-3.5" />
                       {t('add group')}</Button></TableCaption>
       <TableHeader>
@@ -481,7 +485,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
             .filter(
               cls =>
                 cls.subject === invoice.subject &&
-                cls.year === watch('year') &&
+              (watch('year') === 'لغات' || cls.year === watch('year'))&&
                 cls.stream.some(streamm => streamm.includes(watch('field')))
             )
             .map(cls => cls.teacherName) // Map to teacherName to get a list of names
@@ -514,7 +518,7 @@ value={classes.find(type => type.id === watch(`classes.${index}.id`))?.id}
         <SelectLabel>{t('groups')}</SelectLabel>
         {classes.filter(cls => 
           cls.subject === invoice.subject && 
-          cls.year === watch('year') && 
+          (watch('year') === 'لغات' || cls.year === watch('year')) && 
           cls.teacherName === invoice.name
         ).map((groupp, index) => (
           <SelectItem key={groupp.id} value={groupp.id}>
@@ -571,10 +575,10 @@ value={classes.find(type => type.id === watch(`classes.${index}.id`))?.id}
 
     
     <Input
-  type="text"
- defaultValue={invoice?.amount}
+  type="number"
+  value={invoice?.amount} onChange={(e)=>handleGroupChange(index,'amount',+e.target.value)}
   className="col-span-3 w-24 mb-2"
-  readOnly
+
 />
 </TableCell>
 
@@ -595,7 +599,7 @@ value={classes.find(type => type.id === watch(`classes.${index}.id`))?.id}
     
      
             <div className="flex items-center space-x-2">
-              <span className="text-sm font-semibold">Total:</span> {/* Title before the input */}
+              <span className="text-sm font-semibold">Montant Total des Classes:</span> {/* Title before the input */}
               <Input
         type="text"
         value={calculatedAmount + ' DA'}

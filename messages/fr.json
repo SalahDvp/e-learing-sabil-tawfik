@@ -570,11 +570,14 @@
   "Sunday": "Dimanche",
   "University": "Université",
   "primary": "primaire",
-  "جامعي":"Université",
-  "ثانوي":"Lycee",
+  "جامعي": "Université",
+  "ثانوي": "Lycee",
   "متوسط": "CEM",
-  "ابتدائي":"Primaire",
-  "لغات":"Langue",
-  "paymentType":"type de paiment",
-  "grossSalary":"Salaire brute"
+  "ابتدائي": "Primaire",
+  "لغات": "Langue",
+  "paymentType": "type de paiment",
+  "grossSalary": "Salaire brute",
+  "languages": "langues",
+  "preSchool": "préscolaire",
+  "تحضيري":"préscolaire"
 }

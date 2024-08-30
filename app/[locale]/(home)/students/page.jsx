@@ -27,7 +27,7 @@ function Dashboard() {
       <div className="flex items-center">
         <TabsList>
           <TabsTrigger value="all" onClick={() => handleFilter("All")}>{t('all')}</TabsTrigger>
-          {["جامعي","ثانوي","متوسط","ابتدائي","لغات"].map((level) => (
+          {["جامعي","ثانوي","متوسط","ابتدائي","تحضيري","لغات",].map((level) => (
             <TabsTrigger key={level} value={level} onClick={() => handleFilter(level)}>
               {t(`${level}`)}
             </TabsTrigger>
