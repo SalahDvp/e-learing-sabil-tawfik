@@ -10,11 +10,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { CircleAlertIcon, CircleCheckIcon, PlusCircle } from 'lucide-react';
+import { CircleAlertIcon, CircleCheckIcon, PlusCircle, ScanIcon } from 'lucide-react';
 import QrScanner from "qr-scanner";
 import { useTranslations } from 'next-intl';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/firebase/firebase-config';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 
 const isFirestoreId = (id) => {
   if (typeof id !== 'string' || id.length !== 20) {
@@ -84,7 +86,42 @@ const QrSeach: React.FC<{ onStudentScanned: (name: string) => void }> = ({ onStu
     setShowingQrScanner(true);
     setIsDialogOpen(true); // Open the dialog
   };
+  const [scannedCode, setScannedCode] = useState<string>('');
 
+
+
+  React.useEffect(() => {
+    if (scannedCode) {
+      console.log("qr scanned",scannedCode);
+      
+      onQrScannedInput(scannedCode);
+    
+    }
+  }, [scannedCode]);
+  const onQrScannedInput=async(id)=>{
+    if (!isFirestoreId(id)) {
+      setStudent(null);
+      audioRefError.current?.play();
+      return;
+    }
+    
+    const userRef = doc(db, 'Students', id);
+    const userDoc = await getDoc(userRef);
+
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      setStudent(userData);
+      onStudentScanned(userData.name || ''); // Send student name or empty string if name not found
+      audioRefSuccess.current?.play();
+    } else {
+      setStudent(null);
+      onStudentScanned('');//Send empty string if student not found
+      audioRefError.current?.play();
+    }
+
+    setIsDialogOpen(false); // Close the dialog
+    
+  }
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild className='mr-3'>
@@ -99,7 +136,7 @@ const QrSeach: React.FC<{ onStudentScanned: (name: string) => void }> = ({ onStu
         <audio id="qr-scan-sound-success" ref={audioRefSuccess} src="/success.mp3"></audio>
         <audio id="qr-scan-sound-error" ref={audioRefError} src="/error.mp3"></audio>
         <div className="grid gap-6 py-6">
-          <div className="aspect-square bg-background rounded-md overflow-hidden relative h-[300px] w-full flex items-center justify-center">
+          {/* <div className="aspect-square bg-background rounded-md overflow-hidden relative h-[300px] w-full flex items-center justify-center">
             <video hidden={!showingQrScanner} ref={videoRef} className="absolute inset-0 w-full h-full object-cover"></video>
           </div>
           {showingQrScanner ? (
@@ -117,7 +154,27 @@ const QrSeach: React.FC<{ onStudentScanned: (name: string) => void }> = ({ onStu
             >
               {t('Start QR Scanner')}
             </button>
-          )}
+          )} */}
+             <div className="bg-muted rounded-lg p-6 flex flex-col items-center justify-center gap-4">
+      <Card className="w-full max-w-md mx-auto">
+ <CardHeader>
+   <CardTitle className="text-2xl font-bold text-center">QR Code Scanner</CardTitle>
+ </CardHeader>
+ <CardContent className="space-y-4">
+   <div className="relative">
+   <Input
+     type="text"
+     value={scannedCode}
+     onChange={(e) => {setScannedCode(e.target.value)}}
+     placeholder="Scan QR code here"
+     autoFocus
+   />
+     <ScanIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+   </div>
+ </CardContent>
+</Card>
+  
+ </div>
         </div>
       </DialogContent>
     </Dialog>

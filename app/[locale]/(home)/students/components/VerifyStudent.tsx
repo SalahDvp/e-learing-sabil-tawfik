@@ -12,12 +12,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { CircleAlertIcon, CircleCheckIcon, PlusCircle } from 'lucide-react';
+import { CircleAlertIcon, CircleCheckIcon, PlusCircle, ScanIcon } from 'lucide-react';
 import QrScanner from "qr-scanner";
 
 import { useTranslations } from 'next-intl';
 import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/firebase/firebase-config';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 
 
 const isFirestoreId = (id) => {
@@ -111,7 +113,65 @@ const t=useTranslations()
     await qrScanner.current.start();
     setShowingQrScanner(true);
   };
+  const [scannedCode, setScannedCode] = useState<string>('');
 
+
+
+  React.useEffect(() => {
+    if (scannedCode) {
+      console.log("qr scanned",scannedCode);
+      
+      onQrScannedInput(scannedCode);
+    
+    }
+  }, [scannedCode]);
+  const onQrScannedInput=async(id)=>{
+    try {
+      if (!isFirestoreId(id)) {
+        // If the result.data is not a valid Firestore ID
+        setStudent(null);
+        audioRefError.current?.play();
+        return;
+      }
+  
+      const studentsRef = collection(db, 'Students');
+  
+      // Queries to find documents where `id` or `newid` matches `result.data`
+      const queryById = query(studentsRef, where('id', '==', id));
+      const queryByNewId = query(studentsRef, where('newId', '==', id));
+  
+      // Perform the queries
+      const [idSnapshot, newidSnapshot] = await Promise.all([
+        getDocs(queryById),
+        getDocs(queryByNewId),
+      ]);
+  
+      // Determine which query has results and get the student data
+      let studentData = null;
+  
+      if (!idSnapshot.empty) {
+        // If there are results in the id query
+        studentData = idSnapshot.docs[0].data();
+      } else if (!newidSnapshot.empty) {
+        // If there are results in the newid query
+        studentData = newidSnapshot.docs[0].data();
+      }
+  
+      if (studentData) {
+        // Set student data and play success audio
+        setStudent(studentData);
+        audioRefSuccess.current?.play();
+      } else {
+        // If no student data found, set student to null and play error audio
+        setStudent(null);
+        audioRefError.current?.play();
+      }
+    } catch (error) {
+      console.error('Error handling QR scan:', error);
+      setStudent(null);
+      audioRefError.current?.play();
+    } 
+  }
   return (
     <Dialog >
       <DialogTrigger asChild className='mr-3'>
@@ -126,7 +186,7 @@ const t=useTranslations()
         <audio id="qr-scan-sound-success"  ref={audioRefSuccess}  src="/success.mp3" ></audio>
         <audio id="qr-scan-sound-error"  ref={audioRefError}  src="/error.mp3" ></audio>
         <div className="grid gap-6 py-6">
-        <div className="aspect-square bg-background rounded-md overflow-hidden relative h-[300px] w-full flex items-center justify-center">
+        {/* <div className="aspect-square bg-background rounded-md overflow-hidden relative h-[300px] w-full flex items-center justify-center">
           <video hidden={!showingQrScanner} ref={videoRef} className="absolute inset-0 w-full h-full object-cover"></video>
           </div>
           {showingQrScanner ? (
@@ -146,7 +206,32 @@ const t=useTranslations()
 >
  {t('Start QR Scanner')}
 </button>
-)}
+)} */}
+   <div className="bg-muted rounded-lg p-6 flex flex-col items-center justify-center gap-4">
+      <Card className="w-full max-w-md mx-auto">
+ <CardHeader>
+   <CardTitle className="text-2xl font-bold text-center">QR Code Scanner</CardTitle>
+ </CardHeader>
+ <CardContent className="space-y-4">
+   <div className="relative">
+   <Input
+     type="text"
+     value={scannedCode}
+     onChange={(e) => {setScannedCode(e.target.value)}}
+     placeholder="Scan QR code here"
+     autoFocus
+   />
+     <ScanIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+   </div>
+
+   <div className="flex justify-center">
+     
+   </div>
+   
+ </CardContent>
+</Card>
+  
+ </div>
          {student &&(
                <div className="flex items-center justify-center">
                <div className="rounded-md bg-green-50 p-6 w-full max-w-md">

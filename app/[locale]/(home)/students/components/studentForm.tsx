@@ -32,7 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, ScanIcon } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -67,6 +67,7 @@ import {
 import { useTranslations } from 'next-intl';
 import { addStudent } from '@/lib/hooks/students';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Card,CardContent,CardHeader, CardTitle, } from '@/components/ui/card';
 interface FooterProps {
   formData: Student;
   form: UseFormReturn<any>; // Use the specific form type if available
@@ -289,6 +290,42 @@ export default function StudentForm() {
     if (!Array.isArray(amounts)) return 0; // Handle cases where "fields" is not an array
     return fields.reduce((acc, field) => acc + field.amount, 0)
   }, [watch("classes")]);
+  const [scannedCode, setScannedCode] = useState<string>('');
+
+
+
+  React.useEffect(() => {
+    if (scannedCode) {
+      console.log("qr scanned",scannedCode);
+      
+      onQrScannedInput(scannedCode);
+    
+    }
+  }, [scannedCode]);
+  const onQrScannedInput=(id)=>{
+    if (!isFirestoreId(id)) {//less than 20
+      setAlertText("Invalid Qr Code");
+      setOpenAlert(true);
+      audioRefError.current?.play();
+      return;
+    }
+    
+    const parsedData = students.find((student) =>  id === student.id || id=== student.newId);
+
+    
+    if (parsedData!=undefined) {
+      setAlertText("Qr code already used");
+      setOpenAlert(true);
+      audioRefError.current?.play();
+      return;
+    }
+
+
+    setValue("id",id)
+    audioRefSuccess.current?.play();
+
+    
+  }
   return (
     <Dialog >
       <DialogTrigger asChild className='mr-3'>
@@ -331,8 +368,9 @@ export default function StudentForm() {
   </AlertDialogContent>
 </AlertDialog>
       <audio id="qr-scan-sound-success"  ref={audioRefSuccess}  src="/success.mp3" ></audio>
+      
       <audio id="qr-scan-sound-error"  ref={audioRefError}  src="/error.mp3" ></audio>
-   <div className="aspect-square bg-background rounded-md overflow-hidden relative h-[300px]">
+   {/* <div className="aspect-square bg-background rounded-md overflow-hidden relative h-[300px]">
      <video hidden={!showingQrScanner} ref={videoRef} className="absolute inset-0 w-full h-full object-cover"></video>
 
    </div>
@@ -353,7 +391,32 @@ export default function StudentForm() {
    >
      {t('Start QR Scanner')}
    </button>
-   )}
+   )} */}
+   <div className="bg-muted rounded-lg p-6 flex flex-col items-center justify-center gap-4">
+      <Card className="w-full max-w-md mx-auto">
+ <CardHeader>
+   <CardTitle className="text-2xl font-bold text-center">QR Code Scanner</CardTitle>
+ </CardHeader>
+ <CardContent className="space-y-4">
+   <div className="relative">
+   <Input
+     type="text"
+     value={scannedCode}
+     onChange={(e) => {setScannedCode(e.target.value)}}
+     placeholder="Scan QR code here"
+     autoFocus
+   />
+     <ScanIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+   </div>
+
+   <div className="flex justify-center">
+     
+   </div>
+   
+ </CardContent>
+</Card>
+  
+ </div>
  </div>
 
 
@@ -1022,7 +1085,9 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset, cal
             </Button>
             {isLastStep?(        <LoadingButton size="sm"    loading={isSubmitting}        type={'button'}   onClick={form.handleSubmit(onSubmit)}>
               Finish
-            </LoadingButton>):(        <Button size="sm"   disabled={formData.id === null}        type={"button"}    onClick={nextStep}>
+            </LoadingButton>):(        <Button size="sm"   
+            //disabled={formData.id === null}   
+                 type={"button"}    onClick={nextStep}>
               {isLastStep ? "Finish" : isOptionalStep ? "Skip" : "Next"}
             </Button>)}
     
