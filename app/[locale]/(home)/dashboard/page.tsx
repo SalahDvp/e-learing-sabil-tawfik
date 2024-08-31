@@ -475,17 +475,9 @@ export default function Home() {
     setStudentData(parsedData);
     const scanTime = new Date();
     const classInfo =checkClassTime(scanTime,parsedData,classes);
-    
-    if (classInfo) {
+setCurrentClasses(classInfo)
 
-    
-      setCurrentClasses(classInfo)
-
-    } else {
-      setAlertText("No current class found for this student to attend.");
-      setOpenAlert(true);
-
-    }
+   
     
   }
   const transactionsData = React.useMemo(() => {
