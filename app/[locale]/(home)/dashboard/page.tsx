@@ -472,14 +472,6 @@ export default function Home() {
     const parsedData = students.find((student) => student.id === id || student.newId===id);
 
 
-    
-    if (!parsedData) {
-      setAlertText("Invalid QR code");
-      setOpenAlert(true);
-      audioRefError.current?.play();
-      return;
-    }
-
     setStudentData(parsedData);
     const scanTime = new Date();
     const classInfo =checkClassTime(scanTime,parsedData,classes);
