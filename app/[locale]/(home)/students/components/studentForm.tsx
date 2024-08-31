@@ -68,6 +68,7 @@ import { useTranslations } from 'next-intl';
 import { addStudent } from '@/lib/hooks/students';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card,CardContent,CardHeader, CardTitle, } from '@/components/ui/card';
+import { format } from 'date-fns';
 interface FooterProps {
   formData: Student;
   form: UseFormReturn<any>; // Use the specific form type if available
@@ -303,12 +304,7 @@ export default function StudentForm() {
     }
   }, [scannedCode]);
   const onQrScannedInput=(id)=>{
-    if (!isFirestoreId(id)) {//less than 20
-      setAlertText("Invalid Qr Code");
-      setOpenAlert(true);
-      audioRefError.current?.play();
-      return;
-    }
+   
     
     const parsedData = students.find((student) =>  id === student.id || id=== student.newId);
 
@@ -955,54 +951,94 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset, cal
           font-family: Arial, sans-serif;
           margin: 0;
           padding: 0;
-          width: 8cm;
-          height: 8cm;
+          width: 21cm;
+          height: 29.7cm;
+          display: flex;
+          justify-content: center;
+          align-items: center;
         }
         .bill-container {
           padding: 10px;
-          border: 1px solid #000;
+          width: 100%;
+          height: 100%;
+          box-sizing: border-box;
+      
+        }
+        .header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 48px;
+        }
+        .logo-container {
+          display: flex;
+          align-items: center;
+          gap: 24px;
+        }
+        .logo-container img {
+          border-radius: 50%;
+          width: 120px;
+          height: 120px;
+          object-fit: cover;
+        }
+        h2 {
+          font-size: 48px;
+          font-weight: 700;
         }
         .bill-item {
-          margin-bottom: 10px;
+          margin-bottom: 32px;
+          font-size: 36px;
         }
         .bill-item label {
           font-weight: bold;
         }
+        .total {
+          font-size: 60px;
+          font-weight: 700;
+        }
+        .footer {
+          margin-top: 64px;
+          text-align: center;
+          font-size: 36px;
+          color: #6c757d;
+        }
       </style>
     </head>
     <body>
-     <div style="background-color: white; padding: 24px; border-radius: 8px; box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1); width: 100%; max-width: 400px; margin: 0 auto;">
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
-        <div style="display: flex; align-items: center; gap: 8px;">
-            <img src="/placeholder.svg" alt="School Logo" width="40" height="40" style="border-radius: 50%; aspect-ratio: 1; object-fit: cover;" />
-            <h2 style="font-size: 18px; font-weight: 600;">School Name</h2>
+      <div class="bill-container">
+        <div class="header">
+          <div class="logo-container">
+            <img src="/placeholder.svg" alt="School Logo" />
+            <h2>School Name</h2>
+          </div>
+          <div style="font-size: 36px; color: #6c757d;"></div>
         </div>
-        <div style="font-size: 14px; color: #6c757d;">Receipt No. #1234</div>
-    </div>
-    <div style="display: grid; gap: 8px;">
+        <div style="display: grid; gap: 24px;">
+          <div class="bill-item">
+            <label>Nom:</label>
+            <span>${data.name}</span>
+          </div>
+          <div class="bill-item">
+            <label>Frais d inscription:</label>
+            <span>DZD ${profile.RegistrationFee}</span>
+          </div>
+          <div class="bill-item">
+            <label>Date:</label>
+            <span>${format(new Date(),"DD-MM-YYYY")}</span>
+          </div>
+        </div>
+        <hr style="margin: 48px 0;" />
         <div style="display: flex; align-items: center; justify-content: space-between;">
-            <span style="font-weight: 500;">Student Name:</span>
-            <span>John Doe</span>
+          <span class="total">Total:</span>
+          <span class="total">DZD ${profile.RegistrationFee}</span>
         </div>
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-            <span style="font-weight: 500;">Registration Fee:</span>
-            <span>$50.00</span>
+        <div class="footer">
+          Merci!
         </div>
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-            <span style="font-weight: 500;">Date:</span>
-            <span>2023-08-30</span>
-        </div>
-    </div>
-    <hr style="margin: 16px 0;" />
-    <div style="display: flex; align-items: center; justify-content: space-between;">
-        <span style="font-weight: 500;">Total:</span>
-        <span style="font-size: 18px; font-weight: 600;">$50.00</span>
-    </div>
-    <div style="margin-top: 16px; text-align: center; font-size: 14px; color: #6c757d;">Thank you for registering!</div>
-</div>
+      </div>
     </body>
     </html>
-  `;
+    `;
 
   const printWindow = window.open('', '_blank');
 

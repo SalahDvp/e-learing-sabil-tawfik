@@ -456,7 +456,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
         name="paymentType"
         render={({ field }) => (
           <FormItem className="grid grid-cols-4 items-center gap-4">
-            <FormLabel className="text-right">payment Type</FormLabel>
+            <FormLabel className="text-right">type de salaire</FormLabel>
             <FormControl>
               <Select
                 onValueChange={field.onChange}
@@ -466,12 +466,13 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
                   id={`paymentType`}
                   aria-label={`Select payment Type`}
                 >
-                  <SelectValue placeholder='payment Type' />
+                  <SelectValue placeholder='type de salaire' />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="monthly">Monthly</SelectItem>
-                  <SelectItem value="percentage">Percentage</SelectItem>
-                  <SelectItem value="hourly">Hourly</SelectItem>
+                  <SelectItem value="monthly">Salaire fixe</SelectItem>
+                  <SelectItem value="percentage">Pourcentage</SelectItem>
+                  <SelectItem value="hourly">
+                  par séance</SelectItem>
                 </SelectContent>
               </Select>
             </FormControl>
@@ -534,7 +535,8 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
     name={`classes.${groupIndex}.numberOfSessions`}
     render={({ field }) => (
       <FormItem className="w-24">
-        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Number of Sessions:</FormLabel>
+        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">
+        Nombre de séances par mois:</FormLabel>
         <FormControl>
           <Input
             {...field}
@@ -552,7 +554,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
     name={`classes.${groupIndex}.paymentType`}
     render={({ field }) => (
       <FormItem className="w-[120px]">
-        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Payment Type:</FormLabel>
+        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">type de payment:</FormLabel>
         <FormControl>
           <Select
    onValueChange={field.onChange}
@@ -578,7 +580,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
     name={`classes.${groupIndex}.amount`}
     render={({ field }) => (
       <FormItem className="w-24">
-        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Amount:</FormLabel>
+        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Montant:</FormLabel>
         <FormControl>
           <Input
             {...field}
@@ -593,7 +595,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
                   </div>
   {schoolType==="high" && (<div className="flex flex-col">
 
-                  <Label htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">fields:</Label>
+                  <Label htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">spécialité:</Label>
                   <DropdownMenu >
                             <DropdownMenuTrigger asChild       className="w-24">
                             <Button variant="outline" className="w-[150px] overflow-hidden text-ellipsis whitespace-nowrap">
@@ -623,7 +625,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
     name={`classes.${groupIndex}.year`}
     render={({ field }) => (
       <FormItem className="w-[100px]">
-        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Year:</FormLabel>
+        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Annee:</FormLabel>
         <FormControl>
           <Select
       onValueChange={field.onChange}
@@ -658,10 +660,10 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
         <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Day</TableHead>
-                      <TableHead>Start Time</TableHead>
-                      <TableHead>End Time</TableHead>
-                      <TableHead>Room</TableHead>
+                      <TableHead>{t('Day')}</TableHead>
+                      <TableHead>{t('Start Time')}</TableHead>
+                      <TableHead>{t('End Time')}</TableHead>
+                      <TableHead>{t('Room')}</TableHead>
              
                       <TableHead>Action</TableHead>
                     </TableRow>
@@ -694,7 +696,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
                               id={`start-${index}`}
                               aria-label={`Select start time`}
                             >
-                              <SelectValue placeholder={t('select-end-time')} />
+                              <SelectValue placeholder={t('select-start-time')} />
                             </SelectTrigger>
 
                           <SelectContent>
@@ -787,7 +789,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
       }}
     >
       <PlusCircle className="h-4 w-4 mr-2" />
-      Add New Group
+      {t('Add New Group')}
     </Button>
   </ScrollArea>
 </div>

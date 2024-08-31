@@ -1,6 +1,7 @@
 "use client";
 import { markAttendance } from "@/lib/hooks/students";
 import Image from "next/image";
+import StudentPayment from './components/transaction'
 import QrScanner from "qr-scanner";
 import {  useRef, useState } from "react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -47,7 +48,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PDFDownloadLink, PDFViewer, Page, Text, View, Document, StyleSheet } from '@react-pdf/renderer'
 import ReactToPrint from 'react-to-print';
-
+import { differenceInCalendarDays } from 'date-fns';
 import { PrinterIcon } from "lucide-react"
 import { Table, TableBody, TableCell, TableRow,TableHeader,TableHead } from "@/components/ui/table";
 function parseDateTimeRange(dateTimeRange) {
@@ -142,7 +143,7 @@ export default function Home() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const highlightCodeOutlineRef = useRef<HTMLDivElement>(null);
   const qrScanner = useRef<QrScanner | null>(null);
-  const {students,classes,setClasses,setStudents}=useData()
+  const {students,classes,setClasses,setStudents,invoices}=useData()
   const [showingQrScanner, setShowingQrScanner] = useState(false);
   const [studentData, setStudentData] = useState<Student | null>(null);
   const [currentClass, setCurrentClass] = useState<String| any>();
@@ -495,8 +496,26 @@ export default function Home() {
     }
     
   }
+  const transactionsData = React.useMemo(() => {
+    if (!Array.isArray(invoices)) {
+      return []; // Return an empty array if invoices is not an array or is undefined
+    }
+
+    return invoices.flatMap((invoice) =>
+      (Array.isArray(invoice.transaction) ? invoice.transaction : []).map((trans) => ({
+        ...invoice.student, // Include other invoice details
+        ...trans, // Include transaction details as separate fields
+      }))
+    ).sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime()); // Sort by latest paymentDate
+  }, [invoices]);
+  
+
+  const calculateDaysUntilNextPayment = (nextPaymentDate: Date): number => {
+    const today = new Date();
+    return differenceInCalendarDays(nextPaymentDate, today);
+  };
   return (
-    <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto p-4 md:p-8">
+    <div className="grid md:grid-cols-3 gap-8 max-w-8xl mx-auto p-4 md:p-8">
     <div className="flex flex-col gap-6">
       <h1 className="text-3xl font-bold">{t('qr-code-scanner')}</h1>
       <AlertDialog open={openAlert} onOpenChange={setOpenAlert}>
@@ -553,136 +572,162 @@ export default function Home() {
  
     </div>
     </div>
-{studentData ? ( <div className="bg-muted rounded-lg p-6 flex flex-col gap-4">
-  <div className="flex items-center gap-4">
-    <Avatar className="w-24 h-24 border">
-      <AvatarImage src={studentData.photo || "/placeholder-user.jpg"} />
-      <AvatarFallback>{studentData.name.charAt(0)}</AvatarFallback>
-    </Avatar>
-    <div>
-      <h2 className="text-xl font-semibold">{studentData.name}</h2>
-      <p className="text-muted-foreground">{studentData.field}</p>
-    </div>
-  </div>
-  <Separator />
-  <div className="grid gap-2">
-    <div className="flex items-center justify-between">
-      <span className="text-muted-foreground">{t('phone')}:</span>
-      <a href={`tel:${studentData.phoneNumber}`} className="text-primary">
-        {studentData.phoneNumber}
-      </a>
-    </div>
-    <div className="flex items-center justify-between">
-      <span className="text-muted-foreground">{t('birth-date')}:</span>
-      <span>{new Date(studentData.birthdate).toLocaleDateString()}</span>
-    </div>
-    <div className="flex items-center justify-between">
-      <span className="text-muted-foreground">{t('birth-place')}:</span>
-      <span>{studentData.birthplace}</span>
-    </div>
-    <div className="flex items-center justify-between">
-      <span className="text-muted-foreground">{t('school')}:</span>
-      <span>{studentData.school}</span>
-    </div>
-    <div className="flex items-center justify-between">
-      <span className="text-muted-foreground">{t('year')}:</span>
-      <span>{studentData.year}</span>
-    </div>
-    <div className="flex items-center justify-between">
-      <span className="text-muted-foreground">{t('cs')}:</span>
-      <span>{studentData.cs}</span>
-    </div>
-  </div>
-   <Separator />
-  {/*<div className="grid gap-2">
-    <span className="text-muted-foreground">Classes:</span>
-    {studentData.classes.map((subject) => (
-      <div key={subject.id} className="flex flex-col">
-        <span className="font-semibold">{subject.subject}</span>
-        <span>prof:{subject.name}</span>
-        <span>time:{subject.time}</span>
-        <span>CS:{subject.cs}</span>
-      </div>
-    ))}
-    </div> */}
-  <Separator />
-  <div className="grid gap-2">
-  <span className="text-muted-foreground">{t('avaliable-classes')}:</span>
-  {Array.isArray(currentClasses) && currentClasses.length > 0 && (
-  <RadioGroup className="grid grid-cols-2 gap-4">
-    {currentClasses.map((classObj, index) => (
-      <div key={index}>
-        {classObj.studentGroup.split(',').map((group) => (
-          <div key={`${classObj.id}-${group}`}>
-            <RadioGroupItem
-              value={`${classObj.id}-${group}`}
-              onClick={() =>{ if (classObj.sessionsLeft <= 0) {
-                setAlertText("L’étudiant a terminé toutes ses séances. En confirmant, cela sera ajouté à sa dette.");
-                setOpenAlert(true);
-                audioRefError.current?.play();
-              };
-               handleSelection(classObj, group)}}
-              id={`${classObj.id}-${group}`}
-              className="peer sr-only"
-              checked={
-                selectedClasses[classObj.id]?.id === classObj.id &&
-                selectedClasses[classObj.id]?.group === group
-              } // check if the current group is selected for this class
-            />
-            <Label
-              htmlFor={`${classObj.id}-${group}`}
-     
-              className={`flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary
-              ${classObj.sessionsLeft <= 0? 'bg-red-500 text-white' : ''}
-              ${
-                selectedClasses[classObj.id]?.id === classObj.id &&
-                selectedClasses[classObj.id]?.group === group
-                  ? 'border-primary'
-                  : ''
-              }`}
-            >
-              <span className="font-semibold">{classObj.subject}</span>
-              <span>{classObj.name}</span>
-              <span>{`Group: ${group}`}</span>
-              <span>{`Séances restantes: ${classObj.sessionsLeft}`}</span>
-              <span>{`${classObj.day}, ${classObj.start} - ${classObj.end}`}</span>
-            </Label>
+    {studentData ? (
+            <div className="bg-muted rounded-lg p-6 flex flex-col gap-6">
+
+            <div className="flex items-center gap-4">
+              <Avatar className="w-24 h-24 border">
+                <AvatarImage src={studentData.photo || "/placeholder-user.jpg"} />
+                <AvatarFallback>{studentData.name.charAt(0)}</AvatarFallback>
+              </Avatar>
+              <div>
+                <h2 className="text-xl font-semibold">{studentData.name}</h2>
+                <p className="text-muted-foreground">{studentData.field}</p>
+              </div>
+            </div>
+            <Separator />
+            <div className="grid gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">{t('phone')}:</span>
+                <a href={`tel:${studentData.phoneNumber}`} className="text-primary">
+                  {studentData.phoneNumber}
+                </a>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">{t('birth-date')}:</span>
+                <span>{new Date(studentData.birthdate).toLocaleDateString()}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">{t('birth-place')}:</span>
+                <span>{studentData.birthplace}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">{t('school')}:</span>
+                <span>{studentData.school}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">{t('year')}:</span>
+                <span>{studentData.year}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">{t('next-payment-day')}:</span>
+                <span>{new Date(studentData.nextPaymentDate).toLocaleDateString()}</span>
+              </div>
+              <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">{t('days-left-to-pay')}:</span>
+            <span
+            className={`flex items-center p-2 rounded-lg shadow-md transition-colors duration-300 ${
+              calculateDaysUntilNextPayment(studentData.nextPaymentDate) < 0 
+                ? "text-red-600 dark:text-red-300" 
+                : "text-green-600 dark:text-green-300"
+            }`}
+          >
+            {calculateDaysUntilNextPayment(studentData.nextPaymentDate) < 0 
+              ? `${Math.abs(calculateDaysUntilNextPayment(studentData.nextPaymentDate))} Days Overdue`
+              : `${calculateDaysUntilNextPayment(studentData.nextPaymentDate)} Days Remaining`}
+          </span>
           </div>
-        ))}
-      </div>
-    ))}
-  </RadioGroup>
-)}
-</div>
 
-{Object.keys(selectedClasses).length > 0 ? (
-  <div className="mt-4 flex justify-end">
-    <Button
-      onClick={() => { setStudentData(null); setCurrentClass(undefined); setCurrentClasses(undefined); setSelectedClasses({})}}
-      variant='outline'
-    >
-      {t('reset')}
-    </Button>
-    <Button
-      onClick={() => onConfirm()}
-      variant='default'
-    >
-      {t('confirm')}
-    </Button>
-  </div>
-) : (
-  <div className="mt-4 flex justify-end">
-    <Button
-      onClick={() => { setStudentData(null); setCurrentClass(undefined); setCurrentClasses(undefined);setSelectedClasses({}) }}
-      variant='outline'
-    >
-      {t('reset')}
-    </Button>
-  </div>
-)}
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">{t('debt')}:</span>
+                <span>{studentData.debt}</span>
+              </div>
+              {/*<div className="flex items-center justify-between">
+                <span className="text-muted-foreground">{t('cs')}:</span>
+                <span>{studentData.cs}</span>
+                  </div>*/}
+            </div>
+            <Separator />
+            {/*<div className="grid gap-2">
+              <span className="text-muted-foreground">Classes:</span>
+              {studentData.classes.map((subject) => (
+                <div key={subject.id} className="flex flex-col">
+                  <span className="font-semibold">{subject.subject}</span>
+                  <span>prof:{subject.name}</span>
+                  <span>time:{subject.time}</span>
+                  <span>CS:{subject.cs}</span>
+                </div>
+              ))}
+              </div> */}
+            <Separator />
+            <div className="grid gap-2">
+            <span className="text-muted-foreground">{t('avaliable-classes')}:</span>
+            {Array.isArray(currentClasses) && currentClasses.length > 0 && (
+            <RadioGroup className="grid grid-cols-2 gap-4">
+              {currentClasses.map((classObj, index) => (
+                <div key={index}>
+                  {classObj.studentGroup.split(',').map((group) => (
+                    <div key={`${classObj.id}-${group}`}>
+                      <RadioGroupItem
+                        value={`${classObj.id}-${group}`}
+                        onClick={() =>{ if (classObj.sessionsLeft <= 0) {
+                          setAlertText("L’étudiant a terminé toutes ses séances. En confirmant, cela sera ajouté à sa dette.");
+                          setOpenAlert(true);
+                          audioRefError.current?.play();
+                        };
+                        handleSelection(classObj, group)}}
+                        id={`${classObj.id}-${group}`}
+                        className="peer sr-only"
+                        checked={
+                          selectedClasses[classObj.id]?.id === classObj.id &&
+                          selectedClasses[classObj.id]?.group === group
+                        } // check if the current group is selected for this class
+                      />
+                      <Label
+                        htmlFor={`${classObj.id}-${group}`}
+              
+                        className={`flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary
+                        ${classObj.sessionsLeft <= 0? 'bg-red-500 text-white' : ''}
+                        ${
+                          selectedClasses[classObj.id]?.id === classObj.id &&
+                          selectedClasses[classObj.id]?.group === group
+                            ? 'border-primary'
+                            : ''
+                        }`}
+                      >
+                        <span className="font-semibold">{classObj.subject}</span>
+                        <span>{classObj.name}</span>
+                        <span>{`Group: ${group}`}</span>
+                        <span>{`Séances restantes: ${classObj.sessionsLeft}`}</span>
+                        <span>{`${classObj.day}, ${classObj.start} - ${classObj.end}`}</span>
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </RadioGroup>
+          )}
+          </div>
 
-</div>) :(<div className="bg-muted rounded-lg p-6 flex flex-col gap-4">
-  <AutoComplete
+          {Object.keys(selectedClasses).length > 0 ? (
+            <div className="mt-4 flex justify-end">
+              <Button
+                onClick={() => { setStudentData(null); setCurrentClass(undefined); setCurrentClasses(undefined); setSelectedClasses({})}}
+                variant='outline'
+              >
+                {t('reset')}
+              </Button>
+              <Button
+                onClick={() => onConfirm()}
+                variant='default'
+              >
+                {t('confirm')}
+              </Button>
+            </div>
+          ) : (
+            <div className="mt-4 flex justify-end">
+              <Button
+                onClick={() => { setStudentData(null); setCurrentClass(undefined); setCurrentClasses(undefined);setSelectedClasses({}) }}
+                variant='outline'
+              >
+                {t('reset')}
+              </Button>
+            </div>
+          )}
+
+        </div> 
+        ) :(<div className="bg-muted rounded-lg p-6 flex flex-col gap-4">
+          <AutoComplete
         options={students}
         emptyMessage="No resulsts."
         placeholder="Find something"
@@ -727,6 +772,18 @@ export default function Home() {
                     <span className="text-muted-foreground">{t('year')}:</span>
                     <span></span>
                   </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">{t('next-payment-day')}:</span>
+                    <span></span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">{t('days-left-to-pay')}:</span>
+                    <span></span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">{t('debt')}:</span>
+                    <span></span>
+                  </div>
                 </div>
                 <Separator />
                 <div className="grid gap-2">
@@ -740,8 +797,31 @@ export default function Home() {
     >
       {t('reset')}
     </Button>
+
     </div>
-              </div> ) }
+
+
+
+               </div> )
+                }
+      
+      {studentData ? (<div className="bg-muted rounded-lg p-6 flex flex-col gap-6 "> 
+
+    {transactionsData.length > 0 ? (
+      transactionsData.map((transaction) => (
+        <StudentPayment
+          key={transaction.id} // Add a key for each mapped element
+          transaction={transaction} // Pass transaction data as a prop
+          studentid={studentData?.id}
+        />
+      ))
+    ) : (
+      null
+    )}
+
+</div>  ) :  null}
+
+
   </div>
   );
 }

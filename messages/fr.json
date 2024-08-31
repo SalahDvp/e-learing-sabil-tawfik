@@ -579,5 +579,13 @@
   "grossSalary": "Salaire brute",
   "languages": "langues",
   "preSchool": "préscolaire",
-  "تحضيري":"préscolaire"
+  "تحضيري": "préscolaire",
+  "Day": "Jour",
+  "Start Time": "Heure de début",
+  "End Time": "Heure de fin",
+  "Room": "Chambre",
+  "Add New Group": "Ajouter un nouveau groupe",
+  "select-start-time": "sélectionner l'heure de début",
+  "next-payment-day": "prochain jour de paiement",
+  "days-left-to-pay": "jours restants pour payer"
 }

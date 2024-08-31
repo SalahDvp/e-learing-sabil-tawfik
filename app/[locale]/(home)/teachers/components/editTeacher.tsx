@@ -160,6 +160,11 @@ const handleYearToggle = (field:string) => {
 
 const truncateToMinutes = (date: Date) => startOfMinute(date);
 
+const middleSchoolYears = ["1AM", "2AM", "3AM", "4AM"];
+const highSchoolYears = ["1AS", "2AS", "3AS"];
+const universitySchoolYears=["L1","L2","L3","M1"]
+const priarySchoolYears=["1AP","2AP","3AP","4AP","5AP"]
+const languageSchoolYears=["A1","A2","B1","B2","C1","C2"]
 const {classes}=useData()
 // const checkRoomAvailability = useCallback((newGroup: Group, allRooms: string[]): string[] => {
 //   const { day, start, end, classId, room: newGroupRoom } = newGroup;
@@ -269,6 +274,53 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
     newGroups[groupIndex].groups.splice(sessionIndex, 1)
     form.setValue('classes',newGroups)
   }
+  const [schoolType, setSchoolType] = React.useState('');
+
+  React.useEffect(() => {
+    const year = watch('year');
+  
+    if (middleSchoolYears.includes(year)) {
+      setSchoolType('متوسط');
+    } else if (highSchoolYears.includes(year)) {
+      setSchoolType('high');
+    } else if (universitySchoolYears.includes(year)) {
+      setSchoolType('جامعي');
+    } else if (priarySchoolYears.includes(year)) {
+      setSchoolType('ابتدائي');
+    } else if (languageSchoolYears.includes(year)) {
+      setSchoolType('لغات');
+    } else if (year === "تحضيري") {
+      setSchoolType('تحضيري');
+    } else {
+      setSchoolType(''); // Default to empty or any other value you prefer
+    }
+  }, [watch('year'), middleSchoolYears, highSchoolYears, universitySchoolYears, priarySchoolYears, languageSchoolYears]);
+  
+const handleSchoolTypeChange = (type) => {
+  setSchoolType(type);
+
+  let years;
+  if (type === "متوسط") {
+    years = middleSchoolYears;
+  } else if (type === 'high') {
+    years = highSchoolYears;
+  } else if (type === "جامعي") {
+    years = universitySchoolYears;
+  }
+ else if (type === "ابتدائي") {
+  years = priarySchoolYears;
+}
+else if (type === "لغات") {
+  years = languageSchoolYears;
+
+}else if (type ===  "تحضيري") {
+  years = [ "تحضيري"];
+  
+}
+  if (years) {
+    setValue('year', years);
+  }
+};
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-[1400px]">
@@ -284,8 +336,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
         <div className="flex w-full flex-col gap-4">
 
       <Stepper initialStep={0} steps={steps} >
-
-        {steps.map(({ label }, index) => {
+      {steps.map(({ label }, index) => {
           return (
             <Step key={label} label={label}>
               <div className="h-[450px] flex items-center justify-center my-4 border bg-secondary  rounded-md">
@@ -336,8 +387,37 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
     
    
 
-
-
+{/* <FormField
+        control={control}
+        name="year"
+        render={({ field }) => (
+          <FormItem className="grid grid-cols-4 items-center gap-4">
+            <FormLabel className="text-right">{t('school-type')}</FormLabel>
+            <FormControl>
+              <Select
+                onValueChange={(value) => handleSchoolTypeChange(value)}
+                defaultValue={schoolType}
+              >
+                <SelectTrigger
+                  id={`schoolType`}
+                  aria-label={`Select School Type`}
+                >
+                  <SelectValue placeholder={t('select-school-type')} />
+                </SelectTrigger>
+                <SelectContent>
+                <SelectItem value= "تحضيري">{t('preSchool')}</SelectItem>
+                <SelectItem value="ابتدائي">{t('primary')}</SelectItem>
+                  <SelectItem value="متوسط">{t('middle-school')}</SelectItem>
+                  <SelectItem value="high">{t('hight-school')}</SelectItem>
+                  <SelectItem value="جامعي">{t('University')}</SelectItem>
+                  <SelectItem value="لغات">{t('languages')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      /> */}
 
 
 <FormField
@@ -345,7 +425,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
   name="educational-subject"
   render={({ field }) => (
     <FormItem className="grid grid-cols-4 items-center gap-4">
-    <FormLabel className="text-right">{t('educational-subject')}</FormLabel>
+      <FormLabel className="text-right">{t('educational-subject')}</FormLabel>
       <FormControl>
       <Select
    onValueChange={field.onChange}
@@ -388,13 +468,13 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
                 </FormItem>
               )}
             />
-
+            
 <FormField
         control={control}
         name="paymentType"
         render={({ field }) => (
           <FormItem className="grid grid-cols-4 items-center gap-4">
-            <FormLabel className="text-right">payment Type</FormLabel>
+            <FormLabel className="text-right">type de salaire</FormLabel>
             <FormControl>
               <Select
                 onValueChange={field.onChange}
@@ -404,20 +484,20 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
                   id={`paymentType`}
                   aria-label={`Select payment Type`}
                 >
-                  <SelectValue placeholder='payment Type' />
+                  <SelectValue placeholder='type de salaire' />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="monthly">Monthly</SelectItem>
-                  <SelectItem value="percentage">Percentage</SelectItem>
-                  <SelectItem value="hourly">Hourly</SelectItem>
+                  <SelectItem value="monthly">Salaire fixe</SelectItem>
+                  <SelectItem value="percentage">Pourcentage</SelectItem>
+                  <SelectItem value="hourly">
+                  par séance</SelectItem>
                 </SelectContent>
               </Select>
             </FormControl>
             <FormMessage />
           </FormItem>
         )}
-      /> 
-
+      />
 
 <FormField
   control={control}
@@ -441,10 +521,12 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
     );
   }}
 />;
+
+
+    
   </div>
 
 ) : (
-
 <div className="w-full h-full">
   <ScrollArea className="h-[400px] w-full pr-4">
     {fields.map((group, groupIndex) => (
@@ -471,7 +553,8 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
     name={`classes.${groupIndex}.numberOfSessions`}
     render={({ field }) => (
       <FormItem className="w-24">
-        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Number of Sessions:</FormLabel>
+        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">
+        Nombre de séances par mois:</FormLabel>
         <FormControl>
           <Input
             {...field}
@@ -489,7 +572,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
     name={`classes.${groupIndex}.paymentType`}
     render={({ field }) => (
       <FormItem className="w-[120px]">
-        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Payment Type:</FormLabel>
+        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">type de payment:</FormLabel>
         <FormControl>
           <Select
    onValueChange={field.onChange}
@@ -499,7 +582,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
               <SelectValue placeholder="Payment type" />
             </SelectTrigger>
             <SelectContent>
-              {['monthly','session'].map((type) => (
+            {['monthly','session'].map((type) => (
                 <SelectItem key={type} value={type}>{t(type)}</SelectItem>
               ))}
             </SelectContent>
@@ -515,7 +598,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
     name={`classes.${groupIndex}.amount`}
     render={({ field }) => (
       <FormItem className="w-24">
-        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Amount:</FormLabel>
+        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Montant:</FormLabel>
         <FormControl>
           <Input
             {...field}
@@ -528,9 +611,9 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
     )}
   />
                   </div>
-                  <div className="flex flex-col">
+  {watch('year').every(year => ["1AS","2AS","3AS"].includes(year))&& (<div className="flex flex-col">
 
-                  <Label htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">fields:</Label>
+                  <Label htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">spécialité:</Label>
                   <DropdownMenu >
                             <DropdownMenuTrigger asChild       className="w-24">
                             <Button variant="outline" className="w-[150px] overflow-hidden text-ellipsis whitespace-nowrap">
@@ -539,7 +622,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="w-56">
-                            {["ابتدائي","جامعي",'متوسط','علوم تجريبية', 'تقني رياضي', 'رياضيات', 'تسيير واقتصاد ', 'لغات اجنبية ', 'اداب وفلسفة'].map((field) => (
+                            {['علوم تجريبية', 'تقني رياضي', 'رياضيات', 'تسيير واقتصاد ', 'لغات اجنبية ', 'اداب وفلسفة'].map((field) => (
                                        <DropdownMenuItem
                                        key={field}
                                        value={field}
@@ -553,14 +636,14 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
                               ))}
                             </DropdownMenuContent>
                           </DropdownMenu>
-                  </div>
+                  </div>)}
                   <div>
                   <FormField
     control={form.control}
     name={`classes.${groupIndex}.year`}
     render={({ field }) => (
       <FormItem className="w-[100px]">
-        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Year:</FormLabel>
+        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Annee:</FormLabel>
         <FormControl>
           <Select
       onValueChange={field.onChange}
@@ -595,10 +678,10 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
         <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Day</TableHead>
-                      <TableHead>Start Time</TableHead>
-                      <TableHead>End Time</TableHead>
-                      <TableHead>Room</TableHead>
+                      <TableHead>{t('Day')}</TableHead>
+                      <TableHead>{t('Start Time')}</TableHead>
+                      <TableHead>{t('End Time')}</TableHead>
+                      <TableHead>{t('Room')}</TableHead>
              
                       <TableHead>Action</TableHead>
                     </TableRow>
@@ -631,7 +714,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
                               id={`start-${index}`}
                               aria-label={`Select start time`}
                             >
-                              <SelectValue placeholder={t('select-end-time')} />
+                              <SelectValue placeholder={t('select-start-time')} />
                             </SelectTrigger>
 
                           <SelectContent>
@@ -717,18 +800,17 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
           groups:[],
           numberOfSessions: 0,
           amount: 0,
-          stream: [],
+          stream: schoolType === 'high'?[]:[schoolType],
           year: '',
           paymentType: ''
         });
       }}
     >
       <PlusCircle className="h-4 w-4 mr-2" />
-      Add New Group
+      {t('Add New Group')}
     </Button>
   </ScrollArea>
 </div>
-
 )}
               </div>
             </Step>
