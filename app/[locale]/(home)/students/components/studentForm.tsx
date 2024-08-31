@@ -868,8 +868,6 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset, cal
   const {toast}=useToast()
   const onSubmit = async(data:any) => {
 
-   
-  
     const newData=await addStudent({...data,studentIndex:students.length+1, 
       debt:0,
       monthlypayment: calculatedAmount,

@@ -76,7 +76,7 @@ const checkClassTime = (scanTime: Date, student: any, groupClasses: any[]): any[
   const scanDay = format(scanTime, 'EEEE');
 
   // Extract IDs from student classes into a Set
-  const studentClassIds = new Set(student.classesUIDs.map((cls: any) => cls.id));
+  const studentClassIds = new Set(student?.classesUIDs?.map((cls: any) => cls.id));
 
   // Filter group classes to get only those that match the student class IDs
   const relevantGroupClasses = groupClasses.filter((groupClass: any) =>
