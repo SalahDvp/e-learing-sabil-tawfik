@@ -1,5 +1,5 @@
 import { db } from "@/firebase/firebase-config";
-import { doc, updateDoc, setDoc } from "firebase/firestore";
+import { doc, updateDoc, setDoc, getDoc } from "firebase/firestore";
 import { z } from "zod";
 import { profileFormSchema } from "@/validators/general-info";
 
@@ -10,12 +10,22 @@ const generalInfoDocRef = doc(db, "Profile", "GeneralInformation");
 
 export const addProfile = async (updatedProfile: ProfileFormValues) => {
   try {
-    // Update the specific document with new information
-    await updateDoc(generalInfoDocRef, updatedProfile); // This updates existing fields
-    console.log("Profile updated successfully");
+    // Check if the document exists
+    const docSnap = await getDoc(generalInfoDocRef);
+
+    if (docSnap.exists()) {
+      // Document exists, so update it
+      await updateDoc(generalInfoDocRef, updatedProfile); // This updates existing fields
+      console.log("Profile updated successfully");
+    } else {
+      // Document does not exist, so create it
+      await setDoc(generalInfoDocRef, updatedProfile); // This creates the document
+      console.log("Profile created successfully");
+    }
+
     return true;
   } catch (error) {
-    console.error("Error updating profile:", error);
+    console.error("Error adding/updating profile:", error);
     throw error; // Rethrow for further handling
   }
 };
