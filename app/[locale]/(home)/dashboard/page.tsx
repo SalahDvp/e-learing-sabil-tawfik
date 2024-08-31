@@ -526,9 +526,29 @@ setCurrentClasses(classInfo)
         <p className="text-muted-foreground">
           {t('point-your-camera-at-qr-code')}
         </p>
-        
+        <div className="aspect-square bg-background rounded-md overflow-hidden relative">
+                    <video hidden={!showingQrScanner} ref={videoRef} className="absolute inset-0 w-full h-full object-cover"></video>
+            
+                  </div>
+                  {showingQrScanner ? (
+                  
+                      <button
+                    onClick={stopScanner}
+                        className="mt-4 text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-red-600 dark:hover:bg-red-700 focus:outline-none dark:focus:ring-red-800"
+                      >
+                        {t('stop-qr-scanner')}
+                      </button>
+          
+                  ) : (
+                    <button
+                    onClick={handleButtonClick}
+                    className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
+                  >
+                    {t('start-qr-scanner')}
+                  </button>
+                  )}
 
-<div className="bg-muted rounded-lg p-6 flex flex-col items-center justify-center gap-4">
+{/**<div className="bg-muted rounded-lg p-6 flex flex-col items-center justify-center gap-4">
       <Card className="w-full max-w-md mx-auto">
  <CardHeader>
    <CardTitle className="text-2xl font-bold text-center">QR Code Scanner</CardTitle>
@@ -552,7 +572,7 @@ setCurrentClasses(classInfo)
  </CardContent>
 </Card>
   
- </div>
+ </div>**/}
  
     </div>
     </div>

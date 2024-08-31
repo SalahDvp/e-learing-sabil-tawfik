@@ -136,7 +136,7 @@ const QrSeach: React.FC<{ onStudentScanned: (name: string) => void }> = ({ onStu
         <audio id="qr-scan-sound-success" ref={audioRefSuccess} src="/success.mp3"></audio>
         <audio id="qr-scan-sound-error" ref={audioRefError} src="/error.mp3"></audio>
         <div className="grid gap-6 py-6">
-          {/* <div className="aspect-square bg-background rounded-md overflow-hidden relative h-[300px] w-full flex items-center justify-center">
+          <div className="aspect-square bg-background rounded-md overflow-hidden relative h-[300px] w-full flex items-center justify-center">
             <video hidden={!showingQrScanner} ref={videoRef} className="absolute inset-0 w-full h-full object-cover"></video>
           </div>
           {showingQrScanner ? (
@@ -154,8 +154,8 @@ const QrSeach: React.FC<{ onStudentScanned: (name: string) => void }> = ({ onStu
             >
               {t('Start QR Scanner')}
             </button>
-          )} */}
-             <div className="bg-muted rounded-lg p-6 flex flex-col items-center justify-center gap-4">
+          )}
+            {/** <div className="bg-muted rounded-lg p-6 flex flex-col items-center justify-center gap-4">
       <Card className="w-full max-w-md mx-auto">
  <CardHeader>
    <CardTitle className="text-2xl font-bold text-center">QR Code Scanner</CardTitle>
@@ -174,7 +174,7 @@ const QrSeach: React.FC<{ onStudentScanned: (name: string) => void }> = ({ onStu
  </CardContent>
 </Card>
   
- </div>
+ </div>**/}
         </div>
       </DialogContent>
     </Dialog>
