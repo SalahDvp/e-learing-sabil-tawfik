@@ -95,6 +95,7 @@ function addMonthsToDate(date: Date, monthsToAdd: number): Date {
   return newDate;
 }
 
+const currentDate = new Date();
 function parsePaymentPlan(paymentPlan: string, startDate: Date): Date | null {
   const match = paymentPlan.match(/(\d+)\s+months?/i); // Match the number of months in the string
   if (match) {
@@ -457,7 +458,7 @@ const onSelected = (selectedStudent: any) => {
     const transactionData: Transaction = {
       amount: data.amount,
       paymentDate: data.paymentDate,
-      debt:data.monthlypayment + data.debt - data.amount,
+      debt: data.debt - data.amount,
       monthlypayment: data.monthlypayment,
       nextPaymentDate: data.nextPaymentDate,
       
@@ -493,6 +494,128 @@ const onSelected = (selectedStudent: any) => {
       description: t('changes-applied-successfully'),
     });
     reset();
+
+
+
+    const billHtml = `
+    <html>
+    <head>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          margin: 0;
+          padding: 0;
+          width: 21cm;
+          height: 29.7cm;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+        .bill-container {
+          padding: 10px;
+          width: 100%;
+          height: 100%;
+          box-sizing: border-box;
+      
+        }
+        .header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 48px;
+        }
+        .logo-container {
+          display: flex;
+          align-items: center;
+          gap: 24px;
+        }
+        .logo-container img {
+          border-radius: 50%;
+          width: 120px;
+          height: 120px;
+          object-fit: cover;
+        }
+        h2 {
+          font-size: 48px;
+          font-weight: 700;
+        }
+        .bill-item {
+          margin-bottom: 32px;
+          font-size: 36px;
+        }
+        .bill-item label {
+          font-weight: bold;
+        }
+        .total {
+          font-size: 60px;
+          font-weight: 700;
+        }
+        .footer {
+          margin-top: 64px;
+          text-align: center;
+          font-size: 36px;
+          color: #6c757d;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="bill-container">
+        <div class="header">
+          <div class="logo-container">
+            <img src="/placeholder.svg" alt="School Logo" />
+            <h2>School Name</h2>
+          </div>
+          <div style="font-size: 36px; color: #6c757d;"></div>
+        </div>
+        <div style="display: grid; gap: 24px;">
+          <div class="bill-item">
+            <label>Nom:</label>
+            <span>${data.name}</span>
+          </div>
+          <div class="bill-item">
+          <label>Montant mensuel:</label>
+          <span>${data.monthlypayment}</span>
+        </div>
+         
+          <div class="bill-item">
+            <label>Date:</label>
+          </div>
+        </div>
+        <hr style="margin: 48px 0;" />
+
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <span class="total">Total:</span>
+          <span class="total">DZD ${data.amount}</span>
+        </div>
+        <div class="bill-item">
+        <label>Prochain paiement:</label>
+      </div>
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+        <span class="total">Debt:</span>
+        <span class="total">DZD ${data.debt}</span>
+      </div>
+        <div class="footer">
+          Merci!
+        </div>
+      </div>
+    </body>
+    </html>
+    `;
+
+  const printWindow = window.open('', '_blank');
+
+  if (printWindow) {
+    // Write the HTML to the new tab
+    printWindow.document.open();
+    printWindow.document.write(billHtml);
+    printWindow.document.close();
+
+    // Wait for the document to be fully written
+    printWindow.onload = function() {
+      printWindow.focus(); // Focus on the new tab
+      printWindow.print(); // Trigger print dialog
+    };
+  }
   }
   
 

@@ -869,7 +869,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset, cal
   const onSubmit = async(data:any) => {
 
     const newData=await addStudent({...data,studentIndex:students.length+1, 
-      debt:0,
+      debt:calculatedAmount,
       monthlypayment: calculatedAmount,
       lastPaymentDate: Timestamp.fromDate(currentDate),  // Firebase Timestamp for the current date and time
       nextPaymentDate: Timestamp.fromDate(new Date(new Date().setMonth(new Date().getMonth() + 1))),  // Current date + 1 month

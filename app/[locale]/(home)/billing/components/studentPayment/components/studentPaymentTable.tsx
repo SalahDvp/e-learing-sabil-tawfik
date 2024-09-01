@@ -165,7 +165,7 @@ import { exportTableToExcel } from "@/components/excelExport"
     },
     {
         accessorKey: "debt",
-        header: () => <div className="text-right">{t('debt')}</div>,
+        header: () => <div className="text-right">{t('total')}</div>,
         cell: ({ row }) => {
           const amount = parseFloat(row.getValue("debt"))
     
@@ -178,23 +178,7 @@ import { exportTableToExcel } from "@/components/excelExport"
           return <div className="text-right font-medium">{formatted}</div>
         },
       },
-      {
-  accessorKey: "Totalamount",
-  header: () => <div className="text-right">{t('Total')}</div>,
-  cell: ({ row }) => {
-    const monthlyPayment = parseFloat(row.getValue("monthlypayment"));
-    const debt = parseFloat(row.getValue("debt"));
-    const totalAmount = monthlyPayment + debt;
-
-    // Format the total amount as a currency amount
-    const formatted = new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "DZD",
-    }).format(totalAmount);
-
-    return <div className="text-right font-medium">{formatted}</div>;
-  },
-},
+      
   
     {
       id: "actions",
