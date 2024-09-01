@@ -132,7 +132,7 @@ type TeacherSalaryFormValues=z.infer<typeof teacherPaymentRegistrationSchema>;
         return weeks * teacher.amount * expenses.length;
       case "percentage":       
         return expenses.reduce(
-          (total, expense) => total + (expense.amount*1) * teacher.amount/100,
+          (total, expense) => total + (expense.amount*expense.students) * teacher.amount/100,
           0
         );
 
@@ -143,103 +143,95 @@ type TeacherSalaryFormValues=z.infer<typeof teacherPaymentRegistrationSchema>;
   const ReceiptPrint = React.forwardRef((props, ref) => {
     const { receipt } = props;
   
-  
-
-
-  if(receipt.teacher){
-    return (
-  
-  
-   
-        
-      <Card className="mb-6 " ref={ref}>
-        <CardHeader>
-          <CardTitle>Salary Receipt Template</CardTitle>
-        </CardHeader>
-        <CardContent id="print-section">
-          <h3 className="text-lg font-semibold mb-2">Employee's Information:</h3>
-          <Table>
-            <TableBody>
-              <TableRow>
-                <TableCell className="font-medium">Employee's Name:</TableCell>
-                <TableCell>{receipt.teacher.teacherName}</TableCell>
-                <TableCell className="font-medium">Department:</TableCell>
-                <TableCell>{receipt.department}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">Employee's ID:</TableCell>
-                <TableCell>{receipt.teacher.name}</TableCell>
-                <TableCell className="font-medium">Date of Issue:</TableCell>
-                <TableCell>{receipt.date.toISOString()}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">Employee's Level:</TableCell>
-                <TableCell>{receipt.position}</TableCell>
-                <TableCell className="font-medium">Pay Month:</TableCell>
-                <TableCell>{receipt.month}</TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-
-          <h3 className="text-lg font-semibold mt-4 mb-2">Employer's Information:</h3>
-          <Table>
-            <TableBody>
-              <TableRow>
-                <TableCell className="font-medium">Employer's Name:</TableCell>
-                <TableCell>{"Smart School"}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">Address:</TableCell>
-                <TableCell>{"address"}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">Contact Information:</TableCell>
-                <TableCell>{"055555555"}</TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-
-          <h3 className="text-lg font-semibold mt-4 mb-2">Earnings and Deductions:</h3>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Description</TableHead>
-                <TableHead>Number Students</TableHead>
-                <TableHead>Rate</TableHead>
-                <TableHead>Amount</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {receipt.expenses.map((item, index) => (
-                <TableRow key={index}>
-                  <TableCell>{item.groupcode}</TableCell>
-                  <TableCell>{item.students}</TableCell>
-                  <TableCell>{receipt.teacher.amount}%</TableCell>
-                  <TableCell>DZD{item.students*item.amount*receipt.teacher.amount/100}</TableCell>
+    if (receipt.teacher) {
+      return (
+        <Card className="mb-6" ref={ref}>
+          <CardHeader>
+            <CardTitle>Modèle de Reçu de Salaire</CardTitle>
+          </CardHeader>
+          <CardContent id="print-section">
+            <h3 className="text-lg font-semibold mb-2">Informations de l'Employé :</h3>
+            <Table>
+              <TableBody>
+                <TableRow>
+                  <TableCell className="font-medium">Nom de l'Employé :</TableCell>
+                  <TableCell>{receipt.teacher.teacherName}</TableCell>
+                  <TableCell className="font-medium">Département :</TableCell>
+                  <TableCell>{receipt.teacher.year.join(', ')}</TableCell>
                 </TableRow>
-              ))}
-     
-              <TableRow>
-                <TableCell colSpan={3}>Salaire Brute:</TableCell>
-                <TableCell>DZD{receipt.grossSalary}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell colSpan={3} className="font-bold">Les avances:</TableCell>
-                <TableCell className="font-bold">DZD{receipt.advancePayment.toFixed(2)}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell colSpan={3} className="font-bold">Salaire Total:</TableCell>
-                <TableCell className="font-bold">DZD{receipt.netSalary.toFixed(2)}</TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-  )
-  }else{
-    return null;
-  }
-
+                <TableRow>
+                  <TableCell className="font-medium">ID de l'Employé :</TableCell>
+                  <TableCell>{receipt.teacher.name}</TableCell>
+                  <TableCell className="font-medium">Date d'Émission :</TableCell>
+                  <TableCell>{format(receipt.date,"dd-MM-yyyy")}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">Niveau de l'Employé :</TableCell>
+                  <TableCell>{receipt.teacher.year.join(', ')}</TableCell>
+                  <TableCell className="font-medium">Mois de Paiement :</TableCell>
+                  <TableCell>{receipt.month}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+  
+            <h3 className="text-lg font-semibold mt-4 mb-2">Informations de l'Employeur :</h3>
+            <Table>
+              <TableBody>
+                <TableRow>
+                  <TableCell className="font-medium">Nom de l'Employeur :</TableCell>
+                  <TableCell>{"Smart School"}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">Adresse :</TableCell>
+                  <TableCell>{"address"}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">Informations de Contact :</TableCell>
+                  <TableCell>{"055555555"}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+  
+            <h3 className="text-lg font-semibold mt-4 mb-2">Gains et Déductions :</h3>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Nombre d'Étudiants</TableHead>
+                  <TableHead>Taux</TableHead>
+                  <TableHead>Montant</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {receipt.expenses.map((item, index) => (
+                  <TableRow key={index}>
+                    <TableCell>{item.groupcode}</TableCell>
+                    <TableCell>{item.students}</TableCell>
+                    <TableCell>{receipt.teacher.amount}%</TableCell>
+                    <TableCell>DZD{item.students * item.amount * receipt.teacher.amount / 100}</TableCell>
+                  </TableRow>
+                ))}
+  
+                <TableRow>
+                  <TableCell colSpan={3}>Salaire Brut :</TableCell>
+                  <TableCell>DZD{receipt.grossSalary}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell colSpan={3} className="font-bold">Les Avances :</TableCell>
+                  <TableCell className="font-bold">DZD{receipt.advancePayment.toFixed(2)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell colSpan={3} className="font-bold">Salaire Net :</TableCell>
+                  <TableCell className="font-bold">DZD{receipt.netSalary.toFixed(2)}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      );
+    } else {
+      return null;
+    }
   });
 export default function PaymentForm() {
   const { toast } = useToast();
