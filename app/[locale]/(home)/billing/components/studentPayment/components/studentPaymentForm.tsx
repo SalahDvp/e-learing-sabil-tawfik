@@ -579,7 +579,8 @@ const onSelected = (selectedStudent: any) => {
          
           <div class="bill-item">
             <label>Date:</label>
-          </div>
+            <span>${format(new Date(), "dd-MM-yyyy")}</span>
+            </div>
         </div>
         <hr style="margin: 48px 0;" />
 
@@ -589,6 +590,7 @@ const onSelected = (selectedStudent: any) => {
         </div>
         <div class="bill-item">
         <label>Prochain paiement:</label>
+        <span>${format(data.nextPaymentDate,"dd-mm-yyyy")}</span>
       </div>
         <div style="display: flex; align-items: center; justify-content: space-between;">
         <span class="total">Debt:</span>
