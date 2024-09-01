@@ -1022,7 +1022,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset, cal
           </div>
           <div class="bill-item">
             <label>Date:</label>
-            <span>${format(new Date(),"DD-MM-YYYY")}</span>
+   <span>${format(new Date(),"dd-MM-yyyy")}</span>
           </div>
         </div>
         <hr style="margin: 48px 0;" />
