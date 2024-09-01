@@ -195,13 +195,7 @@ export default function Home() {
 
     
       audioRefSuccess.current?.play();
-      const classInfoObject = classInfo.reduce((acc: any, classObj: any) => {
-        acc[classObj.id] = { ...classObj, group: classObj.studentGroup };
-        return acc;
-      }, {});
-      console.log(classInfoObject);
-      
-      onConfirm(classInfoObject,parsedData)
+
       setCurrentClasses(classInfo)
       
 
@@ -241,11 +235,7 @@ export default function Home() {
     
     if (classInfo) {
       audioRefSuccess.current?.play();
-      const classInfoObject = classInfo.reduce((acc: any, classObj: any) => {
-        acc[classObj.id] = { ...classObj, group: classObj.group };
-        return acc;
-      }, {});
-      onConfirm(classInfoObject)
+
       setCurrentClasses(classInfo)
       
     } else {
@@ -712,7 +702,7 @@ setCurrentClasses(classInfo)
                 {t('reset')}
               </Button>
               <Button
-                onClick={() => onConfirm()}
+                onClick={() => onConfirm(selectedClasses,studentData)}
                 variant='default'
               >
                 {t('confirm')}
