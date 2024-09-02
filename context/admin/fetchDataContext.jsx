@@ -150,13 +150,19 @@ export const  FetchDataProvider = ({ children }) => {
             const attendanceSnapshot = await getDocs(collection(db, `Groups/${groupId}/Attendance`));
   
             const attendanceData = attendanceSnapshot.docs.reduce((acc, doc) => {
-              acc[doc.id] = { ...doc.data(), id: doc.id };
+              acc[doc.id] = {
+                ...doc.data(),
+     
+                id: doc.id,
+              };
               return acc;
             }, {});
   
             return {
               id: groupId,
               ...groupData,
+              startDate: groupData.startDate ? new Date(groupData.startDate.toDate()) : new Date(),
+              nextPaymentDate: groupData.nextPaymentDate ? new Date(groupData.nextPaymentDate.toDate()) : new Date(),
               Attendance: attendanceData,
             };
           });

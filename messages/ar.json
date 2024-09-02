@@ -585,5 +585,6 @@
   "Add New Group": "إضافة مجموعة جديدة",
   "select-start-time": "حدد وقت البدء",
   "next-payment-day": "يوم الدفع التالي",
-  "days-left-to-pay": "الأيام المتبقية للدفع"
+  "days-left-to-pay": "الأيام المتبقية للدفع",
+  "start date": "تاريخ البدء"
 }

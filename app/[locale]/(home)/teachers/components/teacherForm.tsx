@@ -67,7 +67,7 @@ import { useData } from "@/context/admin/fetchDataContext";
 
 import { generateTimeOptions } from '../../settings/components/open-days-table';
 import { setgroups } from 'process';
-import { parse, isBefore, isAfter, isEqual } from 'date-fns';
+import { parse, isBefore, isAfter, isEqual, addWeeks } from 'date-fns';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 const parseTime = (timeString) => parse(timeString, 'HH:mm', new Date());
@@ -646,6 +646,32 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
   />
 
                   </div>
+                  <div>
+                  <FormField
+    control={form.control}
+    name={`classes.${groupIndex}.startDate`}
+    render={({ field }) => (
+      <FormItem className="w-[100px]">
+        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">{t('start date')}:</FormLabel>
+        <FormControl>
+        <CalendarDatePicker
+            {...field}
+            date={getValues(`classes.${groupIndex}.startDate`)}
+            setDate={(selectedValue) => {
+              if (selectedValue === undefined) {
+                // Handle undefined case if needed
+              } else {
+                form.setValue(`classes.${groupIndex}.startDate`, selectedValue);
+                form.setValue(`classes.${groupIndex}.nextPaymentDate`, addWeeks(selectedValue, 4));
+
+              }
+            }}
+          />
+        </FormControl>
+      </FormItem>
+    )}
+  />
+                  </div>
                   <Button
                     type="button"
                     variant="destructive"
@@ -784,7 +810,9 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
           amount: 0,
           stream: schoolType === 'high'?[]:[schoolType],
           year: '',
-          paymentType: ''
+          paymentType: '',
+          startDate:new Date(),
+        
         });
       }}
     >
