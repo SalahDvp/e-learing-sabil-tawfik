@@ -86,50 +86,26 @@ const checkClassTime = (scanTime: Date, student: any, groupClasses: any[]): any[
   // Array to store matching class objects with group class information
   const matchingClassesWithGroup: any[] = [];
 
-  // Helper function to get the date of the current week for a given weekday
-  const getDateForCurrentWeek = (targetDay: string): Date => {
-    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const targetIndex = daysOfWeek.indexOf(targetDay);
-
-    const currentDayIndex = scanTime.getDay();
-    const diff = targetIndex - currentDayIndex;
-
-    return addMinutes(scanTime, diff * 1440); // Multiplying by 1440 converts days to minutes
-  };
-
   // Loop through each relevant group class
   for (const groupClass of relevantGroupClasses) {
     for (const groupElement of groupClass.groups) {
       const groupDay = groupElement.day;
 
+      // Check if the group day matches the scan day
       if (scanDay.toLowerCase() === groupDay.toLowerCase()) {
         const matchingClasses = student.classes.find((cls: any) => cls.id === groupClass.id);
 
         if (matchingClasses) {
-          // Calculate the real date for the groupDay in the current week
-          const classStartTime = getDateForCurrentWeek(groupDay);
-
-          // Parse the class start time and set it to the classStartTime date
-          const [hours, minutes] = groupElement.start.split(':');
-          const classStartDateTime = setMinutes(setHours(classStartTime, parseInt(hours, 10)), parseInt(minutes, 10));
-
-          // Calculate the time range (30 min before and after the class start time)
-          const startTimeRange = addMinutes(classStartDateTime, -30); // 30 minutes before
-          const endTimeRange = addMinutes(classStartDateTime, 60); // 30 minutes after
-
-          // Check if scanTime falls within the 30 min before or after the class start time
-          if (isAfter(scanTime, startTimeRange) && isBefore(scanTime, endTimeRange)) {
-            // Add matching class with group information to the result array
-            matchingClassesWithGroup.push({
-              ...groupElement,
-              subject: matchingClasses.subject,
-              id: matchingClasses.id,
-              studentIndex: matchingClasses.index,
-              studentGroup: matchingClasses.group,
-              name: groupClass.teacherName,
-              sessionsLeft:matchingClasses.sessionsLeft
-            });
-          }
+          // Add matching class with group information to the result array
+          matchingClassesWithGroup.push({
+            ...groupElement,
+            subject: matchingClasses.subject,
+            id: matchingClasses.id,
+            studentIndex: matchingClasses.index,
+            studentGroup: matchingClasses.group,
+            name: groupClass.teacherName,
+            sessionsLeft: matchingClasses.sessionsLeft,
+          });
         }
       }
     }
@@ -137,7 +113,6 @@ const checkClassTime = (scanTime: Date, student: any, groupClasses: any[]): any[
 
   return matchingClassesWithGroup.length > 0 ? matchingClassesWithGroup : null;
 };
-
 export default function Home() {
   const t=useTranslations()
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -190,6 +165,7 @@ export default function Home() {
     setStudentData(parsedData);
     const scanTime = new Date();
     const classInfo =checkClassTime(scanTime,parsedData,classes);
+    console.log("classinfo",parsedData);
     
     if (classInfo) {
 
@@ -232,6 +208,7 @@ export default function Home() {
     setStudentData(parsedData);
     const scanTime = new Date();
     const classInfo =checkClassTime(scanTime,parsedData,classes);
+    console.log("classinfo",classInfo);
     
     if (classInfo) {
       audioRefSuccess.current?.play();
@@ -398,16 +375,17 @@ export default function Home() {
       audioRefSuccess.current?.play();
   
       // // Clear state
-      // setCurrentClass(undefined);
-      // setCurrentClasses(undefined);
-      // setStudentData(null);
-      // setSelectedClasses({});
+      setCurrentClass(undefined);
+      setCurrentClasses(undefined);
+      setStudentData(null);
+      setSelectedClasses({});
     } catch (error) {
       console.error('Error updating attendance:', error.message);
       alert('An error occurred while updating attendance. Please try again.');
     }
   };
 
+console.log(currentClasses);
 
   const handleButtonClick = async () => {
     videoRef.current!.hidden = false;

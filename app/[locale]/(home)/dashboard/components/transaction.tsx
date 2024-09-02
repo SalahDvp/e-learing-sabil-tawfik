@@ -36,7 +36,7 @@ interface StudentPaymentProps {
 
 
 const StudentPayment: React.FC<any> =  ({ transaction ,studentid}) => {
-console.log('sdf',transaction);
+
 
 if (transaction.id !== studentid) {
     return  null; // Return null to render nothing if the IDs don't match
