@@ -119,7 +119,7 @@ const extractRoomNumber = (room:string) => {
 };
 
 const VerticalResourceView = () => {
-  const {classes}=useData()
+  const {classes,profile}=useData()
   const [events,setEvents]=useState<MbscCalendarEvent[]>([])
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
   const [openCard, setOpenCard] = useState(false);
@@ -234,50 +234,21 @@ const VerticalResourceView = () => {
   }
 
   const myResources = useMemo<MbscResource[]>(
-    () => [
-      {
-        id: 1,
-        name: 'room 1',
-        color: '#f7c4b4',
-      },
-      {
-        id: 2,
-        name: 'room 2',
-        color: '#c6f1c9',
-
-      },
-      {
-        id: 3,
-        name: 'room 3',
-        color: '#e8d0ef',
-      },
-      {
-        id: 4,
-        name: 'room 4',
-        color: '#edeaba',
-      },
-      {
-        id: 5,
-        name: 'room 5',
-        color: '#bacded',
-      },
-      {
-        id:6,
-        name: 'room 6',
-        color: '#bacded',
-      },
-      {
-        id:7,
-        name: 'room 7',
-        color: '#bacded',
-      },
-      {
-        id:8,
-        name: 'room 8',
-        color: '#bacded',
-      },
-    ],
-    [],
+    () => {
+      const rooms = [];
+      const colors = ['#f7c4b4', '#c6f1c9', '#e8d0ef', '#edeaba', '#bacded'];
+      
+      for (let i = 1; i <= profile.NumberOfClasses; i++) {
+        rooms.push({
+          id: i,
+          name: `room ${i}`,
+          color: colors[(i - 1) % colors.length], // Cycle through colors
+        });
+      }
+      
+      return rooms;
+    },
+    [profile.NumberOfClasses] // Recompute if NumberOfClasses changes
   );
 
   const myView = useMemo<MbscEventcalendarView>(

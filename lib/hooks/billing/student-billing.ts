@@ -2,13 +2,25 @@ import { db } from "@/firebase/firebase-config"
 import { addDoc, collection, deleteDoc, doc, increment ,arrayUnion, updateDoc ,setDoc,getDoc} from "firebase/firestore"
 import { studentPaymentSchema } from "@/validators/studentPaymentSchema";
 import { z } from "zod";
-function getMonthInfo(date:Date) {
-    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-    const monthIndex = date.getMonth(); // Get the month index (0-11)
-    const monthName = months[monthIndex];
-    const monthAbbreviation = monthName.slice(0, 3); // Get the first three characters for the abbreviation
-    return { fullName: monthName, abbreviation: monthAbbreviation };
-  }
+const months = [
+  { abbreviation: 'Jan', name: 'January' },
+  { abbreviation: 'Feb', name: 'February' },
+  { abbreviation: 'Mar', name: 'March' },
+  { abbreviation: 'Apr', name: 'April' },
+  { abbreviation: 'May', name: 'May' },
+  { abbreviation: 'Jun', name: 'June' },
+  { abbreviation: 'Jul', name: 'July' },
+  { abbreviation: 'Aug', name: 'August' },
+  { abbreviation: 'Sep', name: 'September' },
+  { abbreviation: 'Oct', name: 'October' },
+  { abbreviation: 'Nov', name: 'November' },
+  { abbreviation: 'Dec', name: 'December' }
+]; 
+function getMonthInfo(date: Date) {
+  const monthIndex = date.getMonth(); // Get the month index (0-11)
+  const monthInfo = months[monthIndex]; // Get the corresponding month object
+  return { fullName: monthInfo.name, abbreviation: monthInfo.abbreviation };
+}
 type StudentPaymentFormValues = z.infer<any> & {documents?:any[]};
 export const addPaymentTransaction = async (transaction: any, studentID: string) => {
     const month = getMonthInfo(transaction.paymentDate);
@@ -40,8 +52,8 @@ export const addPaymentTransaction = async (transaction: any, studentID: string)
       const data = {
         totalExpenses: 0,
         totalIncome: 0,
-        data: months.map(month => ({
-          month: month.fullName,
+        data: months.map(monthh => ({
+          month: monthh.name,
           expenses: 0,
           income: 0
         }))

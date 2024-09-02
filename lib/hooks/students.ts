@@ -62,7 +62,11 @@ export async function uploadAndLinkToCollection(
           const newIndex = highestIndex + 1;
   
           // Collect data for use in the transaction
-          classUpdates.push({ classID: cls.id, newIndex, group: cls.group ,cs:cls.cs,sessionsLeft:classData.numberOfSessions});
+          classUpdates.push({ classID: cls.id, newIndex, group: cls.group ,cs:cls.cs,
+            sessionsLeft:classData.numberOfSessions,
+            amount:cls.amount,
+            nextPaymentDate:cls.nextPaymentDate,
+            sessionsToStudy:cls.sessionsToStudy});
         } else {
           console.log('No such document for class ID:', cls.id);
           // Handle missing class documents if necessary
@@ -70,6 +74,8 @@ export async function uploadAndLinkToCollection(
       }
       const result = await runTransaction(db, async (transaction) => {
         for (const update of classUpdates) {
+          console.log("Dwdqwdwqd",update);
+          
           const classRef = doc(db, 'Groups', update.classID);
           transaction.update(classRef, {
             students: arrayUnion({
@@ -80,6 +86,9 @@ export async function uploadAndLinkToCollection(
               group: update.group ,
               cs:update.cs,
               sessionsLeft:update.sessionsLeft,
+              amount:update.amount,
+              nextPaymentDate:update.nextPaymentDate,
+              sessionsToStudy:update.sessionsToStudy
             })
           });
         }

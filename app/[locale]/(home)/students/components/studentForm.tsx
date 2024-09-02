@@ -68,7 +68,7 @@ import { useTranslations } from 'next-intl';
 import { addStudent } from '@/lib/hooks/students';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card,CardContent,CardHeader, CardTitle, } from '@/components/ui/card';
-import { format } from 'date-fns';
+import { addDays, differenceInDays, endOfDay, format, getDay, isAfter, isBefore, startOfDay } from 'date-fns';
 interface FooterProps {
   formData: Student;
   form: UseFormReturn<any>; // Use the specific form type if available
@@ -149,6 +149,91 @@ const isFirestoreId = (id) => {
   // Test the id against the regular expression
   return firestoreIdRegex.test(id);
 };
+interface Session {
+  day: string;
+  start: string;
+  end: string;
+}
+const convertSessionToDate = (session: Session, startDate: Date, endDate: Date): Date[] => {
+  const sessionDayIndex = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(session.day);
+  const sessionDates: Date[] = [];
+
+  let currentDate = new Date(startDate);
+
+  // Move currentDate to the first session day on or after startDate
+  while (currentDate.getDay() !== sessionDayIndex) {
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  // Add sessions within the range
+  while (currentDate <= endDate) {
+    const [hours, minutes] = session.start.split(':').map(Number);
+    const sessionDate = new Date(currentDate);
+    sessionDate.setHours(hours, minutes);
+
+    // Include the session if it is on or after the startDate
+    if (sessionDate >= startDate) {
+      sessionDates.push(sessionDate);
+    }
+
+    // Move to the next week
+    currentDate.setDate(currentDate.getDate() + 7);
+  }
+
+  // Check if the nextPaymentDate is on a session day
+  const [endHours, endMinutes] = session.start.split(':').map(Number);
+  let paymentDate = new Date(endDate);
+  paymentDate.setHours(endHours, endMinutes);
+
+  if (paymentDate.getDay() === sessionDayIndex && paymentDate <= endDate) {
+    sessionDates.push(paymentDate);
+  }
+
+  // Check if the first session date has passed the current time
+  if (sessionDates.length > 0) {
+    const firstSessionDate = sessionDates[0];
+    const now = new Date();
+    
+    if (now > firstSessionDate) {
+      // Include the first session if the current time is past the session time
+      sessionDates.shift();
+    }
+  }
+
+  return sessionDates;
+};
+
+function calculateAmountDue(
+  startDate: Date, 
+  nextPaymentDate: Date, 
+  enrollmentDate: Date, 
+  sessionDates: Session[], 
+  monthlyAmount: number,
+  sessionsPerMonth:number,
+): { totalDue: number; numberOfSessionsLeft: number } {
+  // Adjust start date if enrollment date is before the start date
+  const effectiveStartDate = isBefore(enrollmentDate, startDate) ? startDate : enrollmentDate;
+
+
+  const convertedSessionDates = sessionDates.flatMap(session => convertSessionToDate(session, effectiveStartDate, nextPaymentDate));
+
+  
+  // Filter sessions between effective start date and next payment date
+  const sessionsLeft = convertedSessionDates.filter(date => 
+      isAfter(date, effectiveStartDate) && isBefore(date, nextPaymentDate) || date.toDateString() === effectiveStartDate.toDateString()
+  ).length;
+
+
+
+  const sessionRate = monthlyAmount / sessionsPerMonth;
+
+  
+
+  const totalDue = sessionRate * sessionsLeft;
+
+  return { totalDue, numberOfSessionsLeft: sessionsLeft };
+}
+
 export default function StudentForm() {
   const camera = useRef<null | { takePhoto: () => string }>(null);
   const {setStudents,teachers,classes,students,profile}=useData()
@@ -171,12 +256,6 @@ export default function StudentForm() {
     name: "classes",
 
   });
-  const getClassId = (subject:string, name:string,day:string,start:string,end:string)  => {
-    const selectedClass = classes.find(cls => cls.subject === subject && cls.year=== watch('year') &&   cls.groups.some(group => group.stream.includes(watch('field'))) && cls.teacherName === name )
-    const selectedGroup=selectedClass.groups.find( grp=> grp.day === day && grp.start === start && grp.end===end)
-    
-    return selectedClass ? {id:selectedClass.id,index:selectedClass.students?selectedClass.students.length+1:1,group:selectedGroup.group}: {id:"",index:0,group:""};
-  };
   const handleGroupChange = (index: number, field: 'name' | 'id' | 'subject' | 'group' | "amount", value: string | number, classess) => {
     const classes = [...getValues('classes')];
     const classesUids = getValues('classesUIDs') ? [...getValues('classesUIDs')] : [];
@@ -197,8 +276,8 @@ export default function StudentForm() {
         return;
       }
   
-      console.log(selectedClassId);
-      
+
+      const a=calculateAmountDue(selectedClassId.startDate, selectedClassId?.nextPaymentDate, new Date(), selectedClassId?.groups, selectedClassId.amount,selectedClassId.numberOfSessions)
       const updatedClass = {
         ...classes[index],
         group: selectedClassId.group,
@@ -206,8 +285,12 @@ export default function StudentForm() {
         id: selectedClassId.id,
         index: selectedClassId.students.length + 1, 
         cs: classes[index].cs,
-        amount:selectedClassId.amount,
-        sessionsLeft:selectedClassId.numberOfSessions
+      
+        sessionsLeft:selectedClassId.numberOfSessions,
+        amount:a.totalDue,
+        nextPaymentDate:selectedClassId?.nextPaymentDate,
+        sessionsToStudy:a.numberOfSessionsLeft
+
       };
   
       const updatedClassUIDs = classesUids[index] || {};
@@ -762,12 +845,13 @@ if(["تحضيري"].includes(e)) {
 
     <TableCell className="font-medium">
 
-    <Input
-  type="number"
-  value={invoice?.amount} onChange={(e)=>handleGroupChange(index,'amount',+e.target.value)}
-  className="col-span-3 w-24 mb-2"
+  <Input
+    type="number"
+    value={invoice?.amount}
+    onChange={(e) => handleGroupChange(index, 'amount', +e.target.value)}
+    className="col-span-3 w-24 mb-2"
+  />
 
-/>
 </TableCell>
 
     <TableCell>   
@@ -867,6 +951,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset, cal
   const {setStudents,setClasses,students,classes,profile}=useData()
   const {toast}=useToast()
   const onSubmit = async(data:any) => {
+console.log(data.classes);
 
     const newData=await addStudent({...data,studentIndex:students.length+1, 
       debt:calculatedAmount,
@@ -902,9 +987,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset, cal
         lastPaymentDate: Timestamp.fromDate(currentDate),  // Firebase Timestamp for the current date and time
         nextPaymentDate: Timestamp.fromDate(new Date(new Date().setMonth(new Date().getMonth() + 1))),  // Current date + 1 month
         registrationAndInsuranceFee: 'notPaid',
-        totalAmount: calculatedAmount
-          
-        
+        totalAmount: calculatedAmount,  
         }
       ];
     });

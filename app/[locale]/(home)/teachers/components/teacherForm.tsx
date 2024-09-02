@@ -165,7 +165,7 @@ const handleYearToggle = (field:string) => {
   "3AS"
 ]
 */
-const {classes}=useData()
+const {classes,profile}=useData()
 const checkRoomAvailability = useCallback((newGroup: Group, allRooms: string[]): string[] => {
   const { day, start, end } = newGroup;
   console.log(day, start, end);

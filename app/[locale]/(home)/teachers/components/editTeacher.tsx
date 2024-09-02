@@ -165,7 +165,7 @@ const highSchoolYears = ["1AS", "2AS", "3AS"];
 const universitySchoolYears=["L1","L2","L3","M1"]
 const priarySchoolYears=["1AP","2AP","3AP","4AP","5AP"]
 const languageSchoolYears=["A1","A2","B1","B2","C1","C2"]
-const {classes}=useData()
+const {profile}=useData()
 // const checkRoomAvailability = useCallback((newGroup: Group, allRooms: string[]): string[] => {
 //   const { day, start, end, classId, room: newGroupRoom } = newGroup;
 //   // Check if any of the required fields are missing
@@ -237,6 +237,7 @@ const subjects = [
   
 
 ];
+
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
   const addSession = (groupIndex: number) => {
     const newGroups = [...getValues('classes')]
@@ -777,14 +778,15 @@ else if (type === "لغات") {
                         <TableCell>
                           <Select
                             value={session.room}
-                            onValueChange={(value) => updateSessionField(groupIndex, sessionIndex, 'room', value)}
-                          >
+                            onValueChange={(value) => updateSessionField(groupIndex, sessionIndex, 'room', value)}>
                             <SelectTrigger className="w-[120px]">
                               <SelectValue placeholder="Select room" />
                             </SelectTrigger>
                             <SelectContent>
-                            {['room 1','room 2','room 3','room 4','room 5','room 6','room 7','room 8'].map((room) => (
-                                <SelectItem key={room} value={room}>{room}</SelectItem>
+                              {Array.from({ length: profile.NumberOfClasses }, (_, i) => `room ${i + 1}`).map((room) => (
+                                <SelectItem key={room} value={room}>
+                                  {room}
+                                </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>

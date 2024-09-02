@@ -224,7 +224,9 @@ export const  FetchDataProvider = ({ children }) => {
                 name: classDetail.teacherName,
                 subject: classDetail.subject,
                 sessionsLeft:studentDetail.sessionsLeft,
-                amount:classDetail.amount
+                amount:studentDetail.amount,
+                nextPaymentDate:new Date(studentDetail.nextPaymentDate.toDate()),
+                sessionsToStudy:studentDetail.sessionsToStudy,
               };
             });
   

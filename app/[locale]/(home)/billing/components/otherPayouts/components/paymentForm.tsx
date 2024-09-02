@@ -1,394 +1,327 @@
 
-
-import * as React from "react"
+import { Button } from "@/components/ui/button";
 import {
-  CaretSortIcon,
-  ChevronDownIcon,
-  DotsHorizontalIcon,
-} from "@radix-ui/react-icons"
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import {
-  ColumnDef,
-  ColumnFiltersState,
-  SortingState,
-  VisibilityState,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from "@tanstack/react-table"
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardFooter,
-    CardHeader,
-    CardTitle,
-  } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {ResetIcon } from "@radix-ui/react-icons";
+import { Input } from "@/components/ui/input";
+import { useForm } from "react-hook-form";
+import { PaymentRegistrationSchema } from "@/validators/paymentSchema";
+import { zodResolver } from "@hookform/resolvers/zod";
+import React, { useCallback, useState} from "react";
+import { useToast } from "@/components/ui/use-toast";
+import CalendarDatePicker from "@/app/[locale]/(home)/students/components/date-picker";
+import { ScrollArea} from "@/components/ui/scroll-area";
+import ImageUpload from "@/app/[locale]/(home)/students/components/uploadFile";
+import Combobox from "@/components/ui/comboBox";
+import { LoadingButton } from "@/components/ui/loadingButton";
+import { z } from "zod";
+import { useData } from "@/context/admin/fetchDataContext";
+import { addPayment } from "@/lib/hooks/billing/otherPayments";
+import { uploadFilesAndLinkToCollection } from "@/context/admin/hooks/useUploadFiles";
+import { getMonthInfo } from "@/lib/hooks/billing/teacherPayment";
+import { useTranslations } from "next-intl";
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { File } from "lucide-react"
-import { useData } from "@/context/admin/fetchDataContext"
-import SheetDemo from "@/app/[locale]/(home)/students/components/editStudent"
-import { useTranslations } from "next-intl"
-import { exportTableToExcel } from "@/components/excelExport"
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { downloadInvoice } from "./generateInvoice";
+import { format } from "date-fns";
+const fieldNames = [
+  "paymentTitle",
+  "paymentAmount",
+  "typeofPayment",
+  "paymentDate",
+  "fromWho",
+  "toWho",
+  "status",
+  "notesTobeAdded",
+];
 
-  export const StudentPaymentTable= () => {
-    const {students}=useData()
-    const [open,setOpen]=React.useState(false)
-    const [student,setStudent]=React.useState<any>({  
-      id: '123456',
-      level: 'Intermediate',
-      year: '2024',
-      firstName: 'John',
-      lastName: 'Doe',
-      dateOfBirth: new Date('1990-01-01'),
-      gender: 'male',
-      address: '123 Main St',
-      city: 'Anytown',
-      state: 'State',
-      postalCode: '12345',
-      country: 'Country',
-      parentFullName: 'Jane Doe',
-      parentFirstName: 'Jane',
-      parentLastName: 'Doe',
-      parentEmail: 'jane.doe@example.com',
-      parentPhone: '123-456-7890',
-      parentId: '654321',
-      emergencyContactName: 'Emergency Contact',
-      emergencyContactPhone: '987-654-3210',
-      medicalConditions: null,
-      status: 'Active',
-      joiningDate: new Date(),
-      registrationStatus: 'Registered',
-      startDate: new Date(),
-      lastPaymentDate: new Date(),
-      nextPaymentDate: new Date(),
-      totalAmount: 1000,
-      monthlypayment: 500,
-      class: { name: 'Class Name', id: 'class123' },
-    })
-    const t=useTranslations()
-    const openEditSheet = (student:any) => {
-      setStudent(student)
-      setOpen(true); // Open the sheet after setting the level
-    };
-    
-   const columns: ColumnDef<any>[] = [
+type FormKeys =
+  |"paymentTitle"
+  |"paymentAmount"
+  |"typeofPayment"
+  |"paymentDate"
+  |"fromWho"
+  |"toWho"
+  |"status"
+  |"notesTobeAdded"
+
+
+  type PaymentFormValues = z.infer<typeof PaymentRegistrationSchema>;
+  interface FileUploadProgress {
+    file: File;
+    name: string;
+    source:any;
+  }
+export default function PaymentForm() {
+  const { toast } = useToast();
+  const [status, setstatus] = useState(false);
+  const {payouts,setPayouts,setAnalytics}=useData()
+  const [openTypeofpayment, setOpenTypeofpayment] = useState(false);
+  const [filesToUpload, setFilesToUpload] = useState<FileUploadProgress[]>([]);
+  const[printBill,setPrintBill]=useState(false)
+  const form = useForm<PaymentFormValues>({
+    resolver: zodResolver(PaymentRegistrationSchema),
+    defaultValues: {
+        id:"222",
+    },
+  });
+  const { reset, formState, setValue, getValues } = form;
+  const { isSubmitting } = formState;
+  
+  const t=useTranslations()
+  const Typeofpayments = [
     {
-      id: "select",
-      header: ({ table }) => (
-        <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
-      ),
-      enableSorting: false,
-      enableHiding: false,
+      value: "rent",
+      label: t('rent'),
     },
     {
-      accessorKey: "name",
-      header:() => <div>{t('Name')}</div>, 
-
-      cell: ({ row }) => (
-        <div className="capitalize">
-           <div className="font-medium">{row.getValue("name")}</div>
-
-        </div>
-      ),
+      value: "electricbill",
+      label: t('electric-bill'),
     },
     {
-      accessorKey: "year",
-      header:() => <div>{t('level')}</div>, 
-
-      cell: ({ row }) => <div className="lowercase hidden sm:table-cell">{row.getValue("year")}</div>,
+      value: "waterBill",
+      label: t('water-bill'),
     },
     {
-      accessorKey: "nextPaymentDate",
-      header:() => <div>{t('nextPaymentDate')}</div>, 
-      cell: ({ row }) => (
-        <div className="capitalize hidden sm:table-cell"> {((row.getValue("nextPaymentDate") as Date)).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
-      ),
+      value: "gazBill",
+      label: t('gaz-bill'),
     },
+    {
+      value: "maintenance",
+      label: t('maintenance'),
+    },
+    {
+      value: "delivery",
+      label: t('delivery'),
+    },
+    {
+      value:"other"  ,
+      label: t('other-should-be-described-in-the-notes'),
+    },
+  ];
+  
+  
+  const payoutstatus =[
     
     {
-        accessorKey: "phoneNumber",
-        header:() => <div>{t('phone-number')}</div>, 
-        cell: ({ row }) => (
-          <div className="capitalize hidden sm:table-cell">{row.getValue("phoneNumber")}</div>
-        ),
-      },
-    {
-      accessorKey: "monthlypayment",
-      header: () => <div className="text-right">{t('monthly-payment')}</div>,
-      cell: ({ row }) => {
-        const amount = parseFloat(row.getValue("monthlypayment"))
-  
-        // Format the amount as a dollar amount
-        const formatted = new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "DZD",
-        }).format(amount)
-  
-        return <div className="text-right font-medium">{formatted}</div>
-      },
+      value:"paid"  ,
+      label: t('paid'),
     },
     {
-        accessorKey: "debt",
-        header: () => <div className="text-right">{t('total')}</div>,
-        cell: ({ row }) => {
-          const amount = parseFloat(row.getValue("debt"))
-    
-          // Format the amount as a dollar amount
-          const formatted = new Intl.NumberFormat("en-US", {
-            style: "currency",
-            currency: "DZD",
-          }).format(amount)
-    
-          return <div className="text-right font-medium">{formatted}</div>
-        },
-      },
-      
-  
-    {
-      id: "actions",
-      enableHiding: false,
-      cell: ({ row }) => {
-        const student = row.original
-  
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">{t('open-menu')}</span>
-                <DotsHorizontalIcon className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>{t('actions')}</DropdownMenuLabel>
-             
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={()=>openEditSheet(student)}>
-                {t('view-student')} </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )
-      },
+      value:"notPaid"  ,
+      label: t('not-paid'),
     },
   ]
-  const handleExport = () => {
-    const exceldata=students.map((student:any)=>({[`${t('Name')}`]:student.student,
-    [`${t('level')}`]:student.level,
-   
-    [`${t('next-payment-date-0')}`]:student.nextPaymentDate,
-    [`${t('parent-phone-0')}`]:student.parentPhone,
-    [`${t('amount-left')}`]: new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "DZD",
-    }).format(student.monthlypayment),
-    [`${t('total-amount-0')}`]: new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "DZD",
-    }).format(student.totalAmount),
-    }))
-    exportTableToExcel(t('students-payments-table'),exceldata);
-  };
-  const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
-  )
-  const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({})
-  const [rowSelection, setRowSelection] = React.useState({})
-
-  const table = useReactTable({
-    data:students,
-   columns,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
-    state: {
-      sorting,
-      columnFilters,
-      columnVisibility,
-      rowSelection,
-    },
-    initialState: {
-      pagination: {
-        pageIndex: 0, //custom initial page index
-        pageSize: 3, //custom default page size
-      },
-    },
-  })
+  const renderInput = (fieldName:string, field:any) => {
+    switch (fieldName) {
+      case "paymentDate":
+        return (
+          <CalendarDatePicker
+            {...field}
+            date={getValues("paymentDate")}
+            setDate={(selectedValue) => {
+              if (selectedValue === undefined) {
+                // Handle undefined case if needed
+              } else {
+                form.setValue(fieldName, selectedValue);
+              }
+            }}
+          />
+        );
+      case "status":
+        return (
+          <Combobox
+            {...field}
+            open={status}
+            setOpen={setstatus}
+            placeHolder={t("status")}
+            options={payoutstatus}
+            value={getValues("status")}
+            onSelected={(selectedValue) => {
+              form.setValue(fieldName, selectedValue);
+            }} // Set the value based on the form's current value for the field
+          />
+        );
+      case "typeofPayment":
+        return (
+          <Combobox
+            {...field}
+            open={openTypeofpayment}
+            setOpen={setOpenTypeofpayment}
+            placeHolder={t("typeofPayment")}
+            options={Typeofpayments}
+            value={getValues("typeofPayment")}
+            onSelected={(selectedValue) => {
  
+              form.setValue(fieldName, selectedValue);
+            }}
+          />
+        );
+        
+        case "paymentAmount":
+            return (<Input {...field} onChange={event => field.onChange(+event.target.value)}/>)
 
-  
+      default:
+        return <Input {...field} />;
+    }
+  };
+
+  async function onSubmit(data:PaymentFormValues) {
+    const payoutId= await addPayment({...data,documents:[]})
+    const uploaded = await uploadFilesAndLinkToCollection("Billing/payouts/Payout", payoutId, filesToUpload);
+    const month=getMonthInfo(data.paymentDate)
+    setPayouts((prev: PaymentFormValues[]) => [
+      {
+        ...data,
+        id: payoutId,
+        payout: payoutId,
+        documents: uploaded,
+        value: payoutId,
+        label: payoutId,
+      },
+      ...(prev || []),
+    ]);
+    
+    setAnalytics((prevState: any) => {
+      // Ensure prevState is an object and data is initialized as an empty object if undefined
+      const data = prevState?.data || {};
+    
+      // Get the current month's data or initialize it if undefined
+      const monthData = data[month.abbreviation] || {};
+    
+      // Get previous expenses or initialize to 0
+      const previousExpenses = monthData.expenses || 0;
+    
+      // Calculate new expenses
+      const newExpenses = previousExpenses + data.paymentAmount;
+    
+      // Return the updated state
+      return {
+        ...prevState,
+        data: {
+          ...data,
+          [month.abbreviation]: {
+            ...monthData,
+            expenses: newExpenses,
+          },
+        },
+        totalExpenses: (prevState?.totalExpenses || 0) + data.paymentAmount,
+      };
+    });
+    
+    
+    if (printBill) {
+      // Your print bill logic here
+    }
+    
+      if(printBill){
+        downloadInvoice({
+          paymentTitle: data.paymentTitle,
+          toWho: data.toWho,
+          fromWho: data.fromWho,
+          typeofPayment: data.typeofPayment,
+          paymentAmount: data.paymentAmount,
+         paymentDate: format(data.paymentDate, 'dd/MM/yyyy'),
+          status: t(data.status),
+        
+        },payoutId,[t('payment'), t('toWho'), t('fromWho'),t('method'), t('amount'), t('paymentDate'), t('status')],
+      {
+        amount:t("Amount"), from:t('From:'), shippingAddress:t('shipping-address'), billedTo:t('billed-to'), subtotal:t('Subtotal:'), totalTax:t('total-tax-0'), totalAmount:t('total-amount-3'),invoice:t('invoice')
+      })
+      } 
+      toast({
+        title: t('changes-applied-0'),
+        description: t('changes-applied-successfully'),
+      });
+
+            reset(); 
+          
+          }
+
+             
   return (
-    <>
-
-  
-    <Card x-chunk="dashboard-05-chunk-3">
-    <CardHeader className="px-7">
-      <CardTitle>{t('your-student-payments')}</CardTitle>
-      <CardDescription>
-      {t('introducing-our-dynamic-expences-dashboard')} </CardDescription>
-    </CardHeader>
-    <CardContent>     
-    <div className="w-full">
-    <div className="flex items-center justify-between">
-       
-
-       <Input
-             placeholder={t('filter-by-student')}
-             value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-             onChange={(event) =>
-               table.getColumn("name")?.setFilterValue(event.target.value)
-             }
-             className="max-w-sm"
-           />
-             <div className="flex items-center ml-auto">
-       <DropdownMenu>
-             <DropdownMenuTrigger asChild>
-               <Button variant="outline" className="ml-auto">
-                 {t('columns')} <ChevronDownIcon className="ml-2 h-4 w-4" />
-               </Button>
-             </DropdownMenuTrigger>
-             <DropdownMenuContent align="end">
-               {table
-                 .getAllColumns()
-                 .filter((column) => column.getCanHide())
-                 .map((column) => {
-                   return (
-                     <DropdownMenuCheckboxItem
-                       key={column.id}
-                       className="capitalize"
-                       checked={column.getIsVisible()}
-                       onCheckedChange={(value) =>
-                         column.toggleVisibility(!!value)
-                       }
-                     >
-                       {column.id}
-                     </DropdownMenuCheckboxItem>
-                   )
-                 })}
-             </DropdownMenuContent>
-           </DropdownMenu>
-           <Button variant="outline" className="ml-2" onClick={handleExport}>
-          {t('export')} <File className="ml-2 h-4 w-4" />
-         </Button>
-       </div>
-       </div>
-      <div className="rounded-md border mt-5">
-        <Table id="students-payments-table">
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  )
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  {t('no-results')} </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
-          {table.getFilteredRowModel().rows.length} {t('row-s-selected')}
+    <Card className="overflow-hidden" x-chunk="dashboard-05-chunk-4">
+      <CardHeader className="flex flex-row items-start bg-muted/50">
+        <div className="grid gap-0.5">
+          <CardTitle className="group flex items-center gap-2 text-lg">
+            {t('create-payment')} </CardTitle>
+          <CardDescription></CardDescription>
         </div>
-        <div className="space-x-2">
+
+        <div className="ml-auto flex items-center gap-1">
           <Button
-            variant="outline"
             size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            {t('previous')} </Button>
-          <Button
             variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
+            className="h-8 gap-1"
+            onClick={()=>reset()}
           >
-            {t('next')} </Button>
+            <ResetIcon className="h-3.5 w-3.5" />
+            <span className="lg:sr-only xl:not-sr-only xl:whitespace-nowrap">
+              {t('reset-details')} </span>
+          </Button>
         </div>
-      </div>
+      </CardHeader>
+      <ScrollArea
+        className="overflow-auto pt-6 text-sm"
+        style={{ maxHeight: "600px" }}
+      >
+        <CardContent>
+          <Form {...form}>
+            <form>
+              {fieldNames.map((fieldName, index) => (
+                <FormField
+                  key={index}
+                  control={form.control}
+                  name={fieldName as FormKeys}
+                  render={({ field }) => (
+                    <FormItem style={{ marginBottom: 15 }}>
+                      <FormLabel>{t(fieldName)}</FormLabel>
+                      <FormControl>{renderInput(fieldName, field)}</FormControl>
+
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ))}
+            </form>
+          </Form>
+          <div className="flex items-center space-x-2 mb-3">
+      <Checkbox id="terms" checked={printBill} onClick={()=>setPrintBill(!printBill)}/>
+      <label
+        htmlFor="terms"
+        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+      >
+       {t('print-paiment-bill')} 
+       </label>
     </div>
-    <SheetDemo open={open} setOpen={setOpen}  student={student}/>
-
-    </CardContent>
-  </Card>
-  </>
-  )
+          <ImageUpload filesToUpload={filesToUpload} setFilesToUpload={setFilesToUpload}/>
+        </CardContent>
+      </ScrollArea>
+      <CardFooter className="flex flex-row items-center border-t bg-muted/50 px-6 py-3">
+        <div className="flex gap-2">
+          <LoadingButton
+            loading={isSubmitting}
+            type="submit"
+            onClick={form.handleSubmit(onSubmit)}
+          >
+            {t('submit')} </LoadingButton>
+        </div>
+      </CardFooter>
+    </Card>
+  );
 }
