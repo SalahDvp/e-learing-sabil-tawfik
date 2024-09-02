@@ -50,7 +50,7 @@ import { Separator } from '@/components/ui/separator';
 import QRCode from 'qrcode'
 import { addStudent, addStudentToClass, changeStudentGroup, getStudentCount, removeStudentFromClass, updateStudent, updateStudentPicture } from '@/lib/hooks/students';
 import { LoadingButton } from '@/components/ui/loadingButton';
-import { format } from 'date-fns';
+import { format, isAfter, isBefore } from 'date-fns';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { UseFormReturn } from 'react-hook-form';
@@ -129,13 +129,96 @@ const years=[
 "M1",
 
 ]
+interface Session {
+  day: string;
+  start: string;
+  end: string;
+}
+const convertSessionToDate = (session: Session, startDate: Date, endDate: Date): Date[] => {
+  const sessionDayIndex = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(session.day);
+  const sessionDates: Date[] = [];
+
+  let currentDate = new Date(startDate);
+
+  // Move currentDate to the first session day on or after startDate
+  while (currentDate.getDay() !== sessionDayIndex) {
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  // Add sessions within the range
+  while (currentDate <= endDate) {
+    const [hours, minutes] = session.start.split(':').map(Number);
+    const sessionDate = new Date(currentDate);
+    sessionDate.setHours(hours, minutes);
+
+    // Include the session if it is on or after the startDate
+    if (sessionDate >= startDate) {
+      sessionDates.push(sessionDate);
+    }
+
+    // Move to the next week
+    currentDate.setDate(currentDate.getDate() + 7);
+  }
+
+  // Check if the nextPaymentDate is on a session day
+  const [endHours, endMinutes] = session.start.split(':').map(Number);
+  let paymentDate = new Date(endDate);
+  paymentDate.setHours(endHours, endMinutes);
+
+  if (paymentDate.getDay() === sessionDayIndex && paymentDate <= endDate) {
+    sessionDates.push(paymentDate);
+  }
+
+  // Check if the first session date has passed the current time
+  if (sessionDates.length > 0) {
+    const firstSessionDate = sessionDates[0];
+    const now = new Date();
+    
+    if (now > firstSessionDate) {
+      // Include the first session if the current time is past the session time
+      sessionDates.shift();
+    }
+  }
+
+  return sessionDates;
+};
+
+function calculateAmountDue(
+  startDate: Date, 
+  nextPaymentDate: Date, 
+  enrollmentDate: Date, 
+  sessionDates: Session[], 
+  monthlyAmount: number,
+  sessionsPerMonth:number,
+): { totalDue: number; numberOfSessionsLeft: number } {
+  // Adjust start date if enrollment date is before the start date
+  const effectiveStartDate = isBefore(enrollmentDate, startDate) ? startDate : enrollmentDate;
+
+
+  const convertedSessionDates = sessionDates.flatMap(session => convertSessionToDate(session, effectiveStartDate, nextPaymentDate));
+
+  
+  // Filter sessions between effective start date and next payment date
+  const sessionsLeft = convertedSessionDates.filter(date => 
+      isAfter(date, effectiveStartDate) && isBefore(date, nextPaymentDate) || date.toDateString() === effectiveStartDate.toDateString()
+  ).length;
+
+
+
+  const sessionRate = monthlyAmount / sessionsPerMonth;
+
+  
+
+  const totalDue = sessionRate * sessionsLeft;
+
+  return { totalDue, numberOfSessionsLeft: sessionsLeft };
+}
 const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
   const camera = useRef<null | { takePhoto: () => string }>(null);
   const {setStudents,teachers,classes,students}=useData()
   const t=useTranslations()
   const form = useForm<Student>({
     //resolver: zodResolver(StudentSchema),
-    
     defaultValues:student
   });
   const { reset,formState, setValue, getValues,control,watch} = form;
@@ -176,8 +259,8 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
         return;
       }
   
-      console.log(selectedClassId);
-      
+
+      const a=calculateAmountDue(selectedClassId.startDate, selectedClassId?.nextPaymentDate, new Date(), selectedClassId?.groups, selectedClassId.amount,selectedClassId.numberOfSessions)
       const updatedClass = {
         ...classes[index],
         group: selectedClassId.group,
@@ -185,8 +268,12 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
         id: selectedClassId.id,
         index: selectedClassId.students.length + 1, 
         cs: classes[index].cs,
-        amount:selectedClassId.amount,
-        sessionsLeft:selectedClassId.numberOfSessions
+      
+        sessionsLeft:selectedClassId.numberOfSessions,
+        amount:a.totalDue,
+        nextPaymentDate:selectedClassId?.nextPaymentDate,
+        sessionsToStudy:a.numberOfSessionsLeft
+
       };
   
       const updatedClassUIDs = classesUids[index] || {};
@@ -203,7 +290,6 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
     setValue(`classes`, classes);
     setValue(`classesUIDs`, classesUids);
   };
-
 
   const calculatedAmount = useMemo(() => {
     const amounts = watch("classes");
@@ -726,7 +812,10 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,stud
           prevClasses.map((cls: { id: any; students: any; }) =>
       cls.id === id ? {
         ...cls,
-        students: [...cls.students, { group, id,cs, index:index, name, year:student.year,sessionsLeft:cls.sessionsLeft }]
+        students: [...cls.students, { group, id,cs, index:index, name, year:student.year,sessionsLeft:cls.sessionsLeft,
+          amount:cls.amount,
+          nextPaymentDate:cls?.nextPaymentDate,
+          sessionsToStudy:cls.sessionsToStudy }]
       } : cls
     )
   );
@@ -812,12 +901,11 @@ std.id === student.id ? {
  
     const {toast}=useToast()
     const t=useTranslations()
-  const onSubmit = async (data: Student) => {
+const onSubmit = async (data: Student) => {
+
  const result=compareClasses(data.classes,student.classes)
 
- 
-    
-await  processStudentChanges(result,data)
+ await processStudentChanges(result,data)
 const StudentInfoToUpdate = {
   monthlypayment: calculatedAmount,
   name: data.name,

@@ -67,7 +67,7 @@ import { useData } from "@/context/admin/fetchDataContext";
 
 import { generateTimeOptions } from '../../settings/components/open-days-table';
 import { setgroups } from 'process';
-import { parse, isBefore, isAfter, isEqual, addWeeks } from 'date-fns';
+import { parse, isBefore, isAfter, isEqual, addWeeks, startOfWeek, endOfWeek, getDay, setHours, setMinutes, addHours } from 'date-fns';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 const parseTime = (timeString) => parse(timeString, 'HH:mm', new Date());
@@ -662,7 +662,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
                 // Handle undefined case if needed
               } else {
                 form.setValue(`classes.${groupIndex}.startDate`, selectedValue);
-                form.setValue(`classes.${groupIndex}.nextPaymentDate`, addWeeks(selectedValue, 4));
+
 
               }
             }}
@@ -837,6 +837,52 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
     </Dialog>
   )
 }
+const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function getNextPaymentDate(sessions: Session[], classStartDate: Date): Date {
+  // Step 1: Find the last session of the week
+  const lastSession = sessions.reduce((last, current) => {
+    return daysOfWeek.indexOf(current.day) > daysOfWeek.indexOf(last.day) ? current : last;
+  });
+
+  // Step 2: Calculate the date of the last session in the first week
+  const classStartWeekStart = startOfWeek(classStartDate);
+  const classStartWeekEnd = endOfWeek(classStartDate);
+
+  // Find the date for the last session in the first week
+  let lastSessionDate = new Date(classStartWeekStart);
+  while (getDay(lastSessionDate) !== daysOfWeek.indexOf(lastSession.day)) {
+    lastSessionDate.setDate(lastSessionDate.getDate() + 1);
+  }
+
+  // Set the start time for the session
+  const [startHours, startMinutes] = lastSession.end.split(':').map(Number);
+  lastSessionDate.setHours(startHours, startMinutes);
+
+  // Step 3: Calculate the same session date on the 4th week
+  const nextPaymentDate = addWeeks(lastSessionDate, 3); // Move to the 4th week
+
+  return nextPaymentDate;
+}
+function adjustStartDateToFirstSession(startDate: Date, sessions: Session[]): Date {
+  // Step 1: Find the first session of the week
+  const firstSession = sessions.reduce((first, current) => {
+    return daysOfWeek.indexOf(current.day) < daysOfWeek.indexOf(first.day) ? current : first;
+  });
+
+  // Step 2: Get the start time of the first session
+  const [sessionHours, sessionMinutes] = firstSession.start.split(':').map(Number);
+
+  // Step 3: Adjust only the hours and minutes of the start date
+  let adjustedDate = new Date(startDate);
+  adjustedDate = setHours(adjustedDate, sessionHours);
+  adjustedDate = setMinutes(adjustedDate, sessionMinutes);
+
+  // Step 4: Add one hour to the adjusted time
+  adjustedDate = addHours(adjustedDate, 1);
+
+  return adjustedDate;
+}
 
 const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) => {
   const {
@@ -853,7 +899,9 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
 
   const {toast}=useToast()
   const onSubmit = async(data:any) => {
-console.log(data);
+
+
+
 
     const teacherId = await addTeacher(data)
     const collectiveGroups = data.classes.map((cls) => ({
@@ -864,6 +912,8 @@ console.log(data);
       teacherUID:teacherId.id,
       teacherName:data.name,
       subject: data["educational-subject"],
+      startDate:adjustStartDateToFirstSession(cls.startDate, cls.groups),
+      nextPaymentDate:getNextPaymentDate(cls.groups, cls.startDate)
       }
 
 

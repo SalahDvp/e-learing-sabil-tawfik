@@ -66,7 +66,7 @@ import { useData } from "@/context/admin/fetchDataContext";
 
 import { generateTimeOptions } from '../../settings/components/open-days-table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { parse, isBefore, isAfter, isEqual, startOfMinute, addWeeks } from 'date-fns';
+import { parse, isBefore, isAfter, isEqual, addWeeks, startOfWeek, endOfWeek, getDay, setHours, setMinutes, addHours } from 'date-fns';
 import { Label } from '@/components/ui/label';
 const parseTime = (timeString) => parse(timeString, 'HH:mm', new Date());
 interface FooterProps {
@@ -857,6 +857,52 @@ else if (type === "لغات") {
   )
 }
 export default EditTeacher;
+const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function getNextPaymentDate(sessions: Session[], classStartDate: Date): Date {
+  // Step 1: Find the last session of the week
+  const lastSession = sessions.reduce((last, current) => {
+    return daysOfWeek.indexOf(current.day) > daysOfWeek.indexOf(last.day) ? current : last;
+  });
+
+  // Step 2: Calculate the date of the last session in the first week
+  const classStartWeekStart = startOfWeek(classStartDate);
+  const classStartWeekEnd = endOfWeek(classStartDate);
+
+  // Find the date for the last session in the first week
+  let lastSessionDate = new Date(classStartWeekStart);
+  while (getDay(lastSessionDate) !== daysOfWeek.indexOf(lastSession.day)) {
+    lastSessionDate.setDate(lastSessionDate.getDate() + 1);
+  }
+
+  // Set the start time for the session
+  const [startHours, startMinutes] = lastSession.end.split(':').map(Number);
+  lastSessionDate.setHours(startHours, startMinutes);
+
+  // Step 3: Calculate the same session date on the 4th week
+  const nextPaymentDate = addWeeks(lastSessionDate, 3); // Move to the 4th week
+
+  return nextPaymentDate;
+}
+function adjustStartDateToFirstSession(startDate: Date, sessions: Session[]): Date {
+  // Step 1: Find the first session of the week
+  const firstSession = sessions.reduce((first, current) => {
+    return daysOfWeek.indexOf(current.day) < daysOfWeek.indexOf(first.day) ? current : first;
+  });
+
+  // Step 2: Get the start time of the first session
+  const [sessionHours, sessionMinutes] = firstSession.start.split(':').map(Number);
+
+  // Step 3: Adjust only the hours and minutes of the start date
+  let adjustedDate = new Date(startDate);
+  adjustedDate = setHours(adjustedDate, sessionHours);
+  adjustedDate = setMinutes(adjustedDate, sessionMinutes);
+
+  // Step 4: Add one hour to the adjusted time
+  adjustedDate = addHours(adjustedDate, 1);
+
+  return adjustedDate;
+}
 const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teacher}) => {
   const t=useTranslations()
   const {
@@ -902,7 +948,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
     // Add students to classes
     if (addedClasses && Array.isArray(addedClasses)) {
       for (const clss of addedClasses) {
-        console.log(clss);
+    
     
         const clssId = await addGroup({
           ...clss,
@@ -912,6 +958,8 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
           teacherUID: formData.id,
           teacherName: formData.name,
           subject: formData["educational-subject"],
+          startDate:adjustStartDateToFirstSession(clss.startDate, clss.groups),
+          nextPaymentDate:getNextPaymentDate(clss.groups, clss.startDate)
         }, formData.id);
     
         setClasses(prevClasses => [
@@ -923,6 +971,8 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
             students: [],
             reimbursements: [],
             subject: formData['educational-subject'],
+            startDate:adjustStartDateToFirstSession(clss.startDate, clss.groups),
+            nextPaymentDate:getNextPaymentDate(clss.groups, clss.startDate),
             teacherName: formData.name,
             teacherUID: formData.id
           }
@@ -943,7 +993,9 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
                       reimbursements: [],
                       subject: formData['educational-subject'],
                       teacherName: formData.name,
-                      teacherUID: formData.id
+                      teacherUID: formData.id,
+                      startDate:adjustStartDateToFirstSession(clss.startDate, clss.groups),
+                      nextPaymentDate:getNextPaymentDate(clss.groups, clss.startDate)
                     }
                   ],
                   groupUIDs: [...tchr.groupUIDs, clssId]  // Correctly add the new group UID
@@ -991,14 +1043,14 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
   
       if (updatedClasses && Array.isArray(updatedClasses)) {
         for (const classupdate of updatedClasses) {        
-          console.log("Dwdqwqw",classupdate);
-          
-            await updateClassGroup(classupdate.id,classupdate);
+          const newClass={...classupdate,startDate:adjustStartDateToFirstSession(classupdate.startDate, classupdate.groups),
+            nextPaymentDate:getNextPaymentDate(classupdate.groups, classupdate.startDate)}
+            await updateClassGroup(classupdate.id,newClass);
           
             setClasses(prevClasses =>
               prevClasses.map(cls => {
-                if (cls.id === classupdate.id) {
-                  return {...classupdate};
+                if (cls.id === newClass.id) {
+                  return {...newClass};
                 }
                 return cls;
               })
@@ -1009,7 +1061,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
                   return {
                     ...cls,
                     classes: cls.classes.map(cls =>
-                      cls.id === classupdate.id ? {...classupdate } : cls
+                      cls.id === newClass.id ? {...newClass } : cls
                     )
                   };
                 }
@@ -1018,12 +1070,12 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
             );
             setStudents(prevStudents =>
               prevStudents.map(std => {
-                if (classupdate.students.some(st => st.id === std.id)) {
+                if (newClass.students.some(st => st.id === std.id)) {
                   // If the student is in studentsToRemove, update their classes
                   return {
                     ...std,
                     classes: std.classes.map(cls =>
-                      cls.id === classupdate.id? {...classupdate } : cls
+                      cls.id === newClass.id? {...newClass } : cls
                     )
                   };
                 }
@@ -1036,9 +1088,6 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
   const {toast}=useToast()
   const onSubmit = async(data:Teacher) => {
   const result=compareClasses(teacher.classes,data.classes)
- 
-  console.log(result);
-  
   await processStudentChanges(result)
     const { classes, ...teacherData } = data;
 

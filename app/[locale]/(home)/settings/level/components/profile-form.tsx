@@ -4,8 +4,12 @@ import {addProfile} from "@/lib/hooks/profile"
 import { useData } from "@/context/admin/fetchDataContext";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useFieldArray, useForm } from "react-hook-form";
+import ImageUpload from "@/app/[locale]/(home)/students/components/uploadFile";
+
 import { z } from "zod";
 import { useToast } from "@/components/ui/use-toast";
+import { uploadFilesAndLinkToCollection } from "@/context/admin/hooks/useUploadFiles";
+
 import { cn } from "@/lib/utils";
 import {
   Form,
@@ -31,7 +35,7 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 export function ProfileForm() {
  
-
+const [filesToUpload, setFilesToUpload] = React.useState<FileUploadProgress[]>([]);
 const t=useTranslations()
   const form = useForm<any>({
     //resolver: zodResolver(profileFormSchema),
@@ -149,6 +153,55 @@ const t=useTranslations()
             </FormItem>
           )}
         />
+       <FormField
+  control={form.control}
+  name="NumberOfClasses"
+  render={({ field }) => {
+    const [initialValue, setInitialValue] = React.useState<number | null>(null);
+
+    React.useEffect(() => {
+      // Set the initial value when the field is first rendered or has a value
+      if (field.value && initialValue === null) {
+        setInitialValue(field.value);
+      }
+    }, [field.value, initialValue]);
+
+    const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const newValue = +event.target.value;
+
+      // Prevent reducing the value below the initial one
+      if (initialValue !== null && newValue < initialValue) {
+        return; // Ignore the change
+      }
+
+      field.onChange(newValue);
+
+      // Update the initial value if it's still null
+      if (initialValue === null) {
+        setInitialValue(newValue);
+      }
+    };
+
+    return (
+      <FormItem>
+        <FormLabel>{t('NumberOfClasses')}</FormLabel>
+        <FormControl>
+          <Input
+            type="number"
+            placeholder="8 Classes"
+            {...field}
+            onChange={handleInputChange}
+            min={initialValue ?? 1} // Optional: Set a minimum value if needed
+          />
+        </FormControl>
+        <FormDescription>
+          {t('this-is-the-number-of-classes')}
+        </FormDescription>
+        <FormMessage />
+      </FormItem>
+    );
+  }}
+/>
 
         {/* Email field */}
         <FormField
@@ -292,7 +345,7 @@ const t=useTranslations()
             {t('add-url')} </Button>
         </div>
         <div>
-          {classNames.map((field, index) => (
+          {/*classNames.map((field, index) => (
             <FormField
               control={form.control}
               key={index}
@@ -310,8 +363,8 @@ const t=useTranslations()
                 </FormItem>
               )}
             />
-          ))}
-          <Button
+              ))*/}
+         {/* <Button
             type="button"
             variant="outline"
             size="sm"
@@ -319,8 +372,10 @@ const t=useTranslations()
             onClick={() => appendClass("")}
           >
             {t('add-classroom')} </Button>
+            */}
         </div>
           <OpenDaysTable openDays={openDays} form={form}/>
+          <ImageUpload filesToUpload={filesToUpload} setFilesToUpload={setFilesToUpload}/>
         <LoadingButton  
          loading={form.formState.isSubmitting}
 >{t('update-profile-0')}</LoadingButton>
