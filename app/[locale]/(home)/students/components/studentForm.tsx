@@ -1006,8 +1006,8 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset, cal
       <div class="bill-container">
         <div class="header">
           <div class="logo-container">
-            <img src="/placeholder.svg" alt="School Logo" />
-            <h2>School Name</h2>
+            <img src="/smartschool.jpg" alt="School Logo" />
+            <h2>Smart School</h2>
           </div>
           <div style="font-size: 36px; color: #6c757d;"></div>
         </div>
@@ -1022,7 +1022,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset, cal
           </div>
           <div class="bill-item">
             <label>Date:</label>
-   <span>${format(new Date(),"dd-MM-yyyy")}</span>
+            <span>${format(new Date(), "dd-MM-yyyy")}</span>
           </div>
         </div>
         <hr style="margin: 48px 0;" />
@@ -1036,22 +1036,23 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset, cal
       </div>
     </body>
     </html>
-    `;
+  `;
 
   const printWindow = window.open('', '_blank');
-
+  
   if (printWindow) {
-    // Write the HTML to the new tab
     printWindow.document.open();
     printWindow.document.write(billHtml);
     printWindow.document.close();
 
-    // Wait for the document to be fully written
-    printWindow.onload = function() {
-      printWindow.focus(); // Focus on the new tab
-      printWindow.print(); // Trigger print dialog
+    printWindow.onload = () => {
+      printWindow.focus();
+      printWindow.print();
+      printWindow.onafterprint = () => {
+        printWindow.close(); // Close the window after printing
+      };
     };
-  }
+  } 
 
   };
 
