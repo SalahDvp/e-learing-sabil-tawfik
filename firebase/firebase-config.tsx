@@ -10,13 +10,12 @@ import { connectFunctionsEmulator, getFunctions } from 'firebase/functions';
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyCqgP7Ux8aE3gBPYodlmdEa6ySdhyUZnE8",
-  authDomain: "test-swi3a.firebaseapp.com",
-  projectId: "test-swi3a",
-  storageBucket: "test-swi3a.appspot.com",
-  messagingSenderId: "962261822843",
-  appId: "1:962261822843:web:da61beeed8a9a41ce961de",
-  measurementId: "G-K2EX9SF3ZM"
+  apiKey: "AIzaSyCzV_avCG2x6jquZaR-GgsFHORs_d-5VCU",
+  authDomain: "smart-school-9235b.firebaseapp.com",
+  projectId: "smart-school-9235b",
+  storageBucket: "smart-school-9235b.appspot.com",
+  messagingSenderId: "1067380474171",
+  appId: "1:1067380474171:web:61557b68205f47c129771e"
 };
 
 
