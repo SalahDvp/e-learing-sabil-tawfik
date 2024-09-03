@@ -759,14 +759,15 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
                         <TableCell>
                           <Select
                             value={session.room}
-                            onValueChange={(value) => updateSessionField(groupIndex, sessionIndex, 'room', value)}
-                          >
+                            onValueChange={(value) => updateSessionField(groupIndex, sessionIndex, 'room', value)}>
                             <SelectTrigger className="w-[120px]">
                               <SelectValue placeholder="Select room" />
                             </SelectTrigger>
                             <SelectContent>
-                            {checkRoomAvailability(watch(`classes.${groupIndex}.groups.${sessionIndex}`),['room 1','room 2','room 3','room 4','room 5','room 6','room 7','room 8']).map((room) => (
-                                <SelectItem key={room} value={room}>{room}</SelectItem>
+                              {Array.from({ length: profile.NumberOfClasses }, (_, i) => `room ${i + 1}`).map((room) => (
+                                <SelectItem key={room} value={room}>
+                                  {room}
+                                </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
