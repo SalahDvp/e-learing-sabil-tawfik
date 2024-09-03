@@ -251,7 +251,7 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
       classes[index] = {   ...classes[index],id: '', name: value, subject: classes[index].subject, group: '', cs: classes[index].cs };
     } else if (field === 'amount') {
 
-      classes[index] = {  ...classes[index], id: classes[index].id, name: classes[index].name, subject: classes[index].subject, group: classes[index].group, cs: classes[index].cs,amount:value};
+      classes[index] = {  ...classes[index], id: classes[index].id, name: classes[index].name, subject: classes[index].subject, group: classes[index].group, cs: classes[index].cs,amount:value,debt:value};
     } else if (field === 'group') {
       const selectedClassId = classess.find((cls) => cls.id === value);
       if (!selectedClassId) {
@@ -269,8 +269,9 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
         index: selectedClassId.students.length + 1, 
         cs: classes[index].cs,
       
-        sessionsLeft:selectedClassId.numberOfSessions,
+        sessionsLeft:0,
         amount:a.totalDue,
+        debt:a.totalDue,
         nextPaymentDate:selectedClassId?.nextPaymentDate,
         sessionsToStudy:a.numberOfSessionsLeft
 
@@ -814,6 +815,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,stud
         ...cls,
         students: [...cls.students, { group, id,cs, index:index, name, year:student.year,sessionsLeft:cls.sessionsLeft,
           amount:cls.amount,
+          debt:cls.debt,
           nextPaymentDate:cls?.nextPaymentDate,
           sessionsToStudy:cls.sessionsToStudy }]
       } : cls

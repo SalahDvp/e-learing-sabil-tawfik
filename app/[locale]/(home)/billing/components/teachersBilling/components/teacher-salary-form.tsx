@@ -54,8 +54,20 @@ const fieldNames = [
 ];
 type FormKeys = "salaryTitle" | "salaryAmount" | "salaryDate" | "typeofTransaction" | "monthOfSalary" | "fromWho"|"status";
  
-type TeacherSalaryFormValues=z.infer<typeof teacherPaymentRegistrationSchema>;
+const applyPayment = (totalAdvancePayment, paymentAmount) => {
+  if (totalAdvancePayment > 0) {
+    // If payment exceeds totalAdvancePayment
+    if (paymentAmount >= totalAdvancePayment) {
+      paymentAmount -= totalAdvancePayment; // Reduce paymentAmount by totalAdvancePayment
+      totalAdvancePayment = 0; // Set totalAdvancePayment to 0
+    } else {
+      totalAdvancePayment -= paymentAmount; // Reduce totalAdvancePayment by paymentAmount
+      paymentAmount = 0; // Set paymentAmount to 0 as it's fully consumed
+    }
+  }
 
+  return { totalAdvancePayment, paymentAmount };
+};
 
 
 
@@ -64,18 +76,29 @@ type TeacherSalaryFormValues=z.infer<typeof teacherPaymentRegistrationSchema>;
     name: string;
     source:any;
   }
-  const getGroupsByTeacher = (classes, teacherId) => {
-    return classes
-      .filter(cls => cls.teacherUID === teacherId) // Filter classes by teacherId
-      .map(cls => {
-        const studentCount = cls.students.length;
-        return {
-          groupcode: cls.group,
-          amount: cls.amount,
-          students: studentCount
-        };
-      });
-  };
+const getGroupsByTeacher = (classes, teacherId) => {
+  return classes
+    .filter(cls => 
+      cls.teacherUID === teacherId 
+     //  && new Date(cls.nextPaymentDate) < new Date() // Check if nextPaymentDate is before the current date
+    )
+    .map(cls => {
+      const totalAmount = cls.students.reduce((acc, std) => {
+        const studiedLessons = cls.numberOfSessions - std.sessionsLeft;
+        const studentAmount = studiedLessons * (cls.amount / cls.numberOfSessions);
+        return acc + studentAmount;
+      }, 0);
+      
+      return {
+        ...cls,
+        groupcode: cls.group,
+        amount: cls.amount,
+        totalAmount: totalAmount,
+        students:cls.students.length,
+
+      };
+    });
+};
   const getReimbursementByTeacher = (classes, teacherId) => {
     const currentDate = new Date();
     const start = startOfMonth(currentDate);
@@ -132,7 +155,7 @@ type TeacherSalaryFormValues=z.infer<typeof teacherPaymentRegistrationSchema>;
         return weeks * teacher.amount * expenses.length;
       case "percentage":       
         return expenses.reduce(
-          (total, expense) => total + (expense.amount*expense.students) * teacher.amount/100,
+          (total, expense) => total + (expense.totalAmount) * teacher.amount/100,
           0
         );
 
@@ -395,7 +418,7 @@ const [teacherModal,setTeacherModal]=useState(false)
                 const result = getGroupsByTeacher(classes, selectedValue);
                 console.log(result);
             
-               
+            
                 const reimbursement=getReimbursementByTeacher(classes,selectedValue)
                 const advancePayment=getAdvancedPaymentByTeacher(selectedTeacher)
                 form.setValue('advancePayment',advancePayment)
@@ -403,10 +426,10 @@ const [teacherModal,setTeacherModal]=useState(false)
                 form.setValue('expenses',result)
                 form.setValue(fieldName, {...selectedTeacher,name:selectedTeacher?.value,id:selectedTeacher?.id,teacherName:selectedTeacher.name})
                 const amount=calculateSalary(selectedTeacher?.paymentType,selectedTeacher,result)
+                const resultsalary = applyPayment(selectedTeacher.totalAdvancePayment,amount);
                 form.setValue("grossSalary",amount)
-                const netSalary=amount-advancePayment-reimbursement
-                form.setValue("netSalary",netSalary)
-                form.setValue("amount",netSalary)
+                form.setValue("netSalary",resultsalary.paymentAmount)
+                form.setValue("amount",resultsalary.paymentAmount)
  
             }
           
@@ -509,41 +532,42 @@ const [teacherModal,setTeacherModal]=useState(false)
       const uploaded = await uploadFilesAndLinkToCollection("Billing/payouts/TeachersTransactions", teacherId, filesToUpload);
       setTeachersSalary((prev:TeacherSalaryFormValues[])=>[{...data,id:teacherId,teacher:data.teacher,documents:[],    value:teacherId,
         label:teacherId,},...prev])
-        setTeachers((prevTeach) =>
-          prevTeach.map((tch) =>
-            tch.id === data.teacher.name
-              ? {
-                  ...tch,
+        if(data.paymentType==='advance'){
+          setTeachers((prevTeachers) =>
+            prevTeachers.map((teacher) => {
+              if (teacher.id === teacher.name) {
+                return {
+                  ...teacher,
                   advancePayment: [
-                    ...tch.advancePayment,
-                    { date: Timestamp.fromDate(data.date), amount: data.amount }
-                  ]
-                }
-              : tch
-          )
-        );
-        if(printBill && data.paymentType==='salary'){
-          
-          if (reactToPrintRef.current) {
-            reactToPrintRef.current.handlePrint();
-          }
-        } 
-if(data.paymentType==='advance'){
-  setTeachers((prevTeachers) =>
-    prevTeachers.map((teacher) => {
-      if (teacher.id === teacher.name) {
-        return {
-          ...teacher,
-          advancePayment: [
-            ...(teacher.advancePayment || []), // Ensure the array exists
-            { amount:data.amount, date: data.date} // Add the new payment
-          ]
-        };
-      }
-      return teacher;
-    })
-  );
-}
+                    ...(teacher.advancePayment || []), // Ensure the array exists
+                    { amount:data.amount, date: data.date} // Add the new payment
+                  ],
+                  totalAdvancePayment:teacher.totalAdvancePayment+data.amount
+                };
+              }
+              return teacher;
+            })
+          );
+        }else{
+          setTeachers((prevTeach) =>
+            prevTeach.map((tch) =>
+              tch.id === data.teacher.name
+                ? {
+                    ...tch,
+                   totalAdvancePayment:tch.totalAdvancePayment-data.amount
+                  }
+                : tch
+            )
+          );
+          if(printBill && data.paymentType==='salary'){
+            
+            if (reactToPrintRef.current) {
+              reactToPrintRef.current.handlePrint();
+            }
+          } 
+        }
+
+
 
 toast({
               title: t('teacher-salary-added'),
@@ -662,7 +686,96 @@ toast({
                 />
               ))}
                   {watch('paymentType')==='salary'&&(
+
 <>
+<FormField
+            control={control}
+            name="expenses"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>les classes</FormLabel>
+
+                <Table>
+  <TableHeader>
+    <TableRow>
+      <TableHead>group</TableHead>
+      <TableHead>number of student</TableHead>
+     <TableHead>Type de salaire</TableHead>
+      {getValues("teacher")?.paymentType==='percentage' && (<TableHead>percentage</TableHead>)}
+      {getValues("teacher")?.paymentType==='percentage' && (<TableHead>Amount per group</TableHead>)}
+    </TableRow>
+  </TableHeader>
+  <TableBody>
+
+                {expenses.map((option,index) => (
+        
+        
+                    <TableRow key={index}>
+                    <TableCell className="font-semibold">
+                 
+              <Input
+
+                value={option.group}
+                readOnly
+              />
+ 
+            </TableCell>
+            <TableCell>
+      
+      <Input
+       placeholder={t('enter-price')}
+       type="number"
+       value={option.students}
+      readOnly
+      />
+
+    </TableCell>
+    <TableCell className="font-semibold">
+                 
+                 <Input
+   
+                   value={getValues("teacher")?.paymentType}
+                   readOnly
+                 />
+    
+               </TableCell>
+            <TableCell>
+            {getValues("teacher")?.paymentType==='percentage' && (   
+      <Input
+       placeholder={t('enter-price')}
+       type="number"
+       value={getValues("teacher")?.amount}
+      readOnly
+      />)}
+
+    </TableCell>
+    <TableCell>
+            {getValues("teacher")?.paymentType==='percentage' && (   
+      <Input
+       placeholder={t('enter-price')}
+       type="number"
+       value={option.totalAmount*getValues("teacher")?.amount/100}
+      readOnly
+      />)}
+
+    </TableCell>
+      </TableRow>
+    
+
+                ))}
+         
+         </TableBody>
+         <TableFooter>
+        {/* <TableRow>
+          <TableCell >Total</TableCell>
+          <TableCell colSpan={3}>DZD{totalAmount}</TableCell>
+        </TableRow> */}
+      </TableFooter>
+</Table>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 <FormField
         
         control={form.control}
@@ -689,19 +802,7 @@ toast({
           </FormItem>
         )}
       />
-              <FormField
-        
-        control={form.control}
-        name={"reimbursement" as FormKeys}
-        render={({ field }) => (
-          <FormItem style={{ marginBottom: 15 }}>
-            <FormLabel>Les remboursement</FormLabel>
-            <FormControl>{renderInput("reimbursement", field)}</FormControl>
 
-            <FormMessage />
-          </FormItem>
-        )}
-      />
                   <FormField
         
         control={form.control}
@@ -760,94 +861,7 @@ toast({
 </>
 )}   
 
-        <FormField
-            control={control}
-            name="expenses"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>les classes</FormLabel>
-
-                <Table>
-  <TableHeader>
-    <TableRow>
-      <TableHead>group</TableHead>
-      <TableHead>number of student</TableHead>
-     <TableHead>Type de salaire</TableHead>
-      {getValues("teacher")?.paymentType==='percentage' && (<TableHead>percentage</TableHead>)}
-      {getValues("teacher")?.paymentType==='percentage' && (<TableHead>Amount per group</TableHead>)}
-    </TableRow>
-  </TableHeader>
-  <TableBody>
-
-                {expenses.map((option,index) => (
-        
-        
-                    <TableRow key={index}>
-                    <TableCell className="font-semibold">
-                 
-              <Input
-
-                defaultValue={option.groupcode}
-                readOnly
-              />
- 
-            </TableCell>
-            <TableCell>
-      
-      <Input
-       placeholder={t('enter-price')}
-       type="number"
-       value={option.students}
-      readOnly
-      />
-
-    </TableCell>
-    <TableCell className="font-semibold">
-                 
-                 <Input
-   
-                   defaultValue={getValues("teacher")?.paymentType}
-                   readOnly
-                 />
-    
-               </TableCell>
-            <TableCell>
-            {getValues("teacher")?.paymentType==='percentage' && (   
-      <Input
-       placeholder={t('enter-price')}
-       type="number"
-       value={getValues("teacher")?.amount}
-      readOnly
-      />)}
-
-    </TableCell>
-    <TableCell>
-            {getValues("teacher")?.paymentType==='percentage' && (   
-      <Input
-       placeholder={t('enter-price')}
-       type="number"
-       value={(option.students*option.amount)*getValues("teacher")?.amount/100}
-      readOnly
-      />)}
-
-    </TableCell>
-      </TableRow>
-    
-
-                ))}
-         
-         </TableBody>
-         <TableFooter>
-        {/* <TableRow>
-          <TableCell >Total</TableCell>
-          <TableCell colSpan={3}>DZD{totalAmount}</TableCell>
-        </TableRow> */}
-      </TableFooter>
-</Table>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+  
             </form>
           </Form>
           <div className="flex items-center space-x-2 mb-3">

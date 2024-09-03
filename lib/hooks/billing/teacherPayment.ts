@@ -16,10 +16,24 @@ export function getMonthInfo(date:Date) {
     const monthAbbreviation = monthName.slice(0, 3); // Get the first three characters for the abbreviation
     return { fullName: monthName, abbreviation: monthAbbreviation };
   }
+  const applyPayment = (totalAdvancePayment, paymentAmount) => {
+    if (totalAdvancePayment > 0) {
+      // If payment exceeds totalAdvancePayment
+      if (paymentAmount >= totalAdvancePayment) {
+        paymentAmount -= totalAdvancePayment; // Reduce paymentAmount by totalAdvancePayment
+        totalAdvancePayment = 0; // Set totalAdvancePayment to 0
+      } else {
+        totalAdvancePayment -= paymentAmount; // Reduce totalAdvancePayment by paymentAmount
+        paymentAmount = 0; // Set paymentAmount to 0 as it's fully consumed
+      }
+    }
   
+    return { totalAdvancePayment, paymentAmount };
+  };
 type TeacherSalaryFormValues = z.infer<typeof  teacherPaymentRegistrationSchema> & {documents?:any[]};
 export const addTeacherSalary = async (transaction:any) => {
     try {
+        const result = applyPayment(transaction.teacher.totalAdvancePayment, transaction.amount);
         const month=getMonthInfo(transaction.date)
         const teacherTransRef = await addDoc(collection(db, "Billing","payouts","TeachersTransactions"), transaction);
         await setDoc(doc(db, "Teachers", transaction.teacher.id, "TeacherSalary", teacherTransRef.id), {ref: teacherTransRef.id, }); 
@@ -35,7 +49,14 @@ export const addTeacherSalary = async (transaction:any) => {
         });
         if (transaction.paymentType==='advance') {
             await updateDoc(doc(db,"Teachers",transaction.teacher.id),{
-                advancePayment:arrayUnion({date:transaction.date,amount:transaction.amount})
+                advancePayment:arrayUnion({date:transaction.date,amount:transaction.amount}),
+                totalAdvancePayment:increment(transaction.amount)
+            })
+            
+        }else{
+            await updateDoc(doc(db,"Teachers",transaction.teacher.id),{
+                
+                totalAdvancePayment:result.totalAdvancePayment
             })
             
         }

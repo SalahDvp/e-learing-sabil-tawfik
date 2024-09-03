@@ -268,7 +268,7 @@ export default function StudentForm() {
       classes[index] = {   ...classes[index],id: '', name: value, subject: classes[index].subject, group: '', cs: classes[index].cs };
     } else if (field === 'amount') {
 
-      classes[index] = {  ...classes[index], id: classes[index].id, name: classes[index].name, subject: classes[index].subject, group: classes[index].group, cs: classes[index].cs,amount:value};
+      classes[index] = {  ...classes[index], id: classes[index].id, name: classes[index].name, subject: classes[index].subject, group: classes[index].group, cs: classes[index].cs,amount:value,debt:value};
     } else if (field === 'group') {
       const selectedClassId = classess.find((cls) => cls.id === value);
       if (!selectedClassId) {
@@ -286,8 +286,9 @@ export default function StudentForm() {
         index: selectedClassId.students.length + 1, 
         cs: classes[index].cs,
       
-        sessionsLeft:selectedClassId.numberOfSessions,
+        sessionsLeft:0,
         amount:a.totalDue,
+        debt:a.totalDue,
         nextPaymentDate:selectedClassId?.nextPaymentDate,
         sessionsToStudy:a.numberOfSessionsLeft
 
@@ -1010,7 +1011,11 @@ console.log(data.classes);
                 year: data.year, // The year of the student
                 group: cls.group,
                 cs:matchingClass.cs,
-                seesionsLeft:matchingClass.numberOfSessions,
+                sessionsLeft:matchingClass.numberOfSessions,
+                amount:matchingClass.totalDue,
+                debt:matchingClass.totalDue,
+                nextPaymentDate:matchingClass?.nextPaymentDate,
+                sessionsToStudy:matchingClass.numberOfSessionsLeft
               },
             ],
           };

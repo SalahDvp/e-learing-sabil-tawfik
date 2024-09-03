@@ -102,7 +102,8 @@ export default function TeacherForm() {
       year:[],
       salaryDate:new Date(),
       advancePayment:[],
-      classes:[]
+      classes:[],
+      totalAdvancePayment:0
     }
    
   });
@@ -934,6 +935,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
     reset({  year:[],
       salaryDate:new Date(),
       advancePayment:[],
+      totalAdvancePayment:0,
       classes:[]})
   };
   const t=useTranslations()

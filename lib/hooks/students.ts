@@ -65,6 +65,7 @@ export async function uploadAndLinkToCollection(
           classUpdates.push({ classID: cls.id, newIndex, group: cls.group ,cs:cls.cs,
             sessionsLeft:classData.numberOfSessions,
             amount:cls.amount,
+            debt:cls.debt,
             nextPaymentDate:cls.nextPaymentDate,
             sessionsToStudy:cls.sessionsToStudy});
         } else {
@@ -88,7 +89,8 @@ export async function uploadAndLinkToCollection(
               sessionsLeft:update.sessionsLeft,
               amount:update.amount,
               nextPaymentDate:update.nextPaymentDate,
-              sessionsToStudy:update.sessionsToStudy
+              sessionsToStudy:update.sessionsToStudy,
+              debt:update.debt
             })
           });
         }
@@ -220,7 +222,7 @@ export const formatDateToYYYYMMDD = (date: Date): string => {
       students: arrayUnion({ group, id:studentID, index, name:studentName, year,cs,sessionsLeft:student.sessionsLeft,
         amount:student.amount,
         nextPaymentDate:student?.nextPaymentDate,
-        sessionsToStudy:student.sessionsToStudy})
+        sessionsToStudy:student.sessionsToStudy,debt:student.debt,})
     });
   
     const studentDocRef = doc(db, 'Students', studentId);
@@ -244,7 +246,8 @@ export const formatDateToYYYYMMDD = (date: Date): string => {
         students: arrayRemove({ group:student.group, id:studentId, index:student.index, name:studentName, year:student.year,cs:student.cs,sessionsLeft:student.sessionsLeft,
           amount:student.amount,
           nextPaymentDate:student?.nextPaymentDate,
-          sessionsToStudy:student.sessionsToStudy})
+          sessionsToStudy:student.sessionsToStudy,
+          debt:student.debt,})
       });
      }
     
