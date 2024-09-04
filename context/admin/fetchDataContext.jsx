@@ -182,8 +182,10 @@ export const  FetchDataProvider = ({ children }) => {
           }
           const result = teacher.groupUIDs.flatMap(cls => {
             const classDetail = classesData.find(clss => clss.id === cls);
-        
+            
               if(classDetail){
+       
+                
                 const { Attendance, ...rest } = classDetail;
                 return rest;
               }

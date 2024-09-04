@@ -144,3 +144,29 @@ export const deleteTeacherSalary = async(transactionID:string)=>{
         throw error; // Optionally re-throw the error to propagate it further if needed
     } 
 }
+export async function updateStudentPaymentInfo(groupId, studentData, item) {
+  try {
+    // Fetch the group document
+    const groupDoc = await getDoc(doc(db, 'Groups', groupId));
+    
+    // Extract the students array and update the specific student
+    const updatedStudents = groupDoc.data().students.map((std) => 
+      std.id === studentData.id 
+        ? {
+            ...std,
+            nextPaymentDate: item.nextPaymentDate,
+            debt: Math.abs(item.debt - item.amountPaid),
+            sessionsLeft: item.sessionsLeft
+          }
+        : std
+    );
+
+    // Update the group document with the modified students array
+    await updateDoc(doc(db, 'Groups', groupId), {
+      students: updatedStudents
+    });
+return updatedStudents
+  } catch (error) {
+    console.error("Error updating student payment info:", error);
+  }
+}

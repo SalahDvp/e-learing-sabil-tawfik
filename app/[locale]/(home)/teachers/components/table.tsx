@@ -165,8 +165,8 @@ interface DataTableDemoProps {
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
   {classes.map((classItem: any, index: number) => (
     <div key={index} style={{ maxWidth: '200px', marginBottom: '5px' }}>
-      <div className="font-medium">{classItem.subject}</div>
-      {classItem.groups.map((cls)=>(
+      <div className="font-medium">{classItem?.subject}</div>
+      {classItem?.groups?.map((cls)=>(
      <div className="text-sm text-muted-foreground">
      <div>{t(`${cls.day}`)}</div>
      <div>{`${cls.start} -> ${cls.end}`}</div>

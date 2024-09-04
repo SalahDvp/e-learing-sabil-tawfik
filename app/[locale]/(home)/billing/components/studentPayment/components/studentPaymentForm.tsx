@@ -1,7 +1,7 @@
 'use client'
 
 import { Button } from "@/components/ui/button";
-import { arrayUnion } from "firebase/firestore";
+import { arrayUnion, getDoc, updateDoc } from "firebase/firestore";
 
 import {
   Form,
@@ -43,7 +43,7 @@ import Combobox from "@/components/ui/comboBox";
 import { LoadingButton } from "@/components/ui/loadingButton";
 import { date, z } from "zod";
 import { useData } from "@/context/admin/fetchDataContext";
-import { addPaymentTransaction } from "@/lib/hooks/billing/student-billing";
+import { addPaymentTransaction, updateStudentPaymentInfo } from "@/lib/hooks/billing/student-billing";
 import {updateStudentFinance}  from '@/lib/hooks/students';
 import { uploadFilesAndLinkToCollection } from "@/context/admin/hooks/useUploadFiles";
 import { getMonthInfo } from "@/lib/hooks/billing/teacherPayment";
@@ -61,32 +61,30 @@ const fieldNames: string[] = [
   'level',
   'field',
   'school',
-  "monthlypayment",
-  'debt',
+
   'paymentDate',
-  'amount',
-  'nextPaymentDate',
+
 ];
 
 
 type Transaction = {
   amount: number;
+  subject: string;
+  group : string;
+  debt: number;
   paymentDate: Date;
   monthlypayment: number;
-  nextPaymentDate: Date | null;
-  debt:number
+  nextPaymentDate: Date;
 };
 
 type FormKeys =
-  | 'amount'
   | 'paymentDate'
   | 'student'
   | 'level'
   | 'field'
   | 'school'
   | 'monthlypayment'
-  | 'debt'
-  | 'nextPaymentDate'
+
 
 type StudentPaymentFormValues = z.infer<any>;
 function addMonthsToDate(date: Date, monthsToAdd: number): Date {
@@ -133,21 +131,17 @@ function getMonthAbbreviationsInRange(startDate:Date, endDate:Date) {
   if (months.length > 0) {
       months.pop();
   }
-console.log(months);
+
 
   return months;
 }
 
 
-const orderedMonths = [
-  'Sep', 'Oct', 'Nov', 'Dec',
-  'Jan', 'Feb', 'Mar', 'Apr',
-  'May', 'Jun', 'Jul','Aug'
-];
+
 export default function StudentPaymentForm() {
   const { toast } = useToast();
-  const {students,classes,setInvoices,setStudents,setAnalytics,invoices}=useData()
-console.log('classes',classes[0]?.groups.amount);
+  const {students,classes,setInvoices,setStudents,setAnalytics,invoices,setClasses,profile}=useData()
+
 
 
 
@@ -161,7 +155,9 @@ console.log('classes',classes[0]?.groups.amount);
   
   const [filesToUpload, setFilesToUpload] = useState<FileUploadProgress[]>([]);
   const form = useForm<any>({
-    //resolver: zodResolver(studentPaymentSchema),
+defaultValues:{
+  paymentDate:new Date()
+}
   });
   const { reset, formState, setValue, getValues,watch,control,register } = form;
   const { isSubmitting } = formState;
@@ -223,7 +219,7 @@ const levelAndClassOptions = React.useMemo(() => {
 const watchlevel=watch('year')
 const paymentPlans = React.useMemo(() => {
 const studentValue = form.getValues("year");
-  console.log('studentValue',studentValue);
+
   
 
 }, [form,classes,watchlevel]);
@@ -255,6 +251,8 @@ const onSelected = (selectedStudent: any) => {
 
 
 
+
+
   const renderInput = (fieldName:string, field:any) => {
     switch (fieldName) {
       case "paymentDate":
@@ -271,20 +269,7 @@ const onSelected = (selectedStudent: any) => {
             }}
           />
         );
-        case "nextPaymentDate":
-          return (
-            <CalendarDatePicker
-              {...field}
-              date={getValues("nextPaymentDate")}
-              setDate={(selectedValue) => {
-                if (selectedValue === undefined) {
-                  // Handle undefined case if needed
-                } else {
-                  form.setValue(fieldName, selectedValue);
-                }
-              }}
-            />
-          );
+       
           case "student":
             return (
               <Combobox
@@ -309,12 +294,17 @@ const onSelected = (selectedStudent: any) => {
 
 
           });
-          const classss = selectedStudent.classesUIDs.flatMap((clsUID) => {
-            return classes
-              .filter((clss) => clsUID.id === clss.id)
-              .flatMap((cls) => cls.groups.filter((grp) => grp.group === clsUID.group));
+   
+          const classss = selectedStudent.classes.map((clsUID) => {
+            const sleectedClass=classes.find((cls)=>clsUID.id===cls.id)
+            return {...clsUID,amountPerSession:sleectedClass.amount/sleectedClass.numberOfSessions,nextPaymentDate:sleectedClass.nextPaymentDate}
+             
           });
           form.setValue('filtredclasses',classss)
+  
+
+
+          
         }
       }}
     />
@@ -359,273 +349,231 @@ const onSelected = (selectedStudent: any) => {
          case "school":
           return <Input {...field} value={levelAndClassOptions.school} readOnly />;
 
-        case "amount":
-
-            return (<Input {...field}  onChange={event => field.onChange(+event.target.value)}/>)
-
+        
        
         
 
-        case "paymentPlan":
-          return (
-            <Combobox
-            {...field}
-            open={paymentPlanModal}
-            setOpen={setPaymentPlanModal}
-            placeHolder={t('payment-plan')}
-            options={paymentPlans}
-            value={getValues("paymentPlan")?.name}
-            onSelected={(selectedValue) => {
-              console.log("value",selectedValue);
-              
-              const paymentPlan = paymentPlans?.find(
-                (plan:any) => plan.value === selectedValue
-              );
-              console.log("payment",paymentPlans);
-              if (paymentPlan) {
-                form.setValue(fieldName, paymentPlan)
-                form.setValue("amount",paymentPlan.price)
-                
-                const newDate = parsePaymentPlan(paymentPlan.period, getValues("student").nextPaymentDate);
-                if(newDate){
-                  form.setValue("nextPaymentDate",newDate)
-
-                }
-              }
-            }}
-          />
-
-          )
-          case "nextPaymentDate":
-            return (<Input {...field} value={field.value?.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })} readOnly/>)
-          
+        
+        
+         
                       default:
         return <Input {...field} readOnly />;
     }
   };
-  function generateBillIfNeeded(months: any, data: StudentPaymentFormValues) {
-    if (printBill) {
-      console.log(data.paymentDate);
+
+    
+  async function onSubmit(data: any) {
+    try {
+      // Iterate over each filtered class and process the payment
+      for (const item of data.filtredclasses) {
+        // Prepare the transaction data
+        const transaction = {
+          paymentDate: data.paymentDate,
+          amount: item.amountPaid,
+          debt: Math.abs(item.debt - item.amountPaid),
+          monthlypayment: data.monthlypayment,
+          subject: item.subject,
+          group: item.group,
+          nextPaymentDate: item.nextPaymentDate,
+        };
+  
+        // Add payment transaction
+        await addPaymentTransaction(transaction, data.id);
+  
+        // Update student payment info in Firestore
+        const updatedStudents = await updateStudentPaymentInfo(item.id, data.student, item);
+  
+        // Update student's financial records
+        await updateStudentFinance(transaction.paymentDate, transaction.nextPaymentDate, transaction.debt, data.student.id);
+  
+        // Update local state with the modified class and student data
+        setClasses((prev) =>
+          prev.map((cls) =>
+            cls.id === item.id ? { ...cls, students: updatedStudents } : cls
+          )
+        );
+        setStudents((prevStudents: any[]) =>
+          prevStudents.map((std: { id: any; classes: any; }) =>
+            std.id === data.student.id
+              ? {
+                  ...std,
+                  classes: std.classes.map((cls) =>
+                    cls.id === item.id
+                      ? {
+                          ...cls,
+                          nextPaymentDate: item.nextPaymentDate,
+                          debt: Math.abs(item.debt - item.amountPaid),
+                          sessionsLeft: item.sessionsLeft,
+                        }
+                      : cls
+                  ),
+                }
+              : std
+          )
+        );
+      }
+
+  
+//       // Generate the bill HTML
+const billHtml = `
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>وصل استلام</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 0; /* Remove margins */
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            direction: rtl;
+            height: 100%;
+        }
+        .receipt {
+            position: relative; /* Ensure the footer is positioned relative to this container */
+            width: 100%;
+            height: 100vh; /* Full height of the page */
+            background-color: white;
+            border: 1px solid #ddd;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .title {
+            font-size: 50px; /* Much larger text */
+            font-weight: bold;
+            margin: 0;
+        }
+        .subtitle {
+            font-size: 40px; /* Much larger text */
+            margin: 5px 0;
+        }
+        .content {
+            text-align: right;
+            font-size: 36px; /* Much larger text */
+            margin-bottom: 20px;
+        }
+        .row {
+            margin-bottom: 8px;
+        }
+        .amount {
+            border: 3px solid black;
+            padding: 25px; /* Larger padding */
+            text-align: center;
+            font-weight: bold;
+            font-size: 48px; /* Much larger text */
+            margin: 20px 0;
+        }
+        table {
+            width: 100%;
+            margin-bottom: 20px;
+            border-collapse: collapse;
+            font-size: 26px; /* Much larger text */
+        }
+        th, td {
+            border: 2px solid #ddd;
+            padding: 20px; /* Larger padding */
+            text-align: center;
+        }
+        th {
+            background-color: #f4f4f4;
+            font-weight: bold;
+        }
+        .footer {
+            border-top: 2px solid #ddd;
+            padding-top: 25px;
+            font-size: 36px; /* Much larger text */
+            text-align: center;
+            position: absolute;
+            bottom: 0;
+            width: calc(100% - 40px); /* Ensure the footer's width matches the receipt's padding */
+        }
+        .thank-you {
+            font-size: 42px; /* Much larger text for "Thank you" */
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="receipt">
+        <div>
+            <div class="header">
+                <h1 class="title">${profile.schoolName}</h1>
+                <p class="subtitle">${profile.bio}</p>
+                <p class="subtitle">2023/2024</p>
+                <p class="subtitle"><strong>وصل استلام</strong></p>
+            </div>
+            <div class="content">
+                <div class="row">
+                    <span>${format(new Date(), "dd-MM-yyyy")}</span>
+                </div>
+                <div class="row">الاسم و اللقب: ${data.student.namme}</div>
+                <div class="row">وصل لأجل : حوالة</div>
+                <div class="amount">المبلغ: ${data.filtredclasses.reduce((total, cls) => total + cls.amountPaid, 0)}</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>المجموعة</th>
+                            <th>المادة</th>
+                            <th>الدين المتبقي</th>
+                            <th>الجلسات المتبقية</th>
+                            <th>المبلغ المدفوع</th>
+                            <th>تاريخ الدفع التالي</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.filtredclasses.map(cls => `
+                            <tr>
+                                <td>${cls.group}</td>
+                                <td>${cls.subject}</td>
+                                <td>${Math.abs(cls.debt - cls.amountPaid)}</td>
+                                <td>${cls.sessionsLeft}</td>
+                                <td>${cls.amountPaid}</td>
+                                <td>${format(new Date(cls.nextPaymentDate), "dd-MM-yyyy")}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="footer">
+            <p><strong>شروط الوصل</strong></p>
+            <p>1- يرجى الاحتفاظ بالوصل</p>
+            <div class="thank-you">شكراً لكم</div>
+        </div>
+    </div>
+</body>
+</html>
+`;
       
-      const statusArray: string[] = orderedMonths.map((month) => {
-        const monthData = months[month];
   
-        return monthData?.status === 'Paid' ? t('paid') : ' ';
-      });
-  
-      generateBill(
-        {
-          student: data.student.student,
-          level: data.level,
-          amount: data.amount,
-          monthlypayment:data.monthlypayment,
-          paymentDate:format(data.paymentDate, 'dd/MM/yyyy'),
-        
-        },
-        "qwdwqdqwd",
-        [
-          t('student'),
-          t('level'),
-          t('amount'),
-          t('amount-left-to-pay'),
-          t('paymentDate'),
-          t('status'),
-        ],
-        {
-          amount: t("Amount"),
-          from: t('From:'),
-          shippingAddress: t('shipping-address'),
-          billedTo: t('billed-to'),
-          subtotal: t('Subtotal:'),
-          totalTax: t('total-tax-0'),
-          totalAmount: t('total-amount-3'),
-          invoice: t('invoice'),
-        },
-        statusArray
-      );
+      // Open a new window and print the bill
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.open();
+        printWindow.document.write(billHtml);
+        printWindow.document.close();
+        printWindow.onload = function() {
+          printWindow.focus();
+          printWindow.print();
+        };
+      }
+    } catch (error) {
+      console.error('Error processing transaction:', error);
+
     }
   }
   
-  
-  async function onSubmit(data: any) {
-    console.log('data.id',data.id)
-    console.log('data.amount',data.amount);
-    console.log('data.monthlypayment',data.monthlypayment);
 
-    console.log('+',data.monthlypayment-data.amount);
-    console.log('zakmao', data.amount+data.monthlypayment);
-    
-    const transactionData: Transaction = {
-      amount: data.amount,
-      paymentDate: data.paymentDate,
-      debt: data.debt - data.amount,
-      monthlypayment: data.monthlypayment,
-      nextPaymentDate: data.nextPaymentDate,
-      
-    };
-  
-    // Create the `transaction` array and add the transaction data to it
-    const transactionArray = [transactionData];
-  
-    // Save the data with the `transaction` array
-  await addPaymentTransaction(transactionData,data.id);
-  await updateStudentFinance(transactionData.paymentDate,transactionData.nextPaymentDate,transactionData.debt,data.id);
-
-    // Handle file uploads and update the UI accordingly
-   /* const uploaded = await uploadFilesAndLinkToCollection(
-      "Billing/payments/Invoices",
-      transactionId,
-      filesToUpload
-    );
-  
-    
-  */
-    // Generate the bill if needed
-  
-    setInvoices((prev: any) => [
-      {
-        ...data,
-        transactionArray
-      },
-      ...prev,
-    ]);
-    toast({
-      title: t('changes-applied-0'),
-      description: t('changes-applied-successfully'),
-    });
-    reset();
-
-
-
-    const billHtml = `
-    <html>
-    <head>
-      <style>
-        body {
-          font-family: Arial, sans-serif;
-          margin: 0;
-          padding: 0;
-          width: 21cm;
-          height: 29.7cm;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-        }
-        .bill-container {
-          padding: 10px;
-          width: 100%;
-          height: 100%;
-          box-sizing: border-box;
-      
-        }
-        .header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 48px;
-        }
-        .logo-container {
-          display: flex;
-          align-items: center;
-          gap: 24px;
-        }
-        .logo-container img {
-          border-radius: 50%;
-          width: 120px;
-          height: 120px;
-          object-fit: cover;
-        }
-        h2 {
-          font-size: 48px;
-          font-weight: 700;
-        }
-        .bill-item {
-          margin-bottom: 32px;
-          font-size: 36px;
-        }
-        .bill-item label {
-          font-weight: bold;
-        }
-        .total {
-          font-size: 60px;
-          font-weight: 700;
-        }
-        .footer {
-          margin-top: 64px;
-          text-align: center;
-          font-size: 36px;
-          color: #6c757d;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="bill-container">
-        <div class="header">
-          <div class="logo-container">
-            <img src="/placeholder.svg" alt="School Logo" />
-            <h2>School Name</h2>
-          </div>
-          <div style="font-size: 36px; color: #6c757d;"></div>
-        </div>
-        <div style="display: grid; gap: 24px;">
-          <div class="bill-item">
-            <label>Nom:</label>
-            <span>${data.name}</span>
-          </div>
-          <div class="bill-item">
-          <label>Montant mensuel:</label>
-          <span>${data.monthlypayment}</span>
-        </div>
-         
-          <div class="bill-item">
-            <label>Date:</label>
-            <span>${format(new Date(), "dd-MM-yyyy")}</span>
-            </div>
-        </div>
-        <hr style="margin: 48px 0;" />
-
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-          <span class="total">Total:</span>
-          <span class="total">DZD ${data.amount}</span>
-        </div>
-        <div class="bill-item">
-        <label>Prochain paiement:</label>
-        <span>${format(data.nextPaymentDate,"dd-mm-yyyy")}</span>
-      </div>
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-        <span class="total">Debt:</span>
-        <span class="total">DZD ${data.debt}</span>
-      </div>
-        <div class="footer">
-          Merci!
-        </div>
-      </div>
-    </body>
-    </html>
-    `;
-
-  const printWindow = window.open('', '_blank');
-
-  if (printWindow) {
-    // Write the HTML to the new tab
-    printWindow.document.open();
-    printWindow.document.write(billHtml);
-    printWindow.document.close();
-
-    // Wait for the document to be fully written
-    printWindow.onload = function() {
-      printWindow.focus(); // Focus on the new tab
-      printWindow.print(); // Trigger print dialog
-    };
-  }
-  }
-  
-
-  const handleChangeExpense = (index:number, newPrice:number) => {
-    const newPrices = [...getValues('expenses')]; // Get the current prices array
-    newPrices[index].amount = newPrice; // Update the price at the specified index
-    setValue('expenses', newPrices); // Set the updated prices array in the form
-  };
 
   return (
     <Card className="overflow-hidden" x-chunk="dashboard-05-chunk-4">
@@ -676,76 +624,108 @@ const onSelected = (selectedStudent: any) => {
               ))}
 
 <FormField
-            control={control}
-            name="filtredclasses"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t('payment-methods')}</FormLabel>
-                <FormDescription>{t('add-how-parents-are-going-to-pay')}</FormDescription>
-                <Table>
-  <TableHeader>
-    <TableRow>
-      <TableHead>Group</TableHead>
-      <TableHead>Subject</TableHead>
-      <TableHead>Amount</TableHead>
-    </TableRow>
-  </TableHeader>
-  <TableBody>
+  control={control}
+  name="filtredclasses"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>{t('payment-details')}</FormLabel>
+      <FormDescription>{t('this-is-the-student-payent-details')}</FormDescription>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Group</TableHead>
+            <TableHead>Subject</TableHead>
+            <TableHead>Debt</TableHead>
+            <TableHead>Session Left</TableHead>
+            <TableHead>Amount Paid</TableHead>
+            <TableHead>Next Payment Date</TableHead>
+          </TableRow>
+        </TableHeader>
 
-                {filtredclasses.map((option,index) => (
-        
-        
-                    <TableRow key={index}>
-                    <TableCell className="font-semibold">
-                 
-              <Input
-
-                defaultValue={`${option.day},${option.start}-${option.end}`}
-                readOnly
-              />
- 
-            </TableCell>
-            <TableCell>
-      
-      <Input
-       placeholder={t('enter-price')}
-       value={option.subject}
-      readOnly
-      />
-
-    </TableCell>
-            <TableCell>
-      
-              <Input
-               placeholder={t('enter-price')}
-               type="number"
-               value={option.amount}
-              readOnly
-              />
-  
-            </TableCell>
-            <TableCell>
-
-
-    </TableCell>
-      </TableRow>
-    
-
-                ))}
+        <TableBody>
+          {filtredclasses.map((option, index) => {
          
-         </TableBody>
-         <TableFooter>
-        {/* <TableRow>
-          <TableCell >Total</TableCell>
-          <TableCell colSpan={3}>DZD{totalAmount}</TableCell>
-        </TableRow> */}
-      </TableFooter>
-</Table>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-      
+
+            return (
+              <TableRow key={index}>
+                <TableCell className="font-semibold">
+                  <Input defaultValue={option.group} readOnly />
+                </TableCell>
+
+                <TableCell className="w-20">
+                  <Input
+                    className="w-20"
+                    value={option.subject}
+                    readOnly
+                  />
+                </TableCell>
+
+                <TableCell>
+                  <Input
+                    className="w-16"
+                    {...field}
+                    placeholder={t('amount')}
+                    value={option.debt || 0}
+                  />
+                </TableCell>
+
+               
+
+                <TableCell className="w-10">
+                  <Input
+                    className="w-10"
+                    {...field}
+                    placeholder={t('enter-sessions-left')}
+                    value={watch(`filtredclasses.${index}.sessionsLeft`)}
+                  />
+                </TableCell>
+
+                
+                <TableCell>
+                <Input
+  placeholder={t('amount-paid')}
+  onChange={(event) => {
+    const amountPaid = parseFloat(event.target.value);
+    const pricePerSession = option.amountPerSession; // Get the price per session
+    const numberOfSessionsLeft = amountPaid / pricePerSession; // Calculate the number of sessions left
+
+    // Update the form fields
+    form.setValue(`filtredclasses.${index}.amountPaid`, amountPaid);
+    form.setValue(`filtredclasses.${index}.sessionsLeft`, numberOfSessionsLeft);
+
+
+  }}
+/>
+      </TableCell>
+                <TableCell>
+              <CalendarDatePicker
+                className="w-20"
+                date={option.nextPaymentDate}
+                setDate={(selectedValue) => {
+                  if (selectedValue) {
+                    form.setValue(`filtredclasses.${index}.nextPaymentDate`, selectedValue);
+                  }
+                }}
+              />
+</TableCell>
+
+              </TableRow>
+            );
+          })}
+        </TableBody>
+
+        <TableFooter>
+          {/* <TableRow>
+            <TableCell>Total</TableCell>
+            <TableCell colSpan={3}>DZD{totalAmount}</TableCell>
+          </TableRow> */}
+        </TableFooter>
+      </Table>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
+
     
 
    
@@ -771,7 +751,7 @@ const onSelected = (selectedStudent: any) => {
           <LoadingButton
             loading={isSubmitting}
             type="submit"
-            onClick={form.handleSubmit(onSubmit)}
+  onClick={form.handleSubmit(onSubmit)}
           >
             {t('submit')} </LoadingButton>
         </div>
