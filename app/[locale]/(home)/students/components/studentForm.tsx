@@ -988,7 +988,10 @@ console.log(data.classes);
         lastPaymentDate: Timestamp.fromDate(currentDate),  // Firebase Timestamp for the current date and time
         nextPaymentDate: Timestamp.fromDate(new Date(new Date().setMonth(new Date().getMonth() + 1))),  // Current date + 1 month
         registrationAndInsuranceFee: 'notPaid',
-        totalAmount: calculatedAmount,  
+        totalAmount: calculatedAmount, 
+        value:data.name,
+        label:data.name,
+        student:data.name,
         }
       ];
     });

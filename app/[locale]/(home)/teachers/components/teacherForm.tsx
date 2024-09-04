@@ -102,8 +102,7 @@ export default function TeacherForm() {
       year:[],
       salaryDate:new Date(),
       advancePayment:[],
-      classes:[],
-      totalAdvancePayment:0
+      classes:[]
     }
    
   });
@@ -299,6 +298,16 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
     form.setValue('classes',newGroups)
   }
 
+  const [isOn, setIsOn] = useState(false); // Initialize with form value
+
+  // Watch the started field to keep `isOn` in sync with form state
+  
+
+  const handleToggle = (isOn) => {
+  
+   setIsOn(prevState => !prevState);
+   setValue('activate', isOn);
+  };
   
   return (
     <Dialog>
@@ -620,7 +629,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
                             </DropdownMenuContent>
                           </DropdownMenu>
                   </div>)}
-                  <div>
+                  <div className="flex">
                   <FormField
     control={form.control}
     name={`classes.${groupIndex}.year`}
@@ -647,7 +656,18 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
   />
 
                   </div>
-                  <div>
+                  <div className="flex items-center">
+                    <Label>Active</Label>
+                  <Button 
+                  type="button"
+        onClick={()=>handleToggle(!isOn)} 
+        className={` ${isOn ? 'bg-green-500' : 'bg-red-500'} text-white`}
+      >
+        {isOn ? 'Turn Off' : 'Turn On'}
+      </Button>
+      </div>
+      {/* Conditional Rendering */}
+      {isOn && (
                   <FormField
     control={form.control}
     name={`classes.${groupIndex}.startDate`}
@@ -672,7 +692,8 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
       </FormItem>
     )}
   />
-                  </div>
+      )}
+               
                   <Button
                     type="button"
                     variant="destructive"
@@ -760,15 +781,17 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
                         <TableCell>
                           <Select
                             value={session.room}
-                            onValueChange={(value) => updateSessionField(groupIndex, sessionIndex, 'room', value)}>
+                            onValueChange={(value) => updateSessionField(groupIndex, sessionIndex, 'room', value)}
+                          >
                             <SelectTrigger className="w-[120px]">
                               <SelectValue placeholder="Select room" />
                             </SelectTrigger>
                             <SelectContent>
-                              {Array.from({ length: profile.NumberOfClasses }, (_, i) => `room ${i + 1}`).map((room) => (
-                                <SelectItem key={room} value={room}>
-                                  {room}
-                                </SelectItem>
+                            {checkRoomAvailability(
+                            watch(`classes.${groupIndex}.groups.${sessionIndex}`),
+                            Array.from({ length: profile.NumberOfClasses }, (_, i) => `room ${i + 1}`)
+                          ).map((room) => (      
+                               <SelectItem key={room} value={room}>{room}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -814,6 +837,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
           year: '',
           paymentType: '',
           startDate:new Date(),
+          active:false
         
         });
       }}
@@ -935,7 +959,6 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
     reset({  year:[],
       salaryDate:new Date(),
       advancePayment:[],
-      totalAdvancePayment:0,
       classes:[]})
   };
   const t=useTranslations()

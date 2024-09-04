@@ -1,9 +1,10 @@
 
 
 import { db } from "@/firebase/firebase-config"
-import { addDoc, collection, deleteDoc, doc, updateDoc ,setDoc,increment, arrayUnion} from "firebase/firestore"
+import { addDoc, collection, deleteDoc, doc, updateDoc ,setDoc,increment, arrayUnion, getDoc} from "firebase/firestore"
 import { teacherPaymentRegistrationSchema } from "@/validators/teacherSalarySchema";
 import { z } from "zod";
+import { addWeeks } from "date-fns";
 
 
 
@@ -31,43 +32,91 @@ export function getMonthInfo(date:Date) {
     return { totalAdvancePayment, paymentAmount };
   };
 type TeacherSalaryFormValues = z.infer<typeof  teacherPaymentRegistrationSchema> & {documents?:any[]};
-export const addTeacherSalary = async (transaction:any) => {
+const months = [
+    { abbreviation: 'Jan', name: 'January' },
+    { abbreviation: 'Feb', name: 'February' },
+    { abbreviation: 'Mar', name: 'March' },
+    { abbreviation: 'Apr', name: 'April' },
+    { abbreviation: 'May', name: 'May' },
+    { abbreviation: 'Jun', name: 'June' },
+    { abbreviation: 'Jul', name: 'July' },
+    { abbreviation: 'Aug', name: 'August' },
+    { abbreviation: 'Sep', name: 'September' },
+    { abbreviation: 'Oct', name: 'October' },
+    { abbreviation: 'Nov', name: 'November' },
+    { abbreviation: 'Dec', name: 'December' }
+  ];
+  export const addTeacherSalary = async (transaction: any) => {
     try {
+        // Calculate the new total advance payment after applying the transaction amount
         const result = applyPayment(transaction.teacher.totalAdvancePayment, transaction.amount);
-        const month=getMonthInfo(transaction.date)
-        const teacherTransRef = await addDoc(collection(db, "Billing","payouts","TeachersTransactions"), transaction);
-        await setDoc(doc(db, "Teachers", transaction.teacher.id, "TeacherSalary", teacherTransRef.id), {ref: teacherTransRef.id, }); 
-    
-        // Reference to the added document
-        console.log("Tracher Salary added successfully:",teacherTransRef.id );    
+        console.log("results",result);
+        
+        // Get month information based on the transaction date
+        const month = getMonthInfo(transaction.date);
+        
+        // Create a reference for the teacher transaction in the Firestore collection
+        const teacherTransRef = await addDoc(collection(db, "Billing", "payouts", "TeachersTransactions"), {...transaction,amount:result.paymentAmount});
+        
+        // Add the transaction reference to the teacher's salary document
+        await setDoc(doc(db, "Teachers", transaction.teacher.id, "TeacherSalary", teacherTransRef.id), { ref: teacherTransRef.id });
+        
+        // Update the total teachers' expenses in the "payouts" document
         await updateDoc(doc(db, "Billing", "payouts"), {
-            teachersExpenses: increment(transaction.amount),
+            teachersExpenses: increment(result.paymentAmount),
         });
-        await updateDoc(doc(db, "Billing","analytics"), {
-            totalExpenses:increment(transaction.amount),
-            [`data.${month.fullName}.expenses`]: increment(transaction.amount)
-        });
-        if (transaction.paymentType==='advance') {
-            await updateDoc(doc(db,"Teachers",transaction.teacher.id),{
-                advancePayment:arrayUnion({date:transaction.date,amount:transaction.amount}),
-                totalAdvancePayment:increment(transaction.amount)
-            })
-            
-        }else{
-            await updateDoc(doc(db,"Teachers",transaction.teacher.id),{
-                
-                totalAdvancePayment:result.totalAdvancePayment
-            })
-            
+        
+        // Retrieve the analytics document to update monthly and total expenses
+        const analyticsRef = doc(db, "Billing", "analytics");
+        const analyticsDoc = await getDoc(analyticsRef);
+        const existingData = analyticsDoc.data()?.data || [];
+        
+        // Find the index of the current month in the analytics data
+        const monthIndex = existingData.findIndex((m: any) => m.month === month.fullName);
+        
+        if (monthIndex !== -1) {
+            // If the month already exists, update the expenses for that month
+            existingData[monthIndex].expenses += result.paymentAmount;
+        } else {
+            // If the month doesn't exist, add a new entry with the expenses
+            existingData.push({
+                month: month.fullName,
+                expenses: result.paymentAmount,
+                income: 0, // Assuming no income update is needed here
+            });
         }
+        
+        // Update the total expenses and the analytics data in Firestore
+        await updateDoc(analyticsRef, {
+            totalExpenses: increment(result.paymentAmount),
+            data: existingData
+        });
+        
+        // Update the next payment date for each expense in the transaction
+        await Promise.all(transaction.expenses.map(async (exp: any) => {
+            await updateDoc(doc(db, 'Groups', exp.id), {
+                nextPaymentDate: addWeeks(exp.nextPaymentDate, 3),
+            });
+        }));
+
+        // Update the teacher's advance payment details based on payment type
+        if (transaction.paymentType === 'salary') {
+            await updateDoc(doc(db, "Teachers", transaction.teacher.id), {
+                totalAdvancePayment: result.totalAdvancePayment
+            });
+        } else {
+            await updateDoc(doc(db, "Teachers", transaction.teacher.id), {
+                advancePayment: arrayUnion({ date: transaction.date, amount: transaction.amount }),
+                totalAdvancePayment: increment(transaction.amount)
+            });
+        }
+
+        // Return the ID of the added teacher transaction
         return teacherTransRef.id;
-        // Assuming you want to return the ID of the added Tracher Salary
     } catch (error) {
-        console.error("Error adding Tracher Salary:", error);
-        // Handle the error here, such as displaying a message to the user or logging it for further investigation
-        throw error; // Optionally re-throw the error to propagate it further if needed
+        console.error("Error adding Teacher Salary:", error);
+        throw error; // Re-throw the error for further handling if needed
     }
-    
 };
 export const updateTeacherSalary = async(updatedtransaction:TeacherSalaryFormValues,transactionID:string,oldSalary:number)=>{
     try {

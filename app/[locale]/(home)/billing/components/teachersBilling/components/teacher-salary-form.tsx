@@ -37,7 +37,7 @@ import { useTranslations } from "next-intl";
 import { Checkbox } from "@/components/ui/checkbox"
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { differenceInWeeks, endOfMonth, format, startOfMonth } from "date-fns";
+import { addWeeks, differenceInWeeks, endOfMonth, format, startOfMonth } from "date-fns";
 import { downloadInvoice } from "./generateInvoice";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -231,7 +231,7 @@ const getGroupsByTeacher = (classes, teacherId) => {
                     <TableCell>{item.groupcode}</TableCell>
                     <TableCell>{item.students}</TableCell>
                     <TableCell>{receipt.teacher.amount}%</TableCell>
-                    <TableCell>DZD{item.students * item.amount * receipt.teacher.amount / 100}</TableCell>
+                    <TableCell>DZD{item.totalAmount * receipt.teacher.amount / 100}</TableCell>
                   </TableRow>
                 ))}
   
@@ -241,7 +241,7 @@ const getGroupsByTeacher = (classes, teacherId) => {
                 </TableRow>
                 <TableRow>
                   <TableCell colSpan={3} className="font-bold">Les Avances :</TableCell>
-                  <TableCell className="font-bold">DZD{receipt.advancePayment.toFixed(2)}</TableCell>
+                  <TableCell className="font-bold">DZD{receipt?.advancePayment?.toFixed(2)}</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell colSpan={3} className="font-bold">Salaire Net :</TableCell>
@@ -259,7 +259,7 @@ const getGroupsByTeacher = (classes, teacherId) => {
 export default function PaymentForm() {
   const { toast } = useToast();
   const {setTeachersSalary} = useData()
-  const {teachers,setAnalytics,classes,setTeachers}= useData()
+  const {teachers,setAnalytics,classes,setTeachers,setClasses,analytics}= useData()
   const[printBill,setPrintBill]=useState(false)
 
   const [filesToUpload, setFilesToUpload] = useState<FileUploadProgress[]>([]);
@@ -416,12 +416,12 @@ const [teacherModal,setTeacherModal]=useState(false)
                   );
                if(selectedTeacher){
                 const result = getGroupsByTeacher(classes, selectedValue);
-                console.log(result);
+                console.log("teaacherrrr",result);
             
             
                 const reimbursement=getReimbursementByTeacher(classes,selectedValue)
                 const advancePayment=getAdvancedPaymentByTeacher(selectedTeacher)
-                form.setValue('advancePayment',advancePayment)
+                form.setValue('advancePayment',selectedTeacher.totalAdvancePayment)
                 form.setValue('reimbursement',reimbursement)
                 form.setValue('expenses',result)
                 form.setValue(fieldName, {...selectedTeacher,name:selectedTeacher?.value,id:selectedTeacher?.id,teacherName:selectedTeacher.name})
@@ -429,7 +429,7 @@ const [teacherModal,setTeacherModal]=useState(false)
                 const resultsalary = applyPayment(selectedTeacher.totalAdvancePayment,amount);
                 form.setValue("grossSalary",amount)
                 form.setValue("netSalary",resultsalary.paymentAmount)
-                form.setValue("amount",resultsalary.paymentAmount)
+                form.setValue("amount",amount)
  
             }
           
@@ -515,67 +515,122 @@ const [teacherModal,setTeacherModal]=useState(false)
     return finalAmount;
   };
   const reactToPrintRef = React.useRef();
-  async function onSubmit(data:any) {
-   const month=getMonthInfo(data.date)
-
-  //  setAnalytics((prevState: any) => ({
-  //   data: {
-  //     ...prevState.data,
-  //     [month.fullName]: {
-  //       ...prevState.data[month.fullName],
-  //       expenses: (prevState.data[month.fullName]?.expenses || 0) + data.amount
-  //     }
-  //   },
-  //   totalExpenses: prevState.totalExpenses + data.amount
-  // }));
-      const teacherId= await addTeacherSalary({...data,documents:[]})
+  async function onSubmit(data: any) {
+    try {
+      const month = getMonthInfo(data.date);
+  
+      // Add Teacher Salary
+      const teacherId = await addTeacherSalary({ ...data, documents: [] });
+  
+      // Upload files and link them to the collection
       const uploaded = await uploadFilesAndLinkToCollection("Billing/payouts/TeachersTransactions", teacherId, filesToUpload);
-      setTeachersSalary((prev:TeacherSalaryFormValues[])=>[{...data,id:teacherId,teacher:data.teacher,documents:[],    value:teacherId,
-        label:teacherId,},...prev])
-        if(data.paymentType==='advance'){
-          setTeachers((prevTeachers) =>
-            prevTeachers.map((teacher) => {
-              if (teacher.id === teacher.name) {
-                return {
-                  ...teacher,
-                  advancePayment: [
-                    ...(teacher.advancePayment || []), // Ensure the array exists
-                    { amount:data.amount, date: data.date} // Add the new payment
-                  ],
-                  totalAdvancePayment:teacher.totalAdvancePayment+data.amount
-                };
-              }
-              return teacher;
-            })
-          );
-        }else{
-          setTeachers((prevTeach) =>
-            prevTeach.map((tch) =>
-              tch.id === data.teacher.name
+  
+      // Update Teacher's Salary State
+      setTeachersSalary((prev: any[]) => [
+        {
+          ...data,
+          id: teacherId,
+          teacher: data.teacher,
+          documents: [],
+          value: teacherId,
+          label: teacherId,
+        },
+        ...prev,
+      ]);
+  
+      // If payment type is 'Salary', handle the salary-specific logic
+      if (data.paymentType === 'salary') {
+        data.expenses.forEach((exp) => {
+          // Update Teacher's classes with the new payment date
+          setTeachers((tchList) =>
+            tchList.map((tch) =>
+              tch.id === data.teacher.id
                 ? {
                     ...tch,
-                   totalAdvancePayment:tch.totalAdvancePayment-data.amount
+                    classes: tch.classes.map((cls) =>
+                      cls.id === exp.id
+                        ? { ...cls, nextPaymentDate: addWeeks(exp.nextPaymentDate, 3) }
+                        : cls
+                    ),
                   }
                 : tch
             )
           );
-          if(printBill && data.paymentType==='salary'){
-            
-            if (reactToPrintRef.current) {
-              reactToPrintRef.current.handlePrint();
-            }
-          } 
+  
+          // Update the specific class with the new payment date
+          setClasses((clsList) =>
+            clsList.map((cls) =>
+              cls.id === exp.id
+                ? { ...cls, nextPaymentDate: addWeeks(exp.nextPaymentDate, 3) }
+                : cls
+            )
+          );
+        });
+  
+        // Update the teacher's total advance payment
+        setTeachers((prevTeach) =>
+          prevTeach.map((tch) =>
+            tch.id === data.teacher.id
+              ? { ...tch, totalAdvancePayment: applyPayment(data.totalAdvancePayment-data.amount).paymentAmount }
+              : tch
+          )
+        );
+  
+        // Print the bill if requested
+
+          reactToPrintRef.current.handlePrint();
+     
+      } else {
+        // If payment type is not 'Salary', handle other payment types
+        setTeachers((prevTeachers) =>
+          prevTeachers.map((teacher) =>
+            teacher.id === data.teacher.id
+              ? {
+                  ...teacher,
+                  advancePayment: [
+                    ...(teacher.advancePayment || []),
+                    { amount: data.amount, date: data.date },
+                  ],
+                  totalAdvancePayment: teacher.totalAdvancePayment + data.amount,
+                }
+              : teacher
+          )
+        );
+  
+        // Update Analytics Data
+        const updatedAnalytics = { ...analytics };
+        const monthIndex = updatedAnalytics.data.findIndex((m: any) => m.month === month.fullName);
+  
+        if (monthIndex !== -1) {
+          updatedAnalytics.data[monthIndex].expenses += data.amount;
         }
+  
+        setAnalytics((prevState: any) => ({
+          ...prevState,
+          data: updatedAnalytics.data,
+          totalExpenses: prevState.totalExpenses + data.amount,
+        }));
+  
 
-
-
-toast({
-              title: t('teacher-salary-added'),
-              description: t('teacher-salary-added-successfully'),
-            });
-            reset({paymentType:"",expenses:[],date:new Date(),month:format(new Date(), 'MMMM')});
-          
-          }
+      }
+              // Show success toast
+              toast({
+                title: t('teacher-salary-added'),
+                description: t('teacher-salary-added-successfully'),
+              });
+        
+              // Reset form
+              reset({
+                paymentType: "",
+                expenses: [],
+                date: new Date(),
+                month: format(new Date(), 'MMMM'),
+              });
+    } catch (error) {
+      console.error("Error processing submission:", error);
+      // Handle any errors that might occur
+    }
+  }
           const componentRef = React.useRef(null);
 
           const onBeforeGetContentResolve = React.useRef(null);

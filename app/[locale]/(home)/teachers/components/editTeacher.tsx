@@ -322,6 +322,21 @@ else if (type === "لغات") {
     setValue('year', years);
   }
 };
+
+
+
+
+const [isOn, setIsOn] = React.useState(false); // Initialize with form value
+
+  // Watch the started field to keep `isOn` in sync with form state
+  
+
+  const handleToggle = () => {
+  
+   setIsOn(prevState => !prevState);
+   setValue('active', isOn);
+  };
+  
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-[1400px]">
@@ -665,7 +680,19 @@ else if (type === "لغات") {
   />
 
                   </div>
-                  <div>
+                  <div className="flex items-center justify-between">
+                  <Button 
+                  type="button"
+        onClick={handleToggle} 
+        className={`py-2 px-4 ${isOn ? 'bg-green-500' : 'bg-red-500'} text-white`}
+      >
+        {isOn ? 'Turn Off' : 'Turn On'}
+      </Button>
+
+      {/* Conditional Rendering */}
+      {isOn && (
+
+
                   <FormField
     control={form.control}
     name={`classes.${groupIndex}.startDate`}
@@ -690,7 +717,8 @@ else if (type === "لغات") {
       </FormItem>
     )}
   />
-                  </div>
+      )}
+          </div>
                   <Button
                     type="button"
                     variant="destructive"
@@ -959,7 +987,8 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
           teacherName: formData.name,
           subject: formData["educational-subject"],
           startDate:adjustStartDateToFirstSession(clss.startDate, clss.groups),
-          nextPaymentDate:getNextPaymentDate(clss.groups, clss.startDate)
+          nextPaymentDate:getNextPaymentDate(clss.groups, clss.startDate),
+          active:getValue(active)
         }, formData.id);
     
         setClasses(prevClasses => [

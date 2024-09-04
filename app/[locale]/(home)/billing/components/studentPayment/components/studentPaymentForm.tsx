@@ -281,6 +281,8 @@ const onSelected = (selectedStudent: any) => {
       value={getValues("student")?.student}
       onSelected={(selectedValue) => {
         const selectedStudent = students.find((student: any) => student.value === selectedValue);
+        console.log("dwqdqwdwq",selectedStudent,selectedValue,students);
+        
         if (selectedStudent) {
           const { value, label, ...rest } = selectedStudent;
           const updatedStudent: any = { ...rest };
@@ -295,12 +297,28 @@ const onSelected = (selectedStudent: any) => {
 
           });
    
-          const classss = selectedStudent.classes.map((clsUID) => {
-            const sleectedClass=classes.find((cls)=>clsUID.id===cls.id)
-            return {...clsUID,amountPerSession:sleectedClass.amount/sleectedClass.numberOfSessions,nextPaymentDate:sleectedClass.nextPaymentDate}
-             
-          });
+          const classss =selectedStudent.classes
+          .map((clsUID) => {
+            // Find the corresponding class in the `classes` array
+            const selectedClass = classes.find(
+              (cls) => cls.id === clsUID.id && clsUID.sessionsLeft <= 0
+            );
+        
+            // If the selected class is found, update the relevant information
+            if (selectedClass) {
+              return {
+                ...clsUID,
+                amountPerSession: selectedClass.amount / selectedClass.numberOfSessions,
+                nextPaymentDate: selectedClass.nextPaymentDate,
+              };
+            }
+        
+            // If no matching class is found, return `undefined`
+            return undefined;
+          })
+          .filter((clsUID) => clsUID !== undefined); // Filter out undefined values
           form.setValue('filtredclasses',classss)
+          form.setValue('initialClasses',classss)
   
 
 
@@ -516,8 +534,7 @@ const billHtml = `
                 <div class="row">
                     <span>${format(new Date(), "dd-MM-yyyy")}</span>
                 </div>
-                <div class="row">الاسم و اللقب: ${data.student.namme}</div>
-                <div class="row">وصل لأجل : حوالة</div>
+                <div class="row">الاسم و اللقب: ${data.student.name}</div>
                 <div class="amount">المبلغ: ${data.filtredclasses.reduce((total, cls) => total + cls.amountPaid, 0)}</div>
                 <table>
                     <thead>
@@ -685,13 +702,13 @@ const billHtml = `
                 <Input
   placeholder={t('amount-paid')}
   onChange={(event) => {
-    const amountPaid = parseFloat(event.target.value);
+    const amountPaid = parseFloat(event.target.value) ||0;
     const pricePerSession = option.amountPerSession; // Get the price per session
     const numberOfSessionsLeft = amountPaid / pricePerSession; // Calculate the number of sessions left
-
+    const oldsessions=watch(`initialClasses.${index}.sessionsLeft`) ||0;
     // Update the form fields
     form.setValue(`filtredclasses.${index}.amountPaid`, amountPaid);
-    form.setValue(`filtredclasses.${index}.sessionsLeft`, numberOfSessionsLeft);
+    form.setValue(`filtredclasses.${index}.sessionsLeft`, oldsessions+numberOfSessionsLeft);
 
 
   }}
