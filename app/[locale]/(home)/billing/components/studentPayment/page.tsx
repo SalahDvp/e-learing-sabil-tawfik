@@ -29,7 +29,7 @@ import {TransactionDataTableDemo} from './components/transactionTable'
 
   </div>
 
-  <div className="lg:col-span-2 lg:mr-4">
+  <div className="lg:col-span-2 lg:mr-4 ml-8">
     <Tabs defaultValue="createPayment">
       <TabsList>
         <TabsTrigger value="createPayment">regular payment</TabsTrigger>
