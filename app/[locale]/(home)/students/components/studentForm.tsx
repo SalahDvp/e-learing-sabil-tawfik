@@ -1209,7 +1209,7 @@ console.log(data.classes);
             {isLastStep?(        <LoadingButton size="sm"    loading={isSubmitting}        type={'button'}   onClick={form.handleSubmit(onSubmit)}>
               Finish
             </LoadingButton>):(        <Button size="sm"   
-            //disabled={formData.id === null}   
+            disabled={formData.id === null}   
                  type={"button"}    onClick={nextStep}>
               {isLastStep ? "Finish" : isOptionalStep ? "Skip" : "Next"}
             </Button>)}
