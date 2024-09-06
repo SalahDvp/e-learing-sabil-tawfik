@@ -1,8 +1,7 @@
-
 'use client'
 
 import { Button } from "@/components/ui/button";
-import { arrayUnion } from "firebase/firestore";
+import { arrayUnion, getDoc, updateDoc } from "firebase/firestore";
 
 import {
   Form,
@@ -44,9 +43,8 @@ import Combobox from "@/components/ui/comboBox";
 import { LoadingButton } from "@/components/ui/loadingButton";
 import { date, z } from "zod";
 import { useData } from "@/context/admin/fetchDataContext";
-import { addPaymentTransaction } from "@/lib/hooks/billing/student-billing";
+import { updateSessionLeft } from "@/lib/hooks/billing/student-billing";
 import {updateStudentFinance}  from '@/lib/hooks/students';
-import {updatesessionsLeft} from '@/lib/hooks/billing/student-billing";'
 import { uploadFilesAndLinkToCollection } from "@/context/admin/hooks/useUploadFiles";
 import { getMonthInfo } from "@/lib/hooks/billing/teacherPayment";
 import { useTranslations } from "next-intl";
@@ -63,17 +61,20 @@ const fieldNames: string[] = [
   'level',
   'field',
   'school',
-  "monthlypayment",
+
   'paymentDate',
+
 ];
 
 
 type Transaction = {
   amount: number;
+  subject: string;
+  group : string;
+  debt: number;
   paymentDate: Date;
   monthlypayment: number;
-  nextPaymentDate: Date | null;
-  debt:number
+  nextPaymentDate: Date;
 };
 
 type FormKeys =
@@ -92,6 +93,7 @@ function addMonthsToDate(date: Date, monthsToAdd: number): Date {
   return newDate;
 }
 
+const currentDate = new Date();
 function parsePaymentPlan(paymentPlan: string, startDate: Date): Date | null {
   const match = paymentPlan.match(/(\d+)\s+months?/i); // Match the number of months in the string
   if (match) {
@@ -129,21 +131,17 @@ function getMonthAbbreviationsInRange(startDate:Date, endDate:Date) {
   if (months.length > 0) {
       months.pop();
   }
-console.log(months);
+
 
   return months;
 }
 
 
-const orderedMonths = [
-  'Sep', 'Oct', 'Nov', 'Dec',
-  'Jan', 'Feb', 'Mar', 'Apr',
-  'May', 'Jun', 'Jul','Aug'
-];
+
 export default function StudentPaymentForm() {
   const { toast } = useToast();
-  const {students,classes,setInvoices,setStudents,setAnalytics,invoices}=useData()
-console.log('classes',classes[0]?.groups.amount);
+  const {students,classes,setInvoices,setStudents,setAnalytics,invoices,setClasses,profile}=useData()
+
 
 
 
@@ -157,7 +155,9 @@ console.log('classes',classes[0]?.groups.amount);
   
   const [filesToUpload, setFilesToUpload] = useState<FileUploadProgress[]>([]);
   const form = useForm<any>({
-    //resolver: zodResolver(studentPaymentSchema),
+defaultValues:{
+  paymentDate:new Date()
+}
   });
   const { reset, formState, setValue, getValues,watch,control,register } = form;
   const { isSubmitting } = formState;
@@ -219,7 +219,7 @@ const levelAndClassOptions = React.useMemo(() => {
 const watchlevel=watch('year')
 const paymentPlans = React.useMemo(() => {
 const studentValue = form.getValues("year");
-  console.log('studentValue',studentValue);
+
   
 
 }, [form,classes,watchlevel]);
@@ -247,12 +247,7 @@ const onSelected = (selectedStudent: any) => {
 };
 
 
-const [selectedStudentId, setSelectedStudentId] = useState(null);
 
-  // Ensure selectedStudentId is set through some interaction
-  const handleStudentSelection = (studentId) => {
-    setSelectedStudentId(studentId);
-  };
 
 
 
@@ -274,20 +269,7 @@ const [selectedStudentId, setSelectedStudentId] = useState(null);
             }}
           />
         );
-        case "nextPaymentDate":
-          return (
-            <CalendarDatePicker
-              {...field}
-              date={getValues("nextPaymentDate")}
-              setDate={(selectedValue) => {
-                if (selectedValue === undefined) {
-                  // Handle undefined case if needed
-                } else {
-                  form.setValue(fieldName, selectedValue);
-                }
-              }}
-            />
-          );
+       
           case "student":
             return (
               <Combobox
@@ -299,6 +281,8 @@ const [selectedStudentId, setSelectedStudentId] = useState(null);
       value={getValues("student")?.student}
       onSelected={(selectedValue) => {
         const selectedStudent = students.find((student: any) => student.value === selectedValue);
+        console.log("dwqdqwdwq",selectedStudent,selectedValue,students);
+        
         if (selectedStudent) {
           const { value, label, ...rest } = selectedStudent;
           const updatedStudent: any = { ...rest };
@@ -312,14 +296,22 @@ const [selectedStudentId, setSelectedStudentId] = useState(null);
 
 
           });
-          const classss = selectedStudent.classesUIDs.flatMap((clsUID) => {
-            return classes
-              .filter((clss) => clsUID.id === clss.id)
-             // .flatMap((cls) => cls.groups.filter((grp) => grp.group === clsUID.group));
-          });
+   
+          const classss =selectedStudent.classes
+          .map((clsUID) => {
+            // Find the corresponding class in the `classes` array
+            return {
+                ...clsUID,
+              };
+           
+          })
+          .filter((clsUID) => clsUID !== undefined); // Filter out undefined values
           form.setValue('filtredclasses',classss)
-          console.log('classss',classss);
-          handleStudentSelection(selectedStudent.id)
+          form.setValue('initialClasses',classss)
+  
+
+
+          
         }
       }}
     />
@@ -364,202 +356,117 @@ const [selectedStudentId, setSelectedStudentId] = useState(null);
          case "school":
           return <Input {...field} value={levelAndClassOptions.school} readOnly />;
 
-        case "amount":
-
-            return (<Input {...field}  onChange={event => field.onChange(+event.target.value)}/>)
-
+        
        
         
 
-        case "paymentPlan":
-          return (
-            <Combobox
-            {...field}
-            open={paymentPlanModal}
-            setOpen={setPaymentPlanModal}
-            placeHolder={t('payment-plan')}
-            options={paymentPlans}
-            value={getValues("paymentPlan")?.name}
-            onSelected={(selectedValue) => {
-              console.log("value",selectedValue);
-              
-              const paymentPlan = paymentPlans?.find(
-                (plan:any) => plan.value === selectedValue
-              );
-              console.log("payment",paymentPlans);
-              if (paymentPlan) {
-                form.setValue(fieldName, paymentPlan)
-                form.setValue("amount",paymentPlan.price)
-                
-                const newDate = parsePaymentPlan(paymentPlan.period, getValues("student").nextPaymentDate);
-                if(newDate){
-                  form.setValue("nextPaymentDate",newDate)
-
-                }
-              }
-            }}
-          />
-
-          )
-          case "nextPaymentDate":
-            return (<Input {...field} value={field.value?.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })} readOnly/>)
-          
+        
+        
+         
                       default:
         return <Input {...field} readOnly />;
     }
   };
-  function generateBillIfNeeded(months: any, data: StudentPaymentFormValues) {
-    if (printBill) {
-      console.log(data.paymentDate);
-      
-      const statusArray: string[] = orderedMonths.map((month) => {
-        const monthData = months[month];
+
+    
+  async function onSubmit(data: any) {
+    try {
+      // Iterate over each filtered class and process the payment
+      for (const item of data.filtredclasses) {
+        // Prepare the transaction data
+        const updatedStudents = await updateSessionLeft(item.id, data.student, item);
   
-        return monthData?.status === 'Paid' ? t('paid') : ' ';
+        setClasses((prev) =>
+          prev.map((cls) =>
+            cls.id === item.id ? { ...cls, students: updatedStudents } : cls
+          )
+        );
+  
+        setStudents((prevStudents: any[]) =>
+          prevStudents.map((std: { id: any; classes: any }) =>
+            std.id === data.student.id
+              ? {
+                  ...std,
+                  classes: std.classes.map((cls) =>
+                    cls.id === item.id
+                      ? {
+                          ...cls,
+                          sessionsLeft: item.sessionsLeft,
+                          sessionsToStudy: item.sessionsToStudy,
+                        }
+                      : cls
+                  ),
+                }
+              : std
+          )
+        );
+      }
+  
+      // Notify the user of success
+      toast({
+        title: t('changes-applied-0'),
+        description: t('changes-applied-successfully'),
       });
   
-      generateBill(
-        {
-          student: data.student.student,
-          level: data.level,
-          amount: data.amount,
-          monthlypayment:data.monthlypayment,
-          paymentDate:format(data.paymentDate, 'dd/MM/yyyy'),
-        
-        },
-        "qwdwqdqwd",
-        [
-          t('student'),
-          t('level'),
-          t('amount'),
-          t('amount-left-to-pay'),
-          t('paymentDate'),
-          t('status'),
-        ],
-        {
-          amount: t("Amount"),
-          from: t('From:'),
-          shippingAddress: t('shipping-address'),
-          billedTo: t('billed-to'),
-          subtotal: t('Subtotal:'),
-          totalTax: t('total-tax-0'),
-          totalAmount: t('total-amount-3'),
-          invoice: t('invoice'),
-        },
-        statusArray
-      );
+      // Reset the form
+      reset();
+  
+    } catch (error) {
+      console.error('Error processing payments: ', error);
+      // Handle the error if needed
     }
-  }
-  
-  
-  async function onSubmit(data: any) {
-    console.log('data.id',data.id)
-    console.log('data.amount',data.amount);
-    console.log('data.monthlypayment',data.monthlypayment);
-
-    console.log('+',data.monthlypayment-data.amount);
-    console.log('zakmao', data.amount+data.monthlypayment);
-    
-    const transactionData: Transaction = {
-      amount: data.amount,
-      paymentDate: data.paymentDate,
-      debt:data.monthlypayment + data.debt - data.amount,
-      monthlypayment: data.monthlypayment,
-      nextPaymentDate: data.nextPaymentDate,
-      
-    };
-  
-    // Create the `transaction` array and add the transaction data to it
-    const transactionArray = [transactionData];
-  
-    // Save the data with the `transaction` array
- // await addPaymentTransaction(transactionData,data.id);
- // await updateStudentFinance(transactionData.paymentDate,transactionData.nextPaymentDate,transactionData.debt,data.id);
-//await updatesessionsLeft(data.id)
-
-    // Handle file uploads and update the UI accordingly
-   /* const uploaded = await uploadFilesAndLinkToCollection(
-      "Billing/payments/Invoices",
-      transactionId,
-      filesToUpload
-    );
-  
-    
-  */
-    // Generate the bill if needed
-  
-    setInvoices((prev: any) => [
-      {
-        ...data,
-        name: data.name,
-        paymentDate:data.paymentDate,
-        amount:data.amount
-      },
-      ...prev,
-    ]);
-    toast({
-      title: t('changes-applied-0'),
-      description: t('changes-applied-successfully'),
-    });
-    reset();
-  }
-  
-
-  const handleChangeExpense = (index:number, newPrice:number) => {
-    const newPrices = [...getValues('expenses')]; // Get the current prices array
-    newPrices[index].amount = newPrice; // Update the price at the specified index
-    setValue('expenses', newPrices); // Set the updated prices array in the form
   };
 
   return (
     <Card className="overflow-hidden" x-chunk="dashboard-05-chunk-4">
-      <CardHeader className="flex flex-row items-start bg-muted/50">
-        <div className="grid gap-0.5">
-          <CardTitle className="group flex items-center gap-2 text-lg">
-            {t('create-reimbursement')} </CardTitle>
-          <CardDescription></CardDescription>
-        </div>
+    <CardHeader className="flex flex-row items-start bg-muted/50">
+      <div className="grid gap-0.5">
+        <CardTitle className="group flex items-center gap-2 text-lg">
+          {t('create-payment')} </CardTitle>
+        <CardDescription></CardDescription>
+      </div>
 
-        <div className="ml-auto flex items-center gap-1">
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 gap-1"
-            onClick={() => reset()}
-          >
-            <ResetIcon className="h-3.5 w-3.5" />
-            <span className="lg:sr-only xl:not-sr-only xl:whitespace-nowrap">
-              {t('reset-details')} </span>
-          </Button>
-        </div>
-      </CardHeader>
-      <ScrollArea
-        className="overflow-auto pt-6 text-sm"
-        style={{ maxHeight: "600px" }}
-      >
-        <CardContent>
-          <Form {...form}
-          >
+      <div className="ml-auto flex items-center gap-1">
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 gap-1"
+          onClick={() => reset()}
+        >
+          <ResetIcon className="h-3.5 w-3.5" />
+          <span className="lg:sr-only xl:not-sr-only xl:whitespace-nowrap">
+            {t('reset-details')} </span>
+        </Button>
+      </div>
+    </CardHeader>
+    <ScrollArea
+      className="overflow-auto pt-6 text-sm"
+      style={{ maxHeight: "600px" }}
+    >
+      <CardContent>
+        <Form {...form}
+        >
 
-            
-            <form>
-              {fieldNames.map((fieldName, index) => (
-                <FormField
-                  key={index}
-                  control={form.control}
-                  name={fieldName as FormKeys}
-                  render={({ field }) => (
-                    <FormItem style={{ marginBottom: 15 }}>
-                      <FormLabel>{t(fieldName)}</FormLabel>
-                      <FormControl>{renderInput(fieldName, field)}</FormControl>
+          
+          <form>
+            {fieldNames.map((fieldName, index) => (
+              <FormField
+                key={index}
+                control={form.control}
+                name={fieldName as FormKeys}
+                render={({ field }) => (
+                  <FormItem style={{ marginBottom: 15 }}>
+                    <FormLabel>{t(fieldName)}</FormLabel>
+                    <FormControl>{renderInput(fieldName, field)}</FormControl>
 
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              ))}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ))}
 
-<FormField
+  
+  <FormField
             control={control}
             name="filtredclasses"
             render={({ field }) => (
@@ -575,19 +482,16 @@ const [selectedStudentId, setSelectedStudentId] = useState(null);
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-
+  
                 {filtredclasses.map((option,index) => (
         
         
                     <TableRow key={index}>
                     <TableCell className="font-semibold">
                  
-              <Input
+                    <Input defaultValue={option.group} readOnly />
 
-                defaultValue={option.group}
-                readOnly
-              />
- 
+  
             </TableCell>
                                 <TableCell>
                         
@@ -596,45 +500,39 @@ const [selectedStudentId, setSelectedStudentId] = useState(null);
                         value={option.subject}
                         readOnly
                         />
-
+  
                         </TableCell>
                                 <TableCell>
                         
             <Input
       placeholder={t('enter-sessions-left')}
-      defaultValue={
-        filtredclasses[index]?.students.find((student) => student.id === selectedStudentId)?.sessionsLeft || ''
-      }
+      value={watch(`filtredclasses.${index}.sessionsLeft`)}
+
       onChange={(event) => {
-        const newSessionsLeft = +event.target.value;
-
+        const newSessionsLeft = +event.target.value || 0;
+        const initialSessions=watch(`initialClasses.${index}.sessionsLeft`)
+        const initialSessionsToStudy = watch(`initialClasses.${index}.sessionsToStudy`)
         // Updating the correct student within the selected class
-        const updatedClasses = filtredclasses.map((cls, idx) =>
-          idx === index
-            ? {
-                ...cls,
-                students: cls.students.map((student) =>
-                  student.id === selectedStudentId
-                    ? { ...student, sessionsLeft: newSessionsLeft }
-                    : student
-                ),
-              }
-            : cls
-        );
-
+        form.setValue(`filtredclasses.${index}.sessionsLeft`, newSessionsLeft);
+        form.setValue(`filtredclasses.${index}.sessionsToStudy`, initialSessionsToStudy - (newSessionsLeft - initialSessions) );
+        
+  
+  
+        
+  
         // Calling field.onChange with updated classes array
-        field.onChange(updatedClasses);
-      }}
+      }
+    }
     />
-
+  
                                 </TableCell>
                                 <TableCell>
-
-
+  
+  
                     </TableCell>
                     </TableRow>
                     
-
+  
                                 ))}
          
          </TableBody>
@@ -644,17 +542,17 @@ const [selectedStudentId, setSelectedStudentId] = useState(null);
           <TableCell colSpan={3}>DZD{totalAmount}</TableCell>
         </TableRow> */}
       </TableFooter>
-</Table>
+  </Table>
                 <FormMessage />
               </FormItem>
             )}
           />
       
     
-
+  
    
-
-
+  
+  
             </form>
           </Form>
           <div className="flex items-center space-x-2 mb-3">
@@ -667,7 +565,7 @@ const [selectedStudentId, setSelectedStudentId] = useState(null);
        </label>
     </div>
           <ImageUpload filesToUpload={filesToUpload} setFilesToUpload={setFilesToUpload}/>
-
+  
         </CardContent>
       </ScrollArea>
       <CardFooter className="flex flex-row items-center border-t bg-muted/50 px-6 py-3">
@@ -681,7 +579,8 @@ const [selectedStudentId, setSelectedStudentId] = useState(null);
         </div>
       </CardFooter>
     </Card>
-
+  
     
   );
-}
+  
+  }
