@@ -4,7 +4,7 @@ import {
   DotsHorizontalIcon,
 } from "@radix-ui/react-icons"
 import { useToast } from "@/components/ui/use-toast"
-
+import {AtandenceDataModel} from './attendance-report'
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -85,11 +85,15 @@ export type StudentSummary = {
 interface DataTableDemoProps {
   filter: string;
 }
+
   export const DataTableDemo: React.FC<DataTableDemoProps> = ({ filter }) => {
     const [open,setOpen]=React.useState(false)
+    const [openCardSheetAT,setOpenCardSheetAT]=React.useState(false)
     const [openCard,setOpenCard]=React.useState(false)
     const t=useTranslations()
     const {students,setStudents,classes}=useData()
+    console.log('classes',classes);
+    
     const orderedStudents = React.useMemo(() => {
       // Ensure students is defined and is an array
       if (!students || !Array.isArray(students)) {
@@ -156,6 +160,12 @@ interface DataTableDemoProps {
       setStudent(student)
       setOpenCard(true); // Open the sheet after setting the level
     };
+
+    const openCardSheetAttandace = (student:Student) => {
+      setStudent(student)
+      setOpenCardSheetAT(true); // Open the sheet after setting the level
+    };
+    
 
 
    const {toast}=useToast()
@@ -252,8 +262,11 @@ interface DataTableDemoProps {
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => openEditSheet(student)}>
                   {t('edit')} </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => openCardSheetAttandace(student)}>
+                 {t('Attandance')} </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => openCardSheet(student)}>
                  {t('New Card')} </DropdownMenuItem>
+                
                  <DropdownMenuItem onClick={() =>{setOpenAlert(true);setStudent(student)}}>
           {t('delete')} </DropdownMenuItem>
               </DropdownMenuContent>
@@ -504,6 +517,7 @@ const orderedMonths = [
       </div>
       <EditStudent open={open} setOpen={setOpen}  student={student}/>
       <ChangeCard open={openCard} setOpen={setOpenCard}  student={student}/>
+      <AtandenceDataModel open={openCardSheetAT} setOpen={setOpenCardSheetAT}  student={student} classes = {classes}/>
       <AlertDialog open={openAlert} onOpenChange={setOpenAlert}>
   <AlertDialogContent>
     <AlertDialogHeader>
