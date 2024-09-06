@@ -94,46 +94,55 @@ function getNextDayOfWeek(dayOfWeek: string, startDate: Date): Date {
   
     return adjustedDate;
   }
-export const addTeacher = async (teacher: Teacher) => {
+  export const addTeacher = async (teacher: Teacher) => {
     try {
-        // Add the teacher document to the "Teachers" collection
-        const teacherRef = await addDoc(collection(db, "Teachers"), {...teacher,groupUIDs:[]});
-        console.log("Teacher added successfully:", teacherRef.id);
-        
-
-        const collectiveGroups = teacher.classes.map((cls) => ({
+      const teacherData = { ...teacher, groupUIDs: [] };
+      const teacherRef = await addDoc(collection(db, "Teachers"), teacherData);
+      console.log("Teacher added successfully:", teacherRef.id);
+  
+      // Function to prepare group data, excluding undefined fields
+      const prepareGroupData = (cls) => {
+        const groupData: any = {
           ...cls,
-          year:cls.year,
-          students:[],
-          reimbursements:[],
-          teacherUID:teacherRef.id,
-          teacherName:teacher.name,
+          year: cls.year,
+          students: [],
+          reimbursements: [],
+          teacherUID: teacherRef.id,
+          teacherName: teacher.name,
           subject: teacher["educational-subject"],
-          startDate:adjustStartDateToFirstSession(cls.startDate, cls.groups),
-          nextPaymentDate:getNextPaymentDate(cls.groups, cls.startDate)
-          }
-
-
-        ));
-            const groupUIDs: string[] = [];
-            const classesgrouped:any[]=[]
-         for (const group of collectiveGroups) {
-            const groupRef= await addDoc(collection(db, "Groups"), group);
-            groupUIDs.push(groupRef.id);
-            const classesgroupeds = {...group,id: groupRef.id,index: 0,quota: 0}
-            classesgrouped.push(classesgroupeds);
-            
+        };
+  
+        if (teacher.active) {
+          groupData.startDate = adjustStartDateToFirstSession(cls.startDate, cls.groups);
+          groupData.nextPaymentDate = getNextPaymentDate(cls.groups, cls.startDate);
+        }
+  
+        return groupData;
+      };
+  
+      const collectiveGroups = teacher.classes.map(prepareGroupData);
+      const groupUIDs: string[] = [];
+      const classesgrouped: any[] = [];
+  
+      // Loop through and add groups
+      for (const group of collectiveGroups) {
+        const groupRef = await addDoc(collection(db, "Groups"), group);
+        groupUIDs.push(groupRef.id);
+  
+        const classGrouped = { ...group, id: groupRef.id, index: 0, quota: 0 };
+        classesgrouped.push(classGrouped);
+  
         await updateDoc(doc(db, "Teachers", teacherRef.id), {
-            groupUIDs: arrayUnion(groupRef.id),
+          groupUIDs: arrayUnion(groupRef.id),
         });
-    }
-        return {id:teacherRef.id,groupUIDs:groupUIDs,classesgrouped};
+      }
+  
+      return { id: teacherRef.id, groupUIDs, classesgrouped };
     } catch (error) {
-        console.error("Error adding Teacher:", error);
-        throw error; // Optionally re-throw the error to propagate it further if needed
+      console.error("Error adding Teacher:", error);
+      throw error;
     }
-
-};
+  };
 
 export const updateTeacher = async(updatedteacher: Teacher,teacherId:string)=>{
     try {
@@ -193,12 +202,23 @@ export const removeGroupFromDoc = async (clss,studentArray) => {
 
         const userRef = doc(db, 'Groups',groupId);
       
-        // Fetch the document
-        const userDoc = await getDoc(userRef);
         
-        if (userDoc.exists()) {
+        if (userRef) {
       
             await updateDoc(userRef, {...updatedGroupDetails});
+            console.log('Task updated successfully!');
+          } else {
+            console.log('Task not found.');
+          }
+      }
+ export async function activateStudents(groupId,students) {
+
+        const userRef = doc(db, 'Groups',groupId);
+      
+        
+        if (userRef) {
+      
+            await updateDoc(userRef, {students:students});
             console.log('Task updated successfully!');
           } else {
             console.log('Task not found.');

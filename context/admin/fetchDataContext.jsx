@@ -231,7 +231,7 @@ export const  FetchDataProvider = ({ children }) => {
                 sessionsLeft:studentDetail.sessionsLeft,
                 amount:studentDetail.amount,
                 debt:studentDetail.debt,
-                nextPaymentDate:new Date(studentDetail.nextPaymentDate.toDate()),
+                nextPaymentDate:studentDetail.nextPaymentDate?new Date(studentDetail.nextPaymentDate.toDate()) : null,
                 sessionsToStudy:studentDetail.sessionsToStudy,
               };
             });

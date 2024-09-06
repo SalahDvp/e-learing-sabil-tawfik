@@ -102,7 +102,8 @@ export default function TeacherForm() {
       year:[],
       salaryDate:new Date(),
       advancePayment:[],
-      classes:[]
+      classes:[],
+      totalAdvancePayment:0
     }
    
   });
@@ -656,42 +657,52 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
   />
 
                   </div>
-                  {/* <div className="flex items-center">
-                    <Label>Active</Label>
-                  <Button 
-                  type="button"
-        onClick={()=>handleToggle(!isOn)} 
-        className={` ${isOn ? 'bg-green-500' : 'bg-red-500'} text-white`}
-      >
-        {isOn ? 'Turn Off' : 'Turn On'}
-      </Button>
-      </div> */}
-      {/* Conditional Rendering */}
-
-                  <FormField
+   
+      <FormField
     control={form.control}
-    name={`classes.${groupIndex}.startDate`}
+    name={`classes.${groupIndex}.active`}
     render={({ field }) => (
       <FormItem className="w-[100px]">
-        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">{t('start date')}:</FormLabel>
+        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Active:</FormLabel>
         <FormControl>
-        <CalendarDatePicker
-            {...field}
-            date={getValues(`classes.${groupIndex}.startDate`)}
-            setDate={(selectedValue) => {
-              if (selectedValue === undefined) {
-                // Handle undefined case if needed
-              } else {
-                form.setValue(`classes.${groupIndex}.startDate`, selectedValue);
-
-
-              }
-            }}
-          />
+        <Button 
+                  type="button"
+        onClick={()=>setValue(`classes.${groupIndex}.active`,!watch(`classes.${groupIndex}.active`))} 
+        className={` ${watch(`classes.${groupIndex}.active`) ? 'bg-green-500' : 'bg-red-500'} text-white`}
+      >
+        {watch(`classes.${groupIndex}.active`) ? 'Turn Off' : 'Turn On'}
+      </Button>
         </FormControl>
       </FormItem>
     )}
   />
+      
+                 {watch(`classes.${groupIndex}.active`)&&(
+                  <FormField
+                  control={form.control}
+                  name={`classes.${groupIndex}.startDate`}
+                  render={({ field }) => (
+                    <FormItem className="w-[100px]">
+                      <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">{t('start date')}:</FormLabel>
+                      <FormControl>
+                      <CalendarDatePicker
+                          {...field}
+                          date={getValues(`classes.${groupIndex}.startDate`)}
+                          setDate={(selectedValue) => {
+                            if (selectedValue === undefined) {
+                              // Handle undefined case if needed
+                            } else {
+                              form.setValue(`classes.${groupIndex}.startDate`, selectedValue);
+              
+              
+                            }
+                          }}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                 )} 
       
                
                   <Button
@@ -924,42 +935,78 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
   const  {setTeachers,setClasses}= useData()
 
   const {toast}=useToast()
-  const onSubmit = async(data:any) => {
+  const onSubmit = async (data: any) => {
+    try {
+      // Add the teacher and get the teacherId
+      const teacherId = await addTeacher(data);
+  
+      // Function to prepare collective group data
+      const prepareCollectiveGroup = (cls: any) => {
+        const groupData: any = {
+          ...cls,
+          year: cls.year,
+          students: [],
+          reimbursements: [],
+          teacherUID: teacherId.id,
+          teacherName: data.name,
+          subject: data["educational-subject"],
+        };
+  
+        if (data.active) {
+          groupData.startDate = adjustStartDateToFirstSession(cls.startDate, cls.groups);
+          groupData.nextPaymentDate = getNextPaymentDate(cls.groups, cls.startDate);
+        }
+  
+        return groupData;
+      };
+  
+      // Prepare the collectiveGroups array based on teacher's classes
+      const collectiveGroups = data.classes.map(prepareCollectiveGroup);
+  
+      // Add the group IDs to the corresponding groups
+      const updatedCollectiveGroups = collectiveGroups.map((group, index) => ({
+        ...group,
+        id: teacherId.groupUIDs[index],
+      }));
+  
+      // Update state
+      nextStep();
+      setTeachers((prev: Teacher[]) => [
+        ...prev,
+        {
+          ...data,
+          id: teacherId.id,
+          groupUIDs: teacherId.groupUIDs,
+          teacher: data.name,
+          classes: teacherId.classesgrouped,
+          value: teacherId.id,
+          label: data.name,
+        },
+      ]);
+      setClasses((prev: any[]) => [...prev, ...updatedCollectiveGroups]);
+  
+      // Show success toast
+      toast({
+        title: "Teacher Added!",
+        description: `The Teacher, ${data.name}, was added successfully.`,
+      });
+  
+      // Reset form fields
+      reset({
+        year: [],
+        salaryDate: new Date(),
+        advancePayment: [],
+        totalAdvancePayment: 0,
+        classes: [],
+      });
+    } catch (error) {
+      console.error("Error adding Teacher:", error);
+      toast({
+        title: "Error",
+        description: "There was an error adding the teacher.",
 
-
-
-
-    const teacherId = await addTeacher(data)
-    const collectiveGroups = data.classes.map((cls) => ({
-      ...cls,
-      year:cls.year,
-      students:[],
-      reimbursements:[],
-      teacherUID:teacherId.id,
-      teacherName:data.name,
-      subject: data["educational-subject"],
-      startDate:adjustStartDateToFirstSession(cls.startDate, cls.groups),
-      nextPaymentDate:getNextPaymentDate(cls.groups, cls.startDate)
-      }
-
-
-    ));
-    
-    const updatedCollectiveGroups = collectiveGroups.map((group, index) => ({
-      ...group,
-      id: teacherId.groupUIDs[index]
-    }));
-    nextStep()
-    setTeachers((prev: Teacher[]) => [...prev, {...data,id:teacherId.id,groupUIDs:teacherId.groupUIDs,teacher:data.name,classes:teacherId.classesgrouped,value:teacherId.id,label:data.name}]);
-    setClasses((prev: any[]) => [...prev, ...updatedCollectiveGroups]);
-    toast({
-      title: "Teacher Added!",
-      description: `The Teacher, ${data.name} added successfully`,
-    });
-    reset({  year:[],
-      salaryDate:new Date(),
-      advancePayment:[],
-      classes:[]})
+      });
+    }
   };
   const t=useTranslations()
 

@@ -92,19 +92,32 @@ const months = [
             data: existingData
         });
         
-        // Update the next payment date for each expense in the transaction
-        await Promise.all(transaction.expenses.map(async (exp: any) => {
-            await updateDoc(doc(db, 'Groups', exp.id), {
-                nextPaymentDate: addWeeks(exp.nextPaymentDate, 3),
-            });
-        }));
+
 
         // Update the teacher's advance payment details based on payment type
         if (transaction.paymentType === 'salary') {
+            // Update the totalAdvancePayment for the teacher
             await updateDoc(doc(db, "Teachers", transaction.teacher.id), {
-                totalAdvancePayment: result.totalAdvancePayment
+              totalAdvancePayment: result.totalAdvancePayment,
             });
-        } else {
+          
+            // Update the next payment date and students for each expense in the transaction
+            await Promise.all(transaction.expenses.map(async (exp: any) => {
+              // Map over students and update their sessionsToStudy, debt, and nextPaymentDate
+              const updatedStudents = exp.students.map((std: any) => ({
+                ...std,
+                sessionsToStudy: exp.numberOfSessions, // Update number of sessions to study
+                debt: std.debt + exp.amount, // Add expense amount to student's debt
+                nextPaymentDate: addWeeks(std.nextPaymentDate, 3), // Add 3 weeks to the student's next payment date
+              }));
+          
+              // Update the group document with the new nextPaymentDate and students
+              await updateDoc(doc(db, 'Groups', exp.id), {
+                nextPaymentDate: addWeeks(exp.nextPaymentDate, 3), // Add 3 weeks to the group's next payment date
+                students: updatedStudents, // Update students in the group
+              });
+            }));
+          }else {
             await updateDoc(doc(db, "Teachers", transaction.teacher.id), {
                 advancePayment: arrayUnion({ date: transaction.date, amount: transaction.amount }),
                 totalAdvancePayment: increment(transaction.amount)

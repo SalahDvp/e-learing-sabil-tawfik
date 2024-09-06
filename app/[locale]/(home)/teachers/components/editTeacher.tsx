@@ -57,7 +57,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import CalendarDatePicker from '../../students/components/date-picker';
 
-import { addGroup, addNewClasses, addTeacher, removeGroupFromDoc, updateClassGroup, updateTeacher } from '@/lib/hooks/teachers';
+import { activateStudents, addGroup, addNewClasses, addTeacher, removeGroupFromDoc, updateClassGroup, updateTeacher } from '@/lib/hooks/teachers';
 import { LoadingButton } from '@/components/ui/loadingButton';
 
 import { UseFormReturn } from 'react-hook-form';
@@ -147,18 +147,8 @@ const EditTeacher: React.FC<openModelProps> = ({ setOpen, open,teacher }) => {
   };
 
   
+console.log("clalwadwqdqw",watch("classes"));
 
-const handleYearToggle = (field:string) => {
-  const years=[...getValues('year')]
-  if (years.includes(field)) {
-    const aa=years.filter(year=>year !== field)
-    setValue("year",aa)    
-  } else {
-    setValue("year",[...years,field])
-  }
-};
-
-const truncateToMinutes = (date: Date) => startOfMinute(date);
 
 const middleSchoolYears = ["1AM", "2AM", "3AM", "4AM"];
 const highSchoolYears = ["1AS", "2AS", "3AS"];
@@ -680,45 +670,51 @@ const [isOn, setIsOn] = React.useState(false); // Initialize with form value
   />
 
                   </div>
-                  <div className="flex items-center justify-between">
-                  <Button 
-                  type="button"
-        onClick={handleToggle} 
-        className={`py-2 px-4 ${isOn ? 'bg-green-500' : 'bg-red-500'} text-white`}
-      >
-        {isOn ? 'Turn Off' : 'Turn On'}
-      </Button>
-
-      {/* Conditional Rendering */}
-      {isOn && (
-
-
                   <FormField
     control={form.control}
-    name={`classes.${groupIndex}.startDate`}
+    name={`classes.${groupIndex}.active`}
     render={({ field }) => (
       <FormItem className="w-[100px]">
-        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">{t('start date')}:</FormLabel>
+        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Active:</FormLabel>
         <FormControl>
-        <CalendarDatePicker
-            {...field}
-            date={getValues(`classes.${groupIndex}.startDate`)}
-            setDate={(selectedValue) => {
-              if (selectedValue === undefined) {
-                // Handle undefined case if needed
-              } else {
-                form.setValue(`classes.${groupIndex}.startDate`, selectedValue);
-                form.setValue(`classes.${groupIndex}.nextPaymentDate`, addWeeks(selectedValue, 4));
-
-              }
-            }}
-          />
+        <Button 
+                  type="button"
+        onClick={()=>setValue(`classes.${groupIndex}.active`,!watch(`classes.${groupIndex}.active`))} 
+        className={` ${watch(`classes.${groupIndex}.active`) ? 'bg-green-500' : 'bg-red-500'} text-white`}
+      >
+        {watch(`classes.${groupIndex}.active`) ? 'Turn Off' : 'Turn On'}
+      </Button>
         </FormControl>
       </FormItem>
     )}
   />
-      )}
-          </div>
+      
+                 {watch(`classes.${groupIndex}.active`)&&(
+                  <FormField
+                  control={form.control}
+                  name={`classes.${groupIndex}.startDate`}
+                  render={({ field }) => (
+                    <FormItem className="w-[100px]">
+                      <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">{t('start date')}:</FormLabel>
+                      <FormControl>
+                      <CalendarDatePicker
+                          {...field}
+                          date={getValues(`classes.${groupIndex}.startDate`)}
+                          setDate={(selectedValue) => {
+                            if (selectedValue === undefined) {
+                              // Handle undefined case if needed
+                            } else {
+                              form.setValue(`classes.${groupIndex}.startDate`, selectedValue);
+              
+              
+                            }
+                          }}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                 )} 
                   <Button
                     type="button"
                     variant="destructive"
@@ -859,7 +855,8 @@ const [isOn, setIsOn] = React.useState(false); // Initialize with form value
           stream: schoolType === 'high'?[]:[schoolType],
           year: '',
           paymentType: '',
-          startDate:new Date()
+          startDate:new Date(),
+          active:false
         });
       }}
     >
@@ -1071,11 +1068,24 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
       }
   
       if (updatedClasses && Array.isArray(updatedClasses)) {
-        for (const classupdate of updatedClasses) {        
-          const newClass={...classupdate,startDate:adjustStartDateToFirstSession(classupdate.startDate, classupdate.groups),
-            nextPaymentDate:getNextPaymentDate(classupdate.groups, classupdate.startDate)}
+        for (const classupdate of updatedClasses) {    
+          const classesDetailes=classes.find(cls=>cls.id===classupdate.id).active
+          if (classesDetailes===false && classupdate.active===true){
+            const newClass = {
+              ...classupdate,
+              startDate: classupdate.active 
+                ? adjustStartDateToFirstSession(classupdate.startDate, classupdate.groups) 
+                : classupdate.startDate,
+              ...(classupdate.active && {
+                nextPaymentDate: getNextPaymentDate(classupdate.groups, classupdate.startDate),
+              }),
+            };
+            const updatedStudents =classupdate.students.map(std => ({
+              ...std,
+              nextPaymentDate: getNextPaymentDate(classupdate.groups, classupdate.startDate),
+            }));
             await updateClassGroup(classupdate.id,newClass);
-          
+            await activateStudents(classupdate.id,updatedStudents)
             setClasses(prevClasses =>
               prevClasses.map(cls => {
                 if (cls.id === newClass.id) {
@@ -1111,6 +1121,49 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
                 return std; // Return the student as is if not in studentsToRemove
               })
             );
+          }    
+          if (classesDetailes===false && classupdate.active===false){
+            const newClass = {
+              ...classupdate,
+            };
+            await updateClassGroup(classupdate.id,newClass);
+            setClasses(prevClasses =>
+              prevClasses.map(cls => {
+                if (cls.id === newClass.id) {
+                  return {...newClass};
+                }
+                return cls;
+              })
+            );
+            setTeachers(prevTeachers =>
+              prevTeachers.map(cls => {
+                if (cls.id === teacher.id) {
+                  return {
+                    ...cls,
+                    classes: cls.classes.map(cls =>
+                      cls.id === newClass.id ? {...newClass } : cls
+                    )
+                  };
+                }
+                return cls;
+              })
+            );
+            setStudents(prevStudents =>
+              prevStudents.map(std => {
+                if (newClass.students.some(st => st.id === std.id)) {
+                  // If the student is in studentsToRemove, update their classes
+                  return {
+                    ...std,
+                    classes: std.classes.map(cls =>
+                      cls.id === newClass.id? {...newClass } : cls
+                    )
+                  };
+                }
+                return std; // Return the student as is if not in studentsToRemove
+              })
+            );
+          }    
+        
         }
     }
   }

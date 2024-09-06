@@ -422,6 +422,7 @@ const onSelected = (selectedStudent: any) => {
                           nextPaymentDate: item.nextPaymentDate,
                           debt: Math.abs(item.debt - item.amountPaid),
                           sessionsLeft: item.sessionsLeft,
+                          sessionsToStudy:cls.numberOfSessions
                         }
                       : cls
                   ),

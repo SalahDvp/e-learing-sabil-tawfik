@@ -64,9 +64,10 @@ export async function uploadAndLinkToCollection(
           // Collect data for use in the transaction
           classUpdates.push({ classID: cls.id, newIndex, group: cls.group ,cs:cls.cs,
             sessionsLeft:classData.numberOfSessions,
-            amount:cls.amount,
-            debt:cls.debt,
-            nextPaymentDate:cls.nextPaymentDate,
+            amount:classData.active? cls.amount : classData.amount,
+            debt: classData.active? cls.debt : classData.amount,
+            active:classData.active,
+            ...(classData.active && { nextPaymentDate:classData?.nextPaymentDate }),
             sessionsToStudy:cls.sessionsToStudy});
         } else {
           console.log('No such document for class ID:', cls.id);
@@ -86,9 +87,9 @@ export async function uploadAndLinkToCollection(
               year: student.year,
               group: update.group ,
               cs:update.cs,
-              sessionsLeft:update.sessionsLeft,
+              sessionsLeft:0,
               amount:update.amount,
-              nextPaymentDate:update.nextPaymentDate,
+              ...(update.active && { nextPaymentDate:update?.nextPaymentDate }),
               sessionsToStudy:update.sessionsToStudy,
               debt:update.debt
             })
@@ -153,21 +154,14 @@ export const deleteStudent = async (student, classes) => {
       }
 
       const indx = studentDetails.index;
-console.log('fdskwdkfkfkffkfkfkfkf',cls.group,student.id,indx,student.name,student.year,studentDetails.cs);
+
 
       // Reference to the class document
       const classDocRef = doc(db, 'Groups', cls.id);
 
       // Update the class document
       await updateDoc(classDocRef, {
-        students: arrayRemove({
-          group: cls.group,
-          id: student.id,
-          index: indx,
-          name: student.name,
-          year: student.year,
-          cs: studentDetails.cs
-        })
+        students: arrayRemove(studentDetails)
       });
     });
 
@@ -183,9 +177,7 @@ console.log('fdskwdkfkfkffkfkfkfkf',cls.group,student.id,indx,student.name,stude
     console.error('Error deleting student:', error);
   }
 };
-const parseAndFormatDate = (dateString: string, formatString: string): Date => {
-    return parse(dateString, formatString, new Date());
-  };
+
 export const formatDateToYYYYMMDD = (date: Date): string => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are zero-indexed
@@ -219,10 +211,7 @@ export const formatDateToYYYYMMDD = (date: Date): string => {
   
     const classDocRef = doc(db, 'Groups', classId);
     await updateDoc(classDocRef, {
-      students: arrayUnion({ group, id:studentID, index, name:studentName, year,cs,sessionsLeft:student.sessionsLeft,
-        amount:student.amount,
-        nextPaymentDate:student?.nextPaymentDate,
-        sessionsToStudy:student.sessionsToStudy,debt:student.debt,})
+      students: arrayUnion(student)
     });
   
     const studentDocRef = doc(db, 'Students', studentId);
@@ -243,11 +232,7 @@ export const formatDateToYYYYMMDD = (date: Date): string => {
   
       const classDocRef = doc(db, 'Groups', id);
       await updateDoc(classDocRef, {
-        students: arrayRemove({ group:student.group, id:studentId, index:student.index, name:studentName, year:student.year,cs:student.cs,sessionsLeft:student.sessionsLeft,
-          amount:student.amount,
-          nextPaymentDate:student?.nextPaymentDate,
-          sessionsToStudy:student.sessionsToStudy,
-          debt:student.debt,})
+        students: arrayRemove(student)
       });
      }
     

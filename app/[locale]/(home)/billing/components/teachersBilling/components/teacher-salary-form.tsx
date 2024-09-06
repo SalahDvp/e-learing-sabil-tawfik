@@ -84,7 +84,7 @@ const getGroupsByTeacher = (classes, teacherId) => {
     )
     .map(cls => {
       const totalAmount = cls.students.reduce((acc, std) => {
-        const studiedLessons = cls.numberOfSessions - std.sessionsLeft;
+        const studiedLessons = std.sessionsToStudy- std.sessionsLeft;
         const studentAmount = studiedLessons * (cls.amount / cls.numberOfSessions);
         return acc + studentAmount;
       }, 0);
@@ -94,8 +94,8 @@ const getGroupsByTeacher = (classes, teacherId) => {
         groupcode: cls.group,
         amount: cls.amount,
         totalAmount: totalAmount,
-        students:cls.students.length,
-
+        students:cls.students,
+        studentsLength:cls.students.length,
       };
     });
 };
@@ -229,7 +229,7 @@ const getGroupsByTeacher = (classes, teacherId) => {
                 {receipt.expenses.map((item, index) => (
                   <TableRow key={index}>
                     <TableCell>{item.groupcode}</TableCell>
-                    <TableCell>{item.students}</TableCell>
+                    <TableCell>{item.studentsLength}</TableCell>
                     <TableCell>{receipt.teacher.amount}%</TableCell>
                     <TableCell>DZD{item.totalAmount * receipt.teacher.amount / 100}</TableCell>
                   </TableRow>
@@ -354,6 +354,7 @@ const [teacherModal,setTeacherModal]=useState(false)
     name: "expenses",
 
   });
+console.log(watch("expenses"));
 
   const renderInput = (fieldName:string, field:any) => {
     switch (fieldName) {
@@ -780,7 +781,7 @@ const [teacherModal,setTeacherModal]=useState(false)
       <Input
        placeholder={t('enter-price')}
        type="number"
-       value={option.students}
+       value={option.studentsLength}
       readOnly
       />
 

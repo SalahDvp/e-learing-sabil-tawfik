@@ -283,17 +283,14 @@ export default function StudentForm() {
         group: selectedClassId.group,
         groups: selectedClassId.groups,
         id: selectedClassId.id,
-        index: selectedClassId.students.length + 1, 
+        index: selectedClassId.students.length + 1,
         cs: classes[index].cs,
-      
-        sessionsLeft:0,
-        amount:a.totalDue,
-        debt:a.totalDue,
-        nextPaymentDate:selectedClassId?.nextPaymentDate,
-        sessionsToStudy:a.numberOfSessionsLeft
-
+        sessionsLeft: 0,
+        amount:selectedClassId.active? a.totalDue : selectedClassId.amount,
+        debt: selectedClassId.active? a.totalDue : selectedClassId.amount,
+        ...(selectedClassId.active && { nextPaymentDate: selectedClassId?.nextPaymentDate }),
+        sessionsToStudy: selectedClassId.active? a.numberOfSessionsLeft :selectedClassId.numberOfSessions,
       };
-  
       const updatedClassUIDs = classesUids[index] || {};
       updatedClassUIDs.id = selectedClassId.id;
       updatedClassUIDs.group = selectedClassId.group;
@@ -302,7 +299,7 @@ export default function StudentForm() {
       classesUids[index] = updatedClassUIDs;
     } else {
       console.log("Updating other field:", field, value);
-      classes[index] = {         ...classes[index],id: classes[index].id, name: classes[index].name, subject: classes[index].subject, group: classes[index].group, cs: value,amount:classes[index].amount};
+      classes[index] = {         ...classes[index],id: classes[index].id, name: classes[index].name, subject: classes[index].subject, group: classes[index].group, cs: value,amount:classes[index].amount,debt:classes[index].debt};
     }
   
     setValue(`classes`, classes);
@@ -1015,9 +1012,9 @@ console.log(data.classes);
                 group: cls.group,
                 cs:matchingClass.cs,
                 sessionsLeft:matchingClass.numberOfSessions,
-                amount:matchingClass.totalDue,
-                debt:matchingClass.totalDue,
-                nextPaymentDate:matchingClass?.nextPaymentDate,
+                amount:matchingClass.amount,
+                debt:matchingClass.debt,
+                ...(matchingClass.active && { nextPaymentDate:matchingClass?.nextPaymentDate }),
                 sessionsToStudy:matchingClass.numberOfSessionsLeft
               },
             ],

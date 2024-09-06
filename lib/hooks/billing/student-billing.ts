@@ -156,7 +156,8 @@ export async function updateStudentPaymentInfo(groupId, studentData, item) {
             ...std,
             nextPaymentDate: item.nextPaymentDate,
             debt: Math.abs(item.debt - item.amountPaid),
-            sessionsLeft: item.sessionsLeft
+            sessionsLeft: item.sessionsLeft,
+            sessionsToStudy:groupDoc.data().numberOfSessions
           }
         : std
     );

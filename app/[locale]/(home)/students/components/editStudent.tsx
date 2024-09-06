@@ -266,17 +266,14 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
         group: selectedClassId.group,
         groups: selectedClassId.groups,
         id: selectedClassId.id,
-        index: selectedClassId.students.length + 1, 
+        index: selectedClassId.students.length + 1,
         cs: classes[index].cs,
-      
-        sessionsLeft:0,
-        amount:a.totalDue,
-        debt:a.totalDue,
-        nextPaymentDate:selectedClassId?.nextPaymentDate,
-        sessionsToStudy:a.numberOfSessionsLeft
-
+        sessionsLeft: 0,
+        amount:selectedClassId.active? a.totalDue : selectedClassId.amount,
+        debt: selectedClassId.active? a.totalDue : selectedClassId.amount,
+        ...(selectedClassId.active && { nextPaymentDate: selectedClassId?.nextPaymentDate }),
+        sessionsToStudy: selectedClassId.active? a.numberOfSessionsLeft :selectedClassId.numberOfSessions,
       };
-  
       const updatedClassUIDs = classesUids[index] || {};
       updatedClassUIDs.id = selectedClassId.id;
       updatedClassUIDs.group = selectedClassId.group;
@@ -285,13 +282,12 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
       classesUids[index] = updatedClassUIDs;
     } else {
       console.log("Updating other field:", field, value);
-      classes[index] = {         ...classes[index],id: classes[index].id, name: classes[index].name, subject: classes[index].subject, group: classes[index].group, cs: value,amount:classes[index].amount};
+      classes[index] = {...classes[index],id: classes[index].id, name: classes[index].name, subject: classes[index].subject, group: classes[index].group, cs: value,amount:classes[index].amount,debt:classes[index].debt};
     }
   
     setValue(`classes`, classes);
     setValue(`classesUIDs`, classesUids);
   };
-
   const calculatedAmount = useMemo(() => {
     const amounts = watch("classes");
     if (!Array.isArray(amounts)) return 0; // Handle cases where "fields" is not an array
@@ -805,7 +801,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,stud
     // Add students to classes
     if (added && Array.isArray(added)) {
       for (const cls of added) {
-        const { group, id,  name,cs } = cls;
+        const { group, id,  name,cs,active,amount,debt,sessionsLeft,sessionsToStudy} = cls;
         const studentCount = await getStudentCount(id);
         const index = studentCount ;
 
@@ -813,11 +809,15 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,stud
           prevClasses.map((cls: { id: any; students: any; }) =>
       cls.id === id ? {
         ...cls,
-        students: [...cls.students, { group, id,cs, index:index, name, year:student.year,sessionsLeft:cls.sessionsLeft,
-          amount:cls.amount,
-          debt:cls.debt,
-          nextPaymentDate:cls?.nextPaymentDate,
-          sessionsToStudy:cls.sessionsToStudy }]
+        students: [...cls.students, { group, id,cs, 
+          index:index, 
+          name, 
+          year:student.year,
+          sessionsLeft:sessionsLeft,
+          amount:amount,
+          debt:debt,
+          ...(active && { nextPaymentDate: cls?.nextPaymentDate }),
+          sessionsToStudy:sessionsToStudy}]
       } : cls
     )
   );
@@ -834,18 +834,31 @@ std.id === student.id ? {
 
 
   
-await addStudentToClass({...cls,index:index,year:student.year,studentName:student.name,studentID:student.id},cls.id,student.id)
-
-      }
+await addStudentToClass({ group:cls.group, id:cls.id,cs:cls.cs, 
+  index:index, 
+  name, 
+  year:student.year,
+  sessionsLeft:sessionsLeft,
+  amount:amount,
+  debt:debt,
+  ...(active && { nextPaymentDate: cls?.nextPaymentDate }),
+  sessionsToStudy:sessionsToStudy},cls.id,student.id)}
     }
   
     // Remove students from classes
     if (removed && Array.isArray(removed)) {
       for (const cls of removed) {
-        const { id, group,index,name,year,cs} = cls;
-       
+        const { group, id,  name,cs,active,amount,debt,sessionsLeft,sessionsToStudy,index} = cls;
         
-await removeStudentFromClass({...cls,year:student.year},student.id,student.name)
+await removeStudentFromClass({ group:cls.group, id:cls.id,cs:cls.cs, 
+  index:index, 
+  name, 
+  year:student.year,
+  sessionsLeft:sessionsLeft,
+  amount:amount,
+  debt:debt,
+  ...(active && { nextPaymentDate: cls?.nextPaymentDate }),
+  sessionsToStudy:sessionsToStudy},student.id,student.name)
        setClasses((prevClasses: any[]) => 
           prevClasses.map((cls: { id: any; students: any[]; }) =>
       cls.id === id ? {
