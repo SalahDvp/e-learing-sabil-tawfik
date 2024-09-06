@@ -656,7 +656,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
   />
 
                   </div>
-                  <div className="flex items-center">
+                  {/* <div className="flex items-center">
                     <Label>Active</Label>
                   <Button 
                   type="button"
@@ -665,9 +665,9 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
       >
         {isOn ? 'Turn Off' : 'Turn On'}
       </Button>
-      </div>
+      </div> */}
       {/* Conditional Rendering */}
-      {isOn && (
+
                   <FormField
     control={form.control}
     name={`classes.${groupIndex}.startDate`}
@@ -692,7 +692,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
       </FormItem>
     )}
   />
-      )}
+      
                
                   <Button
                     type="button"
