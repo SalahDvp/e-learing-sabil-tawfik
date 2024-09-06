@@ -171,3 +171,30 @@ return updatedStudents
     console.error("Error updating student payment info:", error);
   }
 }
+
+export async function updateSessionLeft(groupId, studentData, item) {
+  try {
+    // Fetch the group document
+    const groupDoc = await getDoc(doc(db, 'Groups', groupId));
+    
+    // Extract the students array and update the specific student
+    const updatedStudents = groupDoc.data().students.map((std) => 
+      std.id === studentData.id 
+        ? {
+            ...std,
+            sessionsLeft: item.sessionsLeft,
+            sessionsToStudy: item.sessionsToStudy,
+            //sessionsToStudy: item.sessionsToStudy
+          }
+        : std
+    );
+
+    // Update the group document with the modified students array
+    await updateDoc(doc(db, 'Groups', groupId), {
+      students: updatedStudents
+    });
+return updatedStudents
+  } catch (error) {
+    console.error("Error updating student payment info:", error);
+  }
+}
