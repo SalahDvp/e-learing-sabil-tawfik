@@ -17,13 +17,13 @@ import TeacherSalaryDashBoard from "./components/teachersBilling/page";
 import Studentpayment from "./components/studentPayment/page";
 import { useTranslations } from "next-intl";
 import { useData } from "@/context/admin/fetchDataContext";
-
+import { useUser } from  "@/lib/auth";
 
 
 
 export default function DashboardPage() {
   const t=useTranslations()
-
+  const { role  } = useUser();
   return (
     <>
       <div className=" flex-col md:flex">
@@ -35,13 +35,15 @@ export default function DashboardPage() {
               {/* <Button>{t('download')}</Button> */}
             </div>
           </div>
-          <Tabs defaultValue="teachers" className="space-y-4">
+          <Tabs defaultValue="students" className="space-y-4">
+         
             <TabsList>
-            <TabsTrigger value="teachers">{t("teachers")}</TabsTrigger>
-              <TabsTrigger value="payouts">{t('payouts')}</TabsTrigger>
-              <TabsTrigger value="students">{t("Students")}</TabsTrigger>
-              <TabsTrigger value="analytics" disabled>{t('analytics')}</TabsTrigger>
+            <TabsTrigger value="students">{t("Students")}</TabsTrigger>
+            <TabsTrigger value="teachers" disabled={role}>{t('teachers')}</TabsTrigger>    
+            <TabsTrigger value="payouts">{t('payouts')}</TabsTrigger>
+            <TabsTrigger value="analytics" disabled={role}>{t('analytics')}</TabsTrigger>
             </TabsList>
+
             <TabsContent value="analytics" className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <CardsRevenue />
