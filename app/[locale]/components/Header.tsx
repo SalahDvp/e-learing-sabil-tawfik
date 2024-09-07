@@ -16,10 +16,11 @@ import { usePathname, useRouter } from "@/navigation"
 import { useTranslations } from "next-intl"
 import LocaleSwitcher from "@/components/LocaleSwitcher"
 import { signOut } from "@/lib/auth"
+import { useUser } from  "@/lib/auth";
 
 export default function Header(){
 const pathname=usePathname()
-
+const { role  } = useUser();
 const t=useTranslations()
     return(
       <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
@@ -56,20 +57,46 @@ const t=useTranslations()
 
         Etudiants</Link>
         <Link
-          href="/teachers"
-          className={`${pathname=== '/teachers' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
-        >
-          {t('teachers-0')} </Link>
+  href={role ? '/teachers' : '#'}
+  onClick={(e) => {
+    if (role) {
+      e.preventDefault(); // Prevent navigation if role is false
+    }
+  }}
+  className={`${
+    pathname === '/teachers'
+      ? 'text-black-500 dark:text-white'
+      : role
+        ? 'text-muted-foreground hover:text-foreground foreground transition-colors'
+        : 'text-gray-400 cursor-not-allowed' // Disabled styling when role is not set
+  }`}
+>
+  {t('teachers-0')}
+</Link>
+
           <Link
           href="/billing"
           className={`${pathname=== '/billing' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
-        >
+          disabled={role} >
           {t('billing')} </Link>
-        <Link
-          href="/settings"
-          className={`${pathname=== '/settings' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
-        >
-          {t('settings')} </Link>
+          <Link
+            href={role ? '/settings' : '#'}
+            onClick={(e) => {
+              if (role) {
+                e.preventDefault(); // Prevent navigation if role is false
+              }
+            }}
+            className={`${
+              pathname === '/settings' 
+                ? 'text-black-500 dark:text-white' 
+                : role 
+                  ? 'text-muted-foreground hover:text-foreground foreground transition-colors' 
+                  : 'text-gray-400 cursor-not-allowed' // Disabled styling
+            }`}
+          >
+            {t('settings')}
+          </Link>
+
 
       </nav>
       <Sheet>
