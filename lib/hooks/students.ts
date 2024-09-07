@@ -60,15 +60,26 @@ export async function uploadAndLinkToCollection(
           const students = classData.students || [];
           const highestIndex = students.reduce((max, student) => Math.max(max, student.index || 0), 0);
           const newIndex = highestIndex + 1;
-  
-          // Collect data for use in the transaction
-          classUpdates.push({ classID: cls.id, newIndex, group: cls.group ,cs:cls.cs,
-            sessionsLeft:classData.numberOfSessions,
-            amount:classData.active? cls.amount : classData.amount,
-            debt: classData.active? cls.debt : classData.amount,
-            active:classData.active,
-            ...(classData.active && { nextPaymentDate:classData?.nextPaymentDate }),
-            sessionsToStudy:cls.sessionsToStudy});
+          if(classData.paymentType==='monthly'){
+     // Collect data for use in the transaction
+     classUpdates.push({ classID: cls.id, newIndex, group: cls.group ,cs:cls.cs,
+      sessionsLeft:classData.numberOfSessions,
+      amount:classData.active? cls.amount : classData.amount,
+      debt: classData.active? cls.debt : classData.amount,
+      active:classData.active,
+      ...(classData.active && { nextPaymentDate:classData?.nextPaymentDate }),
+      sessionsToStudy:cls.sessionsToStudy});
+          }
+          else{
+            classUpdates.push({ classID: cls.id, newIndex, group: cls.group ,cs:cls.cs,
+              sessionsLeft:0,
+              amount: cls.amount,
+              debt: 0,
+              active:classData.active,
+              ...(classData.active && { nextPaymentDate:classData?.nextPaymentDate }),
+              sessionsToStudy:0});
+          }
+     
         } else {
           console.log('No such document for class ID:', cls.id);
           // Handle missing class documents if necessary
@@ -216,21 +227,21 @@ export const formatDateToYYYYMMDD = (date: Date): string => {
   
     const studentDocRef = doc(db, 'Students', studentId);
     await updateDoc(studentDocRef, {
-      classesUIDs: arrayUnion({ id: id, group: group })
+      classesUIDs: arrayUnion({ id: classId, group: group })
     });
   
   }
-  export async function removeStudentFromClass(student,studentId,studentName) {
+  export async function removeStudentFromClass(student,studentId,classId) {
     const { id, group,index,name,year,cs } = student;
   
     const studentDocRef = doc(db, 'Students', studentId);  
 
   
       await updateDoc(studentDocRef, {
-        classesUIDs: arrayRemove({ id, group })
+        classesUIDs: arrayRemove({ id:classId, group })
       });
   
-      const classDocRef = doc(db, 'Groups', id);
+      const classDocRef = doc(db, 'Groups', classId);
       await updateDoc(classDocRef, {
         students: arrayRemove(student)
       });

@@ -51,6 +51,7 @@ import ReactToPrint from 'react-to-print';
 import { differenceInCalendarDays } from 'date-fns';
 import { PrinterIcon } from "lucide-react"
 import { Table, TableBody, TableCell, TableRow,TableHeader,TableHead } from "@/components/ui/table";
+import { addPaymentTransaction } from "@/lib/hooks/billing/student-billing";
 function parseDateTimeRange(dateTimeRange) {
     // Split the string into components
     const parts = dateTimeRange.split('-');
@@ -99,12 +100,17 @@ const checkClassTime = (scanTime: Date, student: any, groupClasses: any[]): any[
           // Add matching class with group information to the result array
           matchingClassesWithGroup.push({
             ...groupElement,
+            ...matchingClasses,
             subject: matchingClasses.subject,
             id: matchingClasses.id,
             studentIndex: matchingClasses.index,
             studentGroup: matchingClasses.group,
             name: groupClass.teacherName,
             sessionsLeft: matchingClasses.sessionsLeft,
+            nextPaymentDate:matchingClasses.nextPaymentDate,
+            paymentType:groupClass.paymentType,
+            isPaid:true,
+            amount:matchingClasses.amount
           });
         }
       }
@@ -266,8 +272,9 @@ export default function Home() {
           setOpenAlert(true);
           return;
         }
- 
-  
+
+          if(selectedClass.paymentType==="monthly"){
+              
         // Update attendance list
         currentAttendanceList.attendanceList.push({
           index: selectedClass.studentIndex,
@@ -320,20 +327,7 @@ export default function Home() {
           });
         } else {
           const date = parseDateTimeRange(`${year}-${month}-${day}-${selectedClass.start}-${selectedClass.end}`);
-          const jj={  group: selectedClass.studentGroup,
-            end: date.endDateTime,
-            id: dateTimeUID,
-            start: date.startDateTime,
-            attendanceList: [{
-              name: studentData?.name,
-              group: selectedClass.studentGroup,
-              index: selectedClass.studentIndex,
-              status: 'present',
-              id: studentData?.id
-            }]}
-          console.log("date",jj);
-          
-          await setDoc(attendanceDocRef, {
+                    await setDoc(attendanceDocRef, {
             group: selectedClass.studentGroup,
             end: date.endDateTime,
             id: dateTimeUID,
@@ -349,12 +343,75 @@ export default function Home() {
         }
   
         await updateDoc(doc(db, 'Groups', clsid), { students: updatedClasses[classIndex].students });
-  
-        generateBillIfNeeded({
+          }else{
+                 // Update attendance list
+        currentAttendanceList.attendanceList.push({
+          index: selectedClass.studentIndex,
+          group: selectedClass.studentGroup,
           name: studentData?.name,
-          subject: selectedClass.subject,
-          year: selectedClass.year
+          status: 'present',
+          id: studentData?.id,
+          isPaid:selectedClass.isPaid,
         });
+  
+        updatedClasses[classIndex] = {
+          ...updatedClasses[classIndex],
+          students: updatedClasses[classIndex].students.map(std => std.id === studentData?.id
+            ? { ...std, debt:selectedClass.isPaid?std.debt+0:std.debt+std.amount}
+            : std
+          ),
+          Attendance: {
+            ...updatedClasses[classIndex].Attendance,
+            [dateTimeUID]: currentAttendanceList
+          }
+        };
+  
+        updatedStudents.forEach(std => {
+          if (std.id === studentData?.id) {
+            std.classes = std.classes.map(cls => cls.id === clsid
+              ? { ...cls,  debt:selectedClass.isPaid?cls.debt+0:cls.debt+cls.amount}
+              : cls
+            );
+          }
+        });
+  
+        const attendanceDocRef = doc(db, 'Groups', clsid, 'Attendance', dateTimeUID);
+        const docSnapshot = await getDoc(attendanceDocRef);
+  
+        if (docSnapshot.exists()) {
+          await updateDoc(attendanceDocRef, {
+            attendanceList: arrayUnion({
+              name: studentData?.name,
+              group: selectedClass.studentGroup,
+              index: selectedClass.studentIndex,
+              status: 'present',
+              id: studentData?.id,
+              isPaid:selectedClass.isPaid
+            })
+          });
+        } else {
+          const date = parseDateTimeRange(`${year}-${month}-${day}-${selectedClass.start}-${selectedClass.end}`);
+                    await setDoc(attendanceDocRef, {
+            group: selectedClass.studentGroup,
+            end: date.endDateTime,
+            id: dateTimeUID,
+            start: date.startDateTime,
+            attendanceList: [{
+              name: studentData?.name,
+              group: selectedClass.studentGroup,
+              index: selectedClass.studentIndex,
+              status: 'present',
+              id: studentData?.id,
+              isPaid:selectedClass.isPaid
+            }]
+          });
+        }
+  
+        await updateDoc(doc(db, 'Groups', clsid), { students: updatedClasses[classIndex].students });
+        await addPaymentTransaction({paymentDate:new Date(),amount:selectedClass.amount},studentData.id)
+          }
+
+  
       };
   
       // Process each selected class
@@ -373,7 +430,188 @@ export default function Home() {
   
       // Play success audio
       audioRefSuccess.current?.play();
-  
+      const billHtml = `
+      <html>
+      <head>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            width: 72.1mm;
+            height: 210mm;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            direction: rtl; /* RTL for Arabic */
+          }
+          .bill-container {
+            padding: 10px;
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+          }
+          .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 28px;
+          }
+          .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+          }
+          .logo-container img {
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            object-fit: cover;
+          }
+          h2 {
+            font-size: 38px;
+            font-weight: 700;
+          }
+          .bill-item {
+            margin-bottom: 10px;
+            font-size: 28px;
+            font-weight: 500;
+          }
+          .bill-item label {
+            font-weight: bold;
+          }
+          .total {
+            font-size: 32px;
+            font-weight: 700;
+            text-align: right;
+            margin-top: 20px;
+          }
+          .footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 36px;
+            color: #6c757d;
+            clear: both; /* Clear floats */
+          }
+          .table-container {
+            width: 50%; /* Set table width to 50% */
+            float: right; /* Align the table to the right */
+            margin-top: 20px;
+          }
+          table {
+            width: 100%; /* Ensure the table takes up full width of the container */
+            border-collapse: collapse;
+            font-size: 32px;
+          }
+          table, th, td {
+            border: 1px solid #ccc;
+          }
+          th, td {
+            padding: 12px;
+            text-align: right; /* Align text to the right */
+          }
+          .paid {
+            color: green;
+            font-weight: bold;
+          }
+          .not-paid {
+            color: red;
+            font-weight: bold;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="bill-container">
+          <div class="header">
+            <div class="logo-container">
+              <img src="/smartschool.jpg" alt="شعار المدرسة" />
+              <h2>school name</h2>
+            </div>
+            <div style="font-size: 36px; color: #6c757d;"></div>
+          </div>
+          <div style="display: grid; gap: 24px;">
+            <div class="bill-item">
+              <label>الاسم:</label>
+              <span>${studentData.name}</span>
+            </div>
+            <div class="bill-item">
+              <label>التاريخ:</label>
+              <span>${format(new Date(), "dd-MM-yyyy")}</span>
+            </div>
+                <div class="bill-item">
+            الإجمالي: ${Object.values(selectedClasses).reduce((total, cls) => total + cls.amount, 0)} دينار
+          </div>
+          </div>
+      
+          <!-- جدول تفاصيل الفصول وحالة الدفع -->
+      <div class="table-container">
+  <table>
+    <thead>
+      <tr>
+        <th>المادة</th>
+        <th>المعلم</th>
+        <th>الوقت</th>
+        <th>الحالة</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${Object.values(selectedClasses)
+        .map(
+          (classObj) => `
+          <tr>
+            <td>${classObj.subject}</td>
+            <td>${classObj.name}</td>
+            <td>${classObj.start}</td>
+            <td class="${
+              classObj.paymentType === 'monthly' 
+              ? 'monthly' 
+              : classObj.isPaid ? 'paid' : 'not-paid'
+            }">
+              ${
+                classObj.paymentType === 'monthly' 
+                ? 'شهري' 
+                : classObj.isPaid 
+                ? 'مدفوع' 
+                : 'غير مدفوع'
+              }
+            </td>
+          </tr>
+          `
+        )
+        .join('')}
+    </tbody>
+  </table>
+</div>
+      
+          <!-- Total Section -->
+      
+          <div class="footer">
+                    1- يرجى الاحتفاظ بالوصل
+          </div>
+        </div>
+      </body>
+      </html>
+      
+      `;
+        
+          const printWindow = window.open('', '_blank');
+          
+          if (printWindow) {
+            printWindow.document.open();
+            printWindow.document.write(billHtml);
+            printWindow.document.close();
+        
+            printWindow.onload = () => {
+              printWindow.focus();
+              printWindow.print();
+              printWindow.onafterprint = () => {
+                printWindow.close(); // Close the window after printing
+              };
+            };
+          } 
       // // Clear state
       setCurrentClass(undefined);
       setCurrentClasses(undefined);
@@ -385,7 +623,7 @@ export default function Home() {
     }
   };
 
-console.log(currentClasses);
+
 
   const handleButtonClick = async () => {
     videoRef.current!.hidden = false;
@@ -407,19 +645,23 @@ console.log(currentClasses);
   };
 
   const [selectedClasses, setSelectedClasses] = useState({});
+console.log(selectedClasses);
 
   const handleSelection = (classObj, group) => {
     setSelectedClasses((prev) => {
-      // Check if the classObj already exists in the current state
-      if (prev[classObj.id]) {
-        // If it exists, remove it from the selected classes
-        const { [classObj.id]: _, ...rest } = prev;
+      const classKey = classObj.id;
+      const isClassSelected = prev[classKey] !== undefined;
+
+      
+      if (isClassSelected) {
+        // Unselect the class if it was already selected
+        const { [classKey]: removedClass, ...rest } = prev;
         return rest;
       } else {
-        // If it doesn't exist, add it to the selected classes
+        // Select the class and add it to the state
         return {
           ...prev,
-          [classObj.id]: { ...classObj, group }, //store the selected class and group by ID
+          [classKey]: { ...classObj, group, isPaid: true },
         };
       }
     });
@@ -461,10 +703,14 @@ setCurrentClasses(classInfo)
     ).sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime()); // Sort by latest paymentDate
   }, [invoices]);
   
-
-  const calculateDaysUntilNextPayment = (nextPaymentDate: Date): number => {
-    const today = new Date();
-    return differenceInCalendarDays(nextPaymentDate, today);
+  const handlePaymentStatus = (classObj, group, isPaid) => {
+    setSelectedClasses(prevState => ({
+      ...prevState,
+      [classObj.id]: {
+        ...prevState[classObj.id],
+        isPaid: isPaid
+      }
+    }));
   };
   return (
     <div className="grid md:grid-cols-3 gap-8 max-w-8xl mx-auto p-4 md:p-8">
@@ -581,91 +827,113 @@ setCurrentClasses(classInfo)
                 <span className="text-muted-foreground">{t('year')}:</span>
                 <span>{studentData.year}</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">{t('next-payment-day')}:</span>
-                <span>{new Date(studentData.nextPaymentDate).toLocaleDateString()}</span>
-              </div>
-              <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">{t('days-left-to-pay')}:</span>
-            <span
-            className={`flex items-center p-2 rounded-lg shadow-md transition-colors duration-300 ${
-              calculateDaysUntilNextPayment(studentData.nextPaymentDate) < 0 
-                ? "text-red-600 dark:text-red-300" 
-                : "text-green-600 dark:text-green-300"
-            }`}
-          >
-            {calculateDaysUntilNextPayment(studentData.nextPaymentDate) < 0 
-              ? `${Math.abs(calculateDaysUntilNextPayment(studentData.nextPaymentDate))} Days Overdue`
-              : `${calculateDaysUntilNextPayment(studentData.nextPaymentDate)} Days Remaining`}
-          </span>
-          </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">{t('debt')}:</span>
-                <span>{studentData.debt}</span>
-              </div>
-              {/*<div className="flex items-center justify-between">
-                <span className="text-muted-foreground">{t('cs')}:</span>
-                <span>{studentData.cs}</span>
-                  </div>*/}
             </div>
-            <Separator />
-            {/*<div className="grid gap-2">
-              <span className="text-muted-foreground">Classes:</span>
-              {studentData.classes.map((subject) => (
-                <div key={subject.id} className="flex flex-col">
-                  <span className="font-semibold">{subject.subject}</span>
-                  <span>prof:{subject.name}</span>
-                  <span>time:{subject.time}</span>
-                  <span>CS:{subject.cs}</span>
-                </div>
-              ))}
-              </div> */}
+
             <Separator />
             <div className="grid gap-2">
             <span className="text-muted-foreground">{t('avaliable-classes')}:</span>
             {Array.isArray(currentClasses) && currentClasses.length > 0 && (
             <RadioGroup className="grid grid-cols-2 gap-4">
               {currentClasses.map((classObj, index) => (
-                <div key={index}>
-                  {classObj.studentGroup.split(',').map((group) => (
-                    <div key={`${classObj.id}-${group}`}>
+        classObj.paymentType==='monthly'?(      
+            <div key={index}>
+          {classObj.studentGroup.split(',').map((group) => (
+            <div key={`${classObj.id}-${group}`}>
+              <RadioGroupItem
+                value={`${classObj.id}-${group}`}
+                onClick={() =>{ if (classObj.sessionsLeft <= 0) {
+                  setAlertText("L’étudiant a terminé toutes ses séances. En confirmant, cela sera ajouté à sa dette.");
+                  setOpenAlert(true);
+                  audioRefError.current?.play();
+                };
+                handleSelection(classObj, group)}}
+                id={`${classObj.id}-${group}`}
+                className="peer sr-only"
+                checked={
+                  selectedClasses[classObj.id]?.id === classObj.id &&
+                  selectedClasses[classObj.id]?.group === group
+                } // check if the current group is selected for this class
+              />
+              <Label
+                htmlFor={`${classObj.id}-${group}`}
+      
+                className={`flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary
+                ${classObj.sessionsLeft <= 0? 'bg-red-500 text-white' : ''}
+                ${
+                  selectedClasses[classObj.id]?.id === classObj.id &&
+                  selectedClasses[classObj.id]?.group === group
+                    ? 'border-primary'
+                    : ''
+                }`}
+              >
+                <span className="font-semibold">{classObj.subject}</span>
+                <span>{classObj.name}</span>
+                <span>{`Group: ${group}`}</span>
+                <span>{`Séances restantes: ${classObj.sessionsLeft}`}</span>
+                <span>{`Prochaine date de paiment: ${classObj.nextPaymentDate}`}</span>
+                <span>{`Dette: ${classObj.debt}`}</span>
+                <span>{`${classObj.day}, ${classObj.start} - ${classObj.end}`}</span>
+                
+              </Label>
+            </div>
+          ))}
+        </div>):(        
+          <div key={index}>
+                    <div key={`${classObj.id}`}>
                       <RadioGroupItem
-                        value={`${classObj.id}-${group}`}
-                        onClick={() =>{ if (classObj.sessionsLeft <= 0) {
+                        value={`${classObj.id}`}
+                        onClick={() =>{ 
+                          if (classObj.sessionsLeft < 0) {
                           setAlertText("L’étudiant a terminé toutes ses séances. En confirmant, cela sera ajouté à sa dette.");
                           setOpenAlert(true);
                           audioRefError.current?.play();
                         };
-                        handleSelection(classObj, group)}}
-                        id={`${classObj.id}-${group}`}
+                        handleSelection(classObj, classObj.group)}}
+                        id={`${classObj.id}`}
                         className="peer sr-only"
                         checked={
                           selectedClasses[classObj.id]?.id === classObj.id &&
-                          selectedClasses[classObj.id]?.group === group
+                          selectedClasses[classObj.id]?.group === classObj.group
                         } // check if the current group is selected for this class
                       />
                       <Label
-                        htmlFor={`${classObj.id}-${group}`}
+                        htmlFor={`${classObj.id}`}
               
                         className={`flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary
-                        ${classObj.sessionsLeft <= 0? 'bg-red-500 text-white' : ''}
+
                         ${
                           selectedClasses[classObj.id]?.id === classObj.id &&
-                          selectedClasses[classObj.id]?.group === group
+                          selectedClasses[classObj.id]?.group === classObj.group
                             ? 'border-primary'
                             : ''
                         }`}
                       >
-                        <span className="font-semibold">{classObj.subject}</span>
-                        <span>{classObj.name}</span>
-                        <span>{`Group: ${group}`}</span>
-                        <span>{`Séances restantes: ${classObj.sessionsLeft}`}</span>
-                        <span>{`${classObj.day}, ${classObj.start} - ${classObj.end}`}</span>
+                          <span className="font-semibold">{classObj.subject}</span>
+                <span>{classObj.name}</span>
+                <span>{`Group: ${classObj.group}`}</span>
+                <span>{`Dette: ${classObj.debt}`}</span>
+                <span>{`${classObj.day}, ${classObj.start} - ${classObj.end}`}</span>
+                <div className="flex gap-2 mt-2">
+            <button
+              className={`px-2 py-1 rounded ${
+                selectedClasses[classObj.id]?.isPaid ? 'bg-green-500' :'bg-gray-500'
+              }`}
+              onClick={() => handlePaymentStatus(classObj, classObj.group, true)} // Mark as Paid
+            >
+              P
+            </button>
+            <button
+              className={`px-2 py-1 rounded ${
+                !selectedClasses[classObj.id]?.isPaid ? 'bg-red-500' : 'bg-gray-500'
+              }`}
+              onClick={() => handlePaymentStatus(classObj, classObj.group, false)} // Mark as Not Paid
+            >
+              Np
+            </button>
+          </div>
                       </Label>
                     </div>
-                  ))}
-                </div>
+                </div>)
               ))}
             </RadioGroup>
           )}

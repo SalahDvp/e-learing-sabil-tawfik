@@ -51,11 +51,11 @@ export const addPaymentTransaction = async (transaction: any, studentID: string)
       // Initialize the document with an array of month objects if it doesn't exist
       const data = {
         totalExpenses: 0,
-        totalIncome: 0,
+        totalIncome: transaction.amount,
         data: months.map(monthh => ({
           month: monthh.name,
           expenses: 0,
-          income: 0
+          income: transaction.amount
         }))
       };
       await setDoc(analyticsRef, data);

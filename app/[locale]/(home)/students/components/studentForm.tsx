@@ -276,27 +276,49 @@ export default function StudentForm() {
         return;
       }
   
+if(selectedClassId.paymentType==='monthly'){
+  const a=calculateAmountDue(selectedClassId.startDate, selectedClassId?.nextPaymentDate, new Date(), selectedClassId?.groups, selectedClassId.amount,selectedClassId.numberOfSessions)
+  const updatedClass = {
+    ...classes[index],
+    group: selectedClassId.group,
+    groups: selectedClassId.groups,
+    id: selectedClassId.id,
+    index: selectedClassId.students.length + 1,
+    cs: classes[index].cs,
+    sessionsLeft: 0,
+    amount:selectedClassId.active? a.totalDue : selectedClassId.amount,
+    debt: selectedClassId.active? a.totalDue : selectedClassId.amount,
+    ...(selectedClassId.active && { nextPaymentDate: selectedClassId?.nextPaymentDate }),
+    sessionsToStudy: selectedClassId.active? a.numberOfSessionsLeft :selectedClassId.numberOfSessions,
+  };
+  const updatedClassUIDs = classesUids[index] || {};
+  updatedClassUIDs.id = selectedClassId.id;
+  updatedClassUIDs.group = selectedClassId.group;
 
-      const a=calculateAmountDue(selectedClassId.startDate, selectedClassId?.nextPaymentDate, new Date(), selectedClassId?.groups, selectedClassId.amount,selectedClassId.numberOfSessions)
-      const updatedClass = {
-        ...classes[index],
-        group: selectedClassId.group,
-        groups: selectedClassId.groups,
-        id: selectedClassId.id,
-        index: selectedClassId.students.length + 1,
-        cs: classes[index].cs,
-        sessionsLeft: 0,
-        amount:selectedClassId.active? a.totalDue : selectedClassId.amount,
-        debt: selectedClassId.active? a.totalDue : selectedClassId.amount,
-        ...(selectedClassId.active && { nextPaymentDate: selectedClassId?.nextPaymentDate }),
-        sessionsToStudy: selectedClassId.active? a.numberOfSessionsLeft :selectedClassId.numberOfSessions,
-      };
-      const updatedClassUIDs = classesUids[index] || {};
-      updatedClassUIDs.id = selectedClassId.id;
-      updatedClassUIDs.group = selectedClassId.group;
-  
-      classes[index] = updatedClass;
-      classesUids[index] = updatedClassUIDs;
+  classes[index] = updatedClass;
+  classesUids[index] = updatedClassUIDs;
+}else{
+  const updatedClass = {
+    ...classes[index],
+    group: selectedClassId.group,
+    groups: selectedClassId.groups,
+    id: selectedClassId.id,
+    index: selectedClassId.students.length + 1,
+    cs: classes[index].cs,
+    sessionsLeft: 0,
+    amount:selectedClassId.amount,
+    debt:0,
+    ...(selectedClassId.active && { nextPaymentDate: selectedClassId?.nextPaymentDate }),
+    sessionsToStudy: 0,
+  };
+  const updatedClassUIDs = classesUids[index] || {};
+  updatedClassUIDs.id = selectedClassId.id;
+  updatedClassUIDs.group = selectedClassId.group;
+
+  classes[index] = updatedClass;
+  classesUids[index] = updatedClassUIDs;
+}
+
     } else {
       console.log("Updating other field:", field, value);
       classes[index] = {         ...classes[index],id: classes[index].id, name: classes[index].name, subject: classes[index].subject, group: classes[index].group, cs: value,amount:classes[index].amount,debt:classes[index].debt};
@@ -949,7 +971,6 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset, cal
   const {setStudents,setClasses,students,classes,profile}=useData()
   const {toast}=useToast()
   const onSubmit = async(data:any) => {
-console.log(data.classes);
 
     const newData=await addStudent({...data,studentIndex:students.length+1, 
       debt:calculatedAmount,
@@ -999,26 +1020,48 @@ console.log(data.classes);
         const matchingClass = newData.classUpdates.find((sls) => sls.classID === cls.id);
     
         if (matchingClass) {
-          // Return the class with the updated students array
-          return {
-            ...cls,
-            students: [
-              ...cls.students,
-              {
-                id: data.id, // The ID of the newly added student
-                name: data.name, // The name of the newly added student
-                index: matchingClass.newIndex, // The new index for the student
-                year: data.year, // The year of the student
-                group: cls.group,
-                cs:matchingClass.cs,
-                sessionsLeft:matchingClass.numberOfSessions,
-                amount:matchingClass.amount,
-                debt:matchingClass.debt,
-                ...(matchingClass.active && { nextPaymentDate:matchingClass?.nextPaymentDate }),
-                sessionsToStudy:matchingClass.numberOfSessionsLeft
-              },
-            ],
-          };
+ if(cls.paymentType="monthly"){
+  return {
+    ...cls,
+    students: [
+      ...cls.students,
+      {
+        id: data.id, // The ID of the newly added student
+        name: data.name, // The name of the newly added student
+        index: matchingClass.newIndex, // The new index for the student
+        year: data.year, // The year of the student
+        group: cls.group,
+        cs:matchingClass.cs,
+        sessionsLeft:matchingClass.numberOfSessions,
+        amount:matchingClass.amount,
+        debt:matchingClass.debt,
+        ...(matchingClass.active && { nextPaymentDate:matchingClass?.nextPaymentDate }),
+        sessionsToStudy:matchingClass.numberOfSessionsLeft
+      },
+    ],
+  };
+ }else{
+  return {
+    ...cls,
+    students: [
+      ...cls.students,
+      {
+        id: data.id, // The ID of the newly added student
+        name: data.name, // The name of the newly added student
+        index: matchingClass.newIndex, // The new index for the student
+        year: data.year, // The year of the student
+        group: cls.group,
+        cs:matchingClass.cs,
+        sessionsLeft:0,
+        amount:matchingClass.amount,
+        debt:0,
+        ...(matchingClass.active && { nextPaymentDate:matchingClass?.nextPaymentDate }),
+        sessionsToStudy:0
+      },
+    ],
+  };
+ }
+     
         }
         // Return the class unchanged if no matching class was found
         return cls;

@@ -554,25 +554,7 @@ const [isOn, setIsOn] = React.useState(false); // Initialize with form value
               )}
             />
           </div>
-          <FormField
-    control={form.control}
-    name={`classes.${groupIndex}.numberOfSessions`}
-    render={({ field }) => (
-      <FormItem className="w-24">
-        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">
-        Nombre de séances par mois:</FormLabel>
-        <FormControl>
-          <Input
-            {...field}
-            type="number"
-            placeholder="Sessions"
-            onChange={event => field.onChange(+event.target.value)}
-          />
-        </FormControl>
-      </FormItem>
-    )}
-  />
-                  <div>
+          <div>
                   <FormField
     control={form.control}
     name={`classes.${groupIndex}.paymentType`}
@@ -598,6 +580,24 @@ const [isOn, setIsOn] = React.useState(false); // Initialize with form value
     )}
   />
                   </div>
+{watch(`classes.${groupIndex}.paymentType`)==='monthly' &&(          <FormField
+    control={form.control}
+    name={`classes.${groupIndex}.numberOfSessions`}
+    render={({ field }) => (
+      <FormItem className="w-24">
+        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">
+        Nombre de séances par mois:</FormLabel>
+        <FormControl>
+          <Input
+            {...field}
+            type="number"
+            placeholder="Sessions"
+            onChange={event => field.onChange(+event.target.value)}
+          />
+        </FormControl>
+      </FormItem>
+    )}
+  />)}
                   <div>
                   <FormField
     control={form.control}

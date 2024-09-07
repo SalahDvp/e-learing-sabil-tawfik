@@ -259,30 +259,52 @@ const EditStudent: React.FC<openModelProps> = ({ setOpen, open,student }) => {
         return;
       }
   
+if(selectedClassId.paymentType==='monthly'){
+  const a=calculateAmountDue(selectedClassId.startDate, selectedClassId?.nextPaymentDate, new Date(), selectedClassId?.groups, selectedClassId.amount,selectedClassId.numberOfSessions)
+  const updatedClass = {
+    ...classes[index],
+    group: selectedClassId.group,
+    groups: selectedClassId.groups,
+    id: selectedClassId.id,
+    index: selectedClassId.students.length + 1,
+    cs: classes[index].cs,
+    sessionsLeft: 0,
+    amount:selectedClassId.active? a.totalDue : selectedClassId.amount,
+    debt: selectedClassId.active? a.totalDue : selectedClassId.amount,
+    ...(selectedClassId.active && { nextPaymentDate: selectedClassId?.nextPaymentDate }),
+    sessionsToStudy: selectedClassId.active? a.numberOfSessionsLeft :selectedClassId.numberOfSessions,
+  };
+  const updatedClassUIDs = classesUids[index] || {};
+  updatedClassUIDs.id = selectedClassId.id;
+  updatedClassUIDs.group = selectedClassId.group;
 
-      const a=calculateAmountDue(selectedClassId.startDate, selectedClassId?.nextPaymentDate, new Date(), selectedClassId?.groups, selectedClassId.amount,selectedClassId.numberOfSessions)
-      const updatedClass = {
-        ...classes[index],
-        group: selectedClassId.group,
-        groups: selectedClassId.groups,
-        id: selectedClassId.id,
-        index: selectedClassId.students.length + 1,
-        cs: classes[index].cs,
-        sessionsLeft: 0,
-        amount:selectedClassId.active? a.totalDue : selectedClassId.amount,
-        debt: selectedClassId.active? a.totalDue : selectedClassId.amount,
-        ...(selectedClassId.active && { nextPaymentDate: selectedClassId?.nextPaymentDate }),
-        sessionsToStudy: selectedClassId.active? a.numberOfSessionsLeft :selectedClassId.numberOfSessions,
-      };
-      const updatedClassUIDs = classesUids[index] || {};
-      updatedClassUIDs.id = selectedClassId.id;
-      updatedClassUIDs.group = selectedClassId.group;
-  
-      classes[index] = updatedClass;
-      classesUids[index] = updatedClassUIDs;
+  classes[index] = updatedClass;
+  classesUids[index] = updatedClassUIDs;
+}else{
+  const updatedClass = {
+    ...classes[index],
+    group: selectedClassId.group,
+    groups: selectedClassId.groups,
+    id: selectedClassId.id,
+    index: selectedClassId.students.length + 1,
+    cs: classes[index].cs,
+    sessionsLeft: 0,
+    amount:selectedClassId.amount,
+    debt:0,
+    ...(selectedClassId.active && { nextPaymentDate: selectedClassId?.nextPaymentDate }),
+    sessionsToStudy: 0,
+  };
+  const updatedClassUIDs = classesUids[index] || {};
+  updatedClassUIDs.id = selectedClassId.id;
+  updatedClassUIDs.group = selectedClassId.group;
+
+  classes[index] = updatedClass;
+  classesUids[index] = updatedClassUIDs;
+}
+
     } else {
       console.log("Updating other field:", field, value);
-      classes[index] = {...classes[index],id: classes[index].id, name: classes[index].name, subject: classes[index].subject, group: classes[index].group, cs: value,amount:classes[index].amount,debt:classes[index].debt};
+      classes[index] = {         ...classes[index],id: classes[index].id, name: classes[index].name, subject: classes[index].subject, group: classes[index].group, cs: value,amount:classes[index].amount,debt:classes[index].debt};
     }
   
     setValue(`classes`, classes);
@@ -529,6 +551,7 @@ if(["تحضيري"].includes(e)) {
         <TableHead>{t('Subject')}</TableHead>
           <TableHead>{t("Name")}</TableHead>
           <TableHead>{t("group")}</TableHead>
+          <TableHead>{t('Time')}</TableHead>
           <TableHead>{t('CS')}</TableHead>
           <TableHead>{t('Amount')}</TableHead>
           <TableHead>{t('Action')}</TableHead>
@@ -585,44 +608,41 @@ if(["تحضيري"].includes(e)) {
 </SelectContent>
 
     </Select></TableCell>
-            <TableCell> 
-              
+           
+           
+           
+      <TableCell> 
             <Select 
-value={classes.find(type => type.id === watch(`classes.${index}.id`))?.id}
-  onValueChange={(value) => {handleGroupChange(index, 'group', value,classes)
-  }}
->
-  <SelectTrigger >
-  <SelectValue placeholder="Select a group" />
-  </SelectTrigger>
-  <SelectContent>
-    {invoice.subject && invoice.name ? (
-      <SelectGroup>
-        <SelectLabel>{t('groups')}</SelectLabel>
-        {classes.filter(cls => 
-          cls.subject === invoice.subject && 
-          (watch('year') === 'لغات' || cls.year === watch('year')) && 
-          cls.teacherName === invoice.name
-        ).map((groupp, index) => (
-          <SelectItem key={groupp.id} value={groupp.id}>
-            {groupp.group}
-          </SelectItem>
-        ))}
-      </SelectGroup>
-    ) : (
-      <p className="text-sm text-muted-foreground">Select Subject and name first</p>
-    )}
-  </SelectContent>
-</Select>
+              value={classes.find(type => type.id === watch(`classes.${index}.id`))?.id}
+                onValueChange={(value) => {handleGroupChange(index, 'group', value,classes)
+                }}
+              >
+                    <SelectTrigger >
+                      <SelectValue placeholder="Select a group" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {invoice.subject && invoice.name ? (
+                            <SelectGroup>
+                                <SelectLabel>{t('groups')}</SelectLabel>
+                                    {classes.filter(cls => 
+                                      cls.subject === invoice.subject && 
+                                      (watch('year') === 'لغات' || cls.year === watch('year')) && 
+                                      cls.teacherName === invoice.name
+                                    ).map((groupp, index) => (
+                                      <SelectItem key={groupp.id} value={groupp.id}>
+                                        {groupp.group}
+                                      </SelectItem>
+                                    ))}
+                              </SelectGroup>
+                              ) : (
+                                <p className="text-sm text-muted-foreground">Select Subject and name first</p>
+                              )}
+                      </SelectContent>
+              </Select>
+        </TableCell>
 
 
-
-    
-    
-    
-    
-    </TableCell>
-    <TableCell>
+        <TableCell>
   {classes.find(cls => cls.id === watch(`classes.${index}.id`))?.groups.map((group, idx) => (
       <Input
       key={idx} 
@@ -634,6 +654,9 @@ value={classes.find(type => type.id === watch(`classes.${index}.id`))?.id}
 
   ))}
 </TableCell>
+    
+
+
     
     <TableCell className="font-medium"> 
               <Select value={invoice.cs} onValueChange={(value)=>handleGroupChange(index,'cs',value)}>
@@ -656,13 +679,13 @@ value={classes.find(type => type.id === watch(`classes.${index}.id`))?.id}
 
     <TableCell className="font-medium">
 
-    
-    <Input
-  type="number"
-  value={invoice?.amount} onChange={(e)=>handleGroupChange(index,'amount',+e.target.value)}
-  className="col-span-3 w-24 mb-2"
+  <Input
+    type="number"
+    value={invoice?.amount}
+    onChange={(e) => handleGroupChange(index, 'amount', +e.target.value)}
+    className="col-span-3 w-24 mb-2"
+  />
 
-/>
 </TableCell>
 
     <TableCell>   
@@ -804,45 +827,83 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,stud
         const { group, id,  name,cs,active,amount,debt,sessionsLeft,sessionsToStudy} = cls;
         const studentCount = await getStudentCount(id);
         const index = studentCount ;
-
-       setClasses((prevClasses: any[]) => 
-          prevClasses.map((cls: { id: any; students: any; }) =>
-      cls.id === id ? {
-        ...cls,
-        students: [...cls.students, { group, id,cs, 
-          index:index, 
-          name, 
-          year:student.year,
-          sessionsLeft:sessionsLeft,
-          amount:amount,
-          debt:debt,
-          ...(active && { nextPaymentDate: cls?.nextPaymentDate }),
-          sessionsToStudy:sessionsToStudy}]
-      } : cls
-    )
-  );
-
-  setStudents((prevStudents: any[]) => 
-    prevStudents.map((std: { id: any; classesUIDs: any; classes: any; }) =>
-std.id === student.id ? {
-  ...std,
-  classesUIDs: [...std.classesUIDs, { id:id,group:group }],
-  classes:[...std.classes,{...cls,index:index}]
-} : std
-)
-);
-
-
+        if(cls.paymentType==='monthly'){
+          setClasses((prevClasses: any[]) => 
+            prevClasses.map((cls: { id: any; students: any; }) =>
+        cls.id === id ? {
+          ...cls,
+          students: [...cls.students, { group, id,cs, 
+            index:index, 
+            name, 
+            year:student.year,
+            sessionsLeft:sessionsLeft,
+            amount:amount,
+            debt:debt,
+            ...(active && { nextPaymentDate: cls?.nextPaymentDate }),
+            sessionsToStudy:sessionsToStudy}]
+        } : cls
+      )
+    );
   
-await addStudentToClass({ group:cls.group, id:cls.id,cs:cls.cs, 
-  index:index, 
-  name, 
-  year:student.year,
-  sessionsLeft:sessionsLeft,
-  amount:amount,
-  debt:debt,
-  ...(active && { nextPaymentDate: cls?.nextPaymentDate }),
-  sessionsToStudy:sessionsToStudy},cls.id,student.id)}
+    setStudents((prevStudents: any[]) => 
+      prevStudents.map((std: { id: any; classesUIDs: any; classes: any; }) =>
+  std.id === student.id ? {
+    ...std,
+    classesUIDs: [...std.classesUIDs, { id:id,group:group }],
+    classes:[...std.classes,{...cls,index:index}]
+  } : std
+  )
+  );  
+  await addStudentToClass({ group:cls.group, id:student.id,cs:cls.cs, 
+    index:index, 
+    name:student.name, 
+    year:student.year,
+    sessionsLeft:sessionsLeft,
+    amount:amount,
+    debt:debt,
+    ...(active && { nextPaymentDate: cls?.nextPaymentDate }),
+    sessionsToStudy:sessionsToStudy},cls.id,student.id)
+        }
+        else{
+          setClasses((prevClasses: any[]) => 
+            prevClasses.map((cls: { id: any; students: any; }) =>
+        cls.id === id ? {
+          ...cls,
+          students: [...cls.students, { group, id,cs, 
+            index:index, 
+            name, 
+            year:student.year,
+            sessionsLeft:0,
+            amount:amount,
+            debt:0,
+            ...(active && { nextPaymentDate: cls?.nextPaymentDate }),
+            sessionsToStudy:0}]
+        } : cls
+      )
+    );
+  
+    setStudents((prevStudents: any[]) => 
+      prevStudents.map((std: { id: any; classesUIDs: any; classes: any; }) =>
+  std.id === student.id ? {
+    ...std,
+    classesUIDs: [...std.classesUIDs, { id:id,group:group }],
+    classes:[...std.classes,{...cls,index:index}]
+  } : std
+  )
+  );  
+  await addStudentToClass({ group:cls.group, id:student.id,cs:cls.cs, 
+    index:index, 
+    name:student.name, 
+    year:student.year,
+    sessionsLeft:0,
+    amount:amount,
+    debt:0,
+    ...(active && { nextPaymentDate: cls?.nextPaymentDate }),
+    sessionsToStudy:sessionsToStudy},cls.id,student.id)}
+        }
+
+
+
     }
   
     // Remove students from classes
@@ -850,15 +911,17 @@ await addStudentToClass({ group:cls.group, id:cls.id,cs:cls.cs,
       for (const cls of removed) {
         const { group, id,  name,cs,active,amount,debt,sessionsLeft,sessionsToStudy,index} = cls;
         
-await removeStudentFromClass({ group:cls.group, id:cls.id,cs:cls.cs, 
+await removeStudentFromClass({ group:cls.group, id:student.id,cs:cls.cs, 
   index:index, 
-  name, 
+  name:student.name, 
   year:student.year,
   sessionsLeft:sessionsLeft,
   amount:amount,
   debt:debt,
   ...(active && { nextPaymentDate: cls?.nextPaymentDate }),
-  sessionsToStudy:sessionsToStudy},student.id,student.name)
+  sessionsToStudy:sessionsToStudy},student.id,cls.id)
+
+
        setClasses((prevClasses: any[]) => 
           prevClasses.map((cls: { id: any; students: any[]; }) =>
       cls.id === id ? {
