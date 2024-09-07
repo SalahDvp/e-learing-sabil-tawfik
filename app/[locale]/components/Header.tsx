@@ -56,23 +56,11 @@ const t=useTranslations()
         >
 
         Etudiants</Link>
-        <Link
-  href={role ? '/teachers' : '#'}
-  onClick={(e) => {
-    if (role) {
-      e.preventDefault(); // Prevent navigation if role is false
-    }
-  }}
-  className={`${
-    pathname === '/teachers'
-      ? 'text-black-500 dark:text-white'
-      : role
-        ? 'text-muted-foreground hover:text-foreground foreground transition-colors'
-        : 'text-gray-400 cursor-not-allowed' // Disabled styling when role is not set
-  }`}
->
-  {t('teachers-0')}
-</Link>
+   <Link
+          href="/teachers"
+          className={`${pathname=== '/teachers' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
+          disabled={role} >
+          {t('teachers-0')} </Link>
 
           <Link
           href="/billing"
@@ -80,22 +68,10 @@ const t=useTranslations()
           disabled={role} >
           {t('billing')} </Link>
           <Link
-            href={role ? '/settings' : '#'}
-            onClick={(e) => {
-              if (role) {
-                e.preventDefault(); // Prevent navigation if role is false
-              }
-            }}
-            className={`${
-              pathname === '/settings' 
-                ? 'text-black-500 dark:text-white' 
-                : role 
-                  ? 'text-muted-foreground hover:text-foreground foreground transition-colors' 
-                  : 'text-gray-400 cursor-not-allowed' // Disabled styling
-            }`}
-          >
-            {t('settings')}
-          </Link>
+          href="/settings"
+          className={`${pathname=== '/settings' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
+          disabled={role} >
+          {t('settings')} </Link>
 
 
       </nav>
