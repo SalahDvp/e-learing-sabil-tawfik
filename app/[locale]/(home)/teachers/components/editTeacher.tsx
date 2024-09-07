@@ -985,7 +985,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
           subject: formData["educational-subject"],
           startDate:adjustStartDateToFirstSession(clss.startDate, clss.groups),
           nextPaymentDate:getNextPaymentDate(clss.groups, clss.startDate),
-          active:getValue(active)
+          active:clss.active
         }, formData.id);
     
         setClasses(prevClasses => [
