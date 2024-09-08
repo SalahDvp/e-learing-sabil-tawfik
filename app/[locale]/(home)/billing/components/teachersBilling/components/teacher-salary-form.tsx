@@ -76,29 +76,60 @@ const applyPayment = (totalAdvancePayment, paymentAmount) => {
     name: string;
     source:any;
   }
-const getGroupsByTeacher = (classes, teacherId) => {
-  return classes
-    .filter(cls => 
-      cls.teacherUID === teacherId 
-     //  && new Date(cls.nextPaymentDate) < new Date() // Check if nextPaymentDate is before the current date
-    )
-    .map(cls => {
-      const totalAmount = cls.students.reduce((acc, std) => {
-        const studiedLessons = std.sessionsToStudy- std.sessionsLeft;
-        const studentAmount = studiedLessons * (cls.amount / cls.numberOfSessions);
-        return acc + studentAmount;
-      }, 0);
+  const getGroupsByTeacher = (classes, teacherId) => {
+    const today ='2024-09-07'; // Get today's date in 'yyyy-mm-dd' format
+  
+    return classes
+      .filter(cls => {
+        if (cls.teacherUID !== teacherId) {
+          return false;
+        }
+  
+        if (cls.paymentType === 'monthly') {
+          // For monthly payment, check if the class is active and nextPaymentDate is in the past
+          return cls.active === true && new Date(cls.nextPaymentDate) < new Date();
+        } else if (cls.paymentType === 'session') {
+          // For session-based payment, check if any attendance date matches today's date
+          return Object.keys(cls.Attendance || {}).some(attendanceDate => attendanceDate === today);
+        }
+  
+        return false;
+      })
+      .map(cls => {
+        // Calculate total amount for students
+        let totalAmount = 0;
       
-      return {
-        ...cls,
-        groupcode: cls.group,
-        amount: cls.amount,
-        totalAmount: totalAmount,
-        students:cls.students,
-        studentsLength:cls.students.length,
-      };
-    });
-};
+        // If it's session-based, use today's attendance to calculate the total amount
+        if (cls.paymentType === 'session') {
+          const todayAttendance = cls.Attendance ? cls.Attendance[today] : {};
+          const attendanceList = todayAttendance.attendanceList || [];
+      
+          // Calculate total amount based on attendance
+          totalAmount = attendanceList.reduce((acc, std) => {
+            // Assuming std.amount refers to the student's payment amount for the session
+            const studentAmount = std.amount || 0;
+            return acc + studentAmount;
+          }, 0);
+        } else {
+          // For non-session-based (e.g., monthly), calculate total amount based on the number of lessons studied
+          totalAmount = cls.students.reduce((acc, std) => {
+            const studiedLessons = std.sessionsToStudy - std.sessionsLeft;
+            const studentAmount = studiedLessons * (std.amount / cls.numberOfSessions);
+            return acc + studentAmount;
+          }, 0);
+        }
+      
+        return {
+          ...cls,
+          groupcode: cls.group,
+          amount: cls.amount,
+          totalAmount: totalAmount,
+          students: cls.students,
+          studentsLength:cls.paymentType === 'session' ? cls.Attendance[today].attendanceList.length:cls.students.length,
+          todayAttendance: cls.paymentType === 'session' ? cls.Attendance[today] || null : null, // Include today's attendance if session-based
+        };
+      });
+  };
   const getReimbursementByTeacher = (classes, teacherId) => {
     const currentDate = new Date();
     const start = startOfMonth(currentDate);
@@ -354,7 +385,7 @@ const [teacherModal,setTeacherModal]=useState(false)
     name: "expenses",
 
   });
-console.log(watch("expenses"));
+
 
   const renderInput = (fieldName:string, field:any) => {
     switch (fieldName) {
@@ -484,37 +515,7 @@ console.log(watch("expenses"));
         return <Input {...field} />;
     }
   };
-  const getTotalForCurrentMonth = (classData) => {
-    const startOfCurrentMonth = startOfMonth(new Date());
-    const endOfCurrentMonth = endOfMonth(new Date());
-  
-    let totalAmount = 0;
-  
-    // Loop through each class in the array
-    classData.forEach(classObj => {
-      const { amount, numberOfSessions, Attendance } = classObj;
-  
-      // Calculate the ratio
-      const ratio = amount / numberOfSessions;
-  
-      // Loop through each attendance record within the class
-      Object.keys(Attendance).forEach(dateKey => {
-        const attendanceRecord = Attendance[dateKey];
-        const date = parseISO(dateKey);
-  
-        // Check if the date falls within the current month
-        if (date >= startOfCurrentMonth && date <= endOfCurrentMonth) {
-          const attendanceCount = attendanceRecord.attendanceList.length;
-          totalAmount += attendanceCount * ratio;
-        }
-      });
-    });
-  
-    // Multiply the total amount by teacher's amount divided by 100
-    const finalAmount = totalAmount * (teacherAmount / 100);
-  
-    return finalAmount;
-  };
+
   const reactToPrintRef = React.useRef();
   async function onSubmit(data: any) {
     try {

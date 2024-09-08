@@ -308,7 +308,7 @@ const onSelected = (selectedStudent: any) => {
             if (selectedClass) {
               return {
                 ...clsUID,
-                amountPerSession: selectedClass.amount / selectedClass.numberOfSessions,
+                amountPerSession: clsUID.amount / selectedClass.numberOfSessions,
                 nextPaymentDate: selectedClass.nextPaymentDate,
               };
             }
@@ -592,6 +592,7 @@ const billHtml = `
   }
   
 
+console.log(filtredclasses);
 
   return (
     <Card className="overflow-hidden" x-chunk="dashboard-05-chunk-4">
@@ -704,8 +705,7 @@ const billHtml = `
   placeholder={t('amount-paid')}
   onChange={(event) => {
     const amountPaid = parseFloat(event.target.value) ||0;
-    const pricePerSession = option.amountPerSession; // Get the price per session
-    const numberOfSessionsLeft = amountPaid / pricePerSession; // Calculate the number of sessions left
+    const numberOfSessionsLeft = amountPaid /option.amountPerSession; // Calculate the number of sessions left
     const oldsessions=watch(`initialClasses.${index}.sessionsLeft`) ||0;
     // Update the form fields
     form.setValue(`filtredclasses.${index}.amountPaid`, amountPaid);

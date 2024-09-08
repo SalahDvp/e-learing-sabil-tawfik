@@ -107,7 +107,7 @@ const months = [
               const updatedStudents = exp.students.map((std: any) => ({
                 ...std,
                 sessionsToStudy: exp.numberOfSessions, // Update number of sessions to study
-                debt: std.debt + exp.amount, // Add expense amount to student's debt
+                debt: std.debt + std.amount, // Add expense amount to student's debt
                 nextPaymentDate: addWeeks(std.nextPaymentDate, 3), // Add 3 weeks to the student's next payment date
               }));
           

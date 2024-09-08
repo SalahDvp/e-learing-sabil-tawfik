@@ -352,6 +352,7 @@ export default function Home() {
           status: 'present',
           id: studentData?.id,
           isPaid:selectedClass.isPaid,
+          amount:selectedClass.amount
         });
   
         updatedClasses[classIndex] = {
@@ -386,7 +387,8 @@ export default function Home() {
               index: selectedClass.studentIndex,
               status: 'present',
               id: studentData?.id,
-              isPaid:selectedClass.isPaid
+              isPaid:selectedClass.isPaid,
+              amount:selectedClass.amount
             })
           });
         } else {
@@ -402,7 +404,8 @@ export default function Home() {
               index: selectedClass.studentIndex,
               status: 'present',
               id: studentData?.id,
-              isPaid:selectedClass.isPaid
+              isPaid:selectedClass.isPaid,
+              amount:selectedClass.amount
             }]
           });
         }

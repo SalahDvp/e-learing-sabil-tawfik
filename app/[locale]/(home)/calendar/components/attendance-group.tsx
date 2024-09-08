@@ -30,8 +30,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Button, buttonVariants } from "@/components/ui/button"
-import { removeStudentFromAttendance } from "@/lib/hooks/calendar";
+import { addStudentFromAttendance, removeStudentFromAttendance } from "@/lib/hooks/calendar";
 import React from "react";
+import { doc, updateDoc } from "firebase/firestore";
+import { addPaymentTransaction } from "@/lib/hooks/billing/student-billing";
+import { addPayment } from "@/lib/hooks/billing/otherPayments";
 
 
 
@@ -44,21 +47,68 @@ interface DailyAttandenceDataTableProps {
 
 export const DailyAttandenceDataTable: React.FC<DailyAttandenceDataTableProps> = ({ selectedEvent}) => {
  const t =useTranslations()
-const {students,classes,setClasses}=useData()
-const [attendance,setAttendance]=useState(selectedEvent.attendanceList)
+const {students,classes,setClasses,setStudents}=useData()
+const [attendance, setAttendance] = useState(() => {
+  const updatedAttendanceList = [...selectedEvent.attendanceList];
+  if(selectedEvent.paymentType==='monthly'){
+    selectedEvent.students.forEach(student => {
+      const isStudentInAttendance = updatedAttendanceList.some(attendanceEntry => attendanceEntry.id === student.id);
+  
+      // If the student is not in attendance list, add them with status "absent"
+      if (!isStudentInAttendance) {
+        updatedAttendanceList.push({
+          id: student.id,
+          name: student.name,
+          group: selectedEvent.group,  // Assuming group is available in selectedEvent
+          status: "absent",
+          index: student.index,  // Add the new index (length + 1)
+        });
+      }
+    });
+  }else{
+    selectedEvent.students.forEach(student => {
+      const isStudentInAttendance = updatedAttendanceList.some(attendanceEntry => attendanceEntry.id === student.id);
+  
+      // If the student is not in attendance list, add them with status "absent"
+      if (!isStudentInAttendance) {
+        updatedAttendanceList.push({
+          id: student.id,
+          name: student.name,
+          group: selectedEvent.group,  // Assuming group is available in selectedEvent
+          status: "absent",
+          isPaid:false,
+          amount:student.amount,
+          index: student.index,  // Add the new index (length + 1)
+        });
+      }
+    });
+  }
+  // Loop through each student in selectedEvent.students
+
+
+  return updatedAttendanceList;
+});
+
 
 
 const removeStudent= async (student,classId,attendanceId) => {
   try {
-    await removeStudentFromAttendance(student,classId,attendanceId)
-    console.log("wdqwddqw",attendanceId);
+    if(selectedEvent.paymentType==='monthly'){
+      const updatedStudents=selectedEvent.students.map((std)=>std.id===student.id?{...std, sessionsLeft: std.sessionsLeft>0 ? std.sessionsLeft + 1:std.sessionsLeft }:std)
+      await removeStudentFromAttendance(student,classId,attendanceId,updatedStudents)
+    }else{
+      await removeStudentFromAttendance(student,classId,attendanceId,undefined)
+      // await addPayment()
+    }
+
+
     
     setClasses((prevClasses) => prevClasses.map((cls) => {
       // Check if this is the class we want to update
       if (cls.id === selectedEvent.classId) {
         // Find the attendance record for the selected event
         const attendance = cls.Attendance?.[selectedEvent.attendanceId];
-          console.log("dwqqwqqqqweerrdqwd",attendance);
+
           
         // Remove the student from the attendance list
         if (attendance) {
@@ -75,7 +125,81 @@ const removeStudent= async (student,classId,attendanceId) => {
       // Return the class as is if it's not the one we want to update
       return cls;
     }));
-    setAttendance((prevClasses) => prevClasses.filter((std) => std.id !== student.id))
+    setAttendance((prevClasses) => prevClasses.map((std) => std.id === student.id?{...std,status:'absent'}:std))
+    
+  } catch (error) {
+  }
+
+}
+const addStudent= async (student,classId,attendanceId) => {
+  try {
+    if(selectedEvent.paymentType==='monthly'){
+      const updatedStudents=selectedEvent.students.map((std)=>std.id===student.id?{...std, sessionsLeft: std.sessionsLeft>0 ? std.sessionsLeft - 1:std.sessionsLeft }:std)
+    await addStudentFromAttendance({...student,status:"present"},classId,attendanceId,updatedStudents)
+    
+    setClasses((prevClasses) => prevClasses.map((cls) => {
+      // Check if this is the class we want to update
+      if (cls.id === selectedEvent.classId) {
+        // Find the attendance record for the selected event
+        const attendance = cls.Attendance?.[selectedEvent.attendanceId];
+
+          
+        // Remove the student from the attendance list
+        if (attendance) {
+          attendance.attendanceList = [...attendance.attendanceList,{...student,status:"present"}];
+        }
+    
+        // Return the updated class with the modified attendanceList
+        return {
+          ...cls,
+          students:cls.students.map(std => std.id === student?.id
+            ? { ...std, sessionsLeft: std.sessionsLeft>0 ? std.sessionsLeft - 1:std.sessionsLeft }
+            : std
+          ),
+          attendanceList: attendance ? attendance.attendanceList : cls.attendanceList
+        };
+      }
+    
+      // Return the class as is if it's not the one we want to update
+      return cls;
+    }));
+    setStudents((prev)=>prev.map(std => {
+      if (std.id === student.id) {
+        std.classes = std.classes.map(cls => cls.id === clsid
+          ? { ...cls, sessionsLeft: cls.sessionsLeft>0 ? cls.sessionsLeft - 1:cls.sessionsLeft}
+          : cls
+        );
+      }
+    }));
+    setAttendance((prevClasses) => prevClasses.map((std) => std.id === student.id?{...std,status:'present'}:std))
+  }else{
+    await addStudentFromAttendance({...student,status:"present",isPaid:true},classId,attendanceId,undefined)
+    
+    setClasses((prevClasses) => prevClasses.map((cls) => {
+      // Check if this is the class we want to update
+      if (cls.id === selectedEvent.classId) {
+        // Find the attendance record for the selected event
+        const attendance = cls.Attendance?.[selectedEvent.attendanceId];
+
+          
+        // Remove the student from the attendance list
+        if (attendance) {
+          attendance.attendanceList = [...attendance.attendanceList,{...student,status:"present",isPaid:true}];
+        }
+    
+        // Return the updated class with the modified attendanceList
+        return {
+          ...cls,
+          attendanceList: attendance ? attendance.attendanceList : cls.attendanceList
+        };
+      }
+    
+      // Return the class as is if it's not the one we want to update
+      return cls;
+    }));
+    setAttendance((prevClasses) => prevClasses.map((std) => std.id === student.id?{...std,status:'present',isPaid:true}:std))
+    await addPaymentTransaction({paymentDate:new Date(),amount:student.amount},student.id)
+  }
   } catch (error) {
   }
 
@@ -95,26 +219,19 @@ const removeStudent= async (student,classId,attendanceId) => {
         </div>
       ),
     },
-//     {
-//       accessorKey: "group",
-//       header: () => <div>group</div>,
-//       cell: ({ row }) =>{
-      
-// const group=row.getValue("group")
-       
-// const groupDetails=selectedEvent.groups?.find(cls=>cls.group===group)
-
-  
-//         return(
-//         <div className="hidden sm:table-cell">{row.getValue("group")}:{t(`${groupDetails.day}`)},{groupDetails.start}-{groupDetails.end}</div>
-//       ) },
-      
-//     },
     {
       accessorKey: "status",
       header: () => <div>Status</div>,
       cell: ({ row }) => <div>{getStatusIcon(row.getValue("status"))}</div>,
     },
+    ...(selectedEvent.paymentType === 'session' 
+      ? [{
+          accessorKey: "isPaid",
+          header: () => <div>Paye</div>,
+          cell: ({ row }) => <div>{row.getValue("isPaid") ? "Paye" : "Non Paye"}</div>,
+        }]
+      : []
+    ),
     {
       id: "remove",
       enableHiding: false,
@@ -123,18 +240,18 @@ const removeStudent= async (student,classId,attendanceId) => {
         return (
           <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button variant="link" className="text-red-500">retirer</Button>
+            <Button variant="link" className={row.original.status==='present'?"text-red-500":"text-green-500"}>{row.original.status==='present'?"Remove":"Add"}</Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
               <AlertDialogDescription>
-                This action cannot be undone. This will permanently reove the student form attednace list.
+                This action cannot be undone. This will permanently.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction className={buttonVariants({ variant: "destructive" })} onClick={()=>removeStudent(student,selectedEvent.classId,selectedEvent.attendanceId)}>Remove</AlertDialogAction>
+              <AlertDialogAction className={row.original.status==='present'?buttonVariants({ variant: "destructive" }):buttonVariants({ variant: "default"})} onClick={()=>row.original.status==='present'?removeStudent(student,selectedEvent.classId,selectedEvent.attendanceId):addStudent(student,selectedEvent.classId,selectedEvent.attendanceId)}>{row.original.status==='present'?"Remove":"Add"}</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -146,7 +263,7 @@ const removeStudent= async (student,classId,attendanceId) => {
   const getStatusIcon = (status) => {
     if (status === "present") {
       return <CheckIcon className="ml-5 w-5 h-5 text-green-500" />;
-    } else if (status === "Absent") {
+    } else if (status === "absent") {
       return <XIcon className="ml-5 w-5 h-5 text-red-500" />;
     } else {
       return null; // Handle other cases if necessary
@@ -186,6 +303,7 @@ const removeStudent= async (student,classId,attendanceId) => {
   })
 
   
+console.log(selectedEvent);
 
 
   return (

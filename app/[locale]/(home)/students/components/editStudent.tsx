@@ -658,7 +658,7 @@ if(["تحضيري"].includes(e)) {
 
 
     
-    <TableCell className="font-medium"> 
+<TableCell className="font-medium"> 
               <Select value={invoice.cs} onValueChange={(value)=>handleGroupChange(index,'cs',value)}>
       <SelectTrigger className="">
         <SelectValue placeholder="Select a cs" />
@@ -666,11 +666,20 @@ if(["تحضيري"].includes(e)) {
       <SelectContent>
         <SelectGroup>
         <SelectLabel>cs</SelectLabel>
-        <SelectItem  value={"true"}>
-                        True
+        <SelectItem  value={"no"}>
+                        No
                       </SelectItem>
-                      <SelectItem  value={"false"}>
-                        False
+        <SelectItem  value={"teacher"}>
+                        Teacher
+                      </SelectItem>
+                      <SelectItem  value={"rectorate"}>
+                        Rectorate
+                      </SelectItem>
+                      <SelectItem  value={"orphan"}>
+                        Orphan
+                      </SelectItem>
+                      <SelectItem  value={"civil status"}>
+                        Civil Status
                       </SelectItem>
         </SelectGroup>
       </SelectContent>
