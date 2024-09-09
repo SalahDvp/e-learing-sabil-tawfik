@@ -668,7 +668,7 @@ console.log(filtredclasses);
             return (
               <TableRow key={index}>
                 <TableCell className="font-semibold">
-                  <Input defaultValue={option.group} readOnly />
+                  <Input value={option.group} readOnly />
                 </TableCell>
 
                 <TableCell className="w-20">

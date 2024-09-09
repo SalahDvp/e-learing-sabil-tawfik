@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import resourceDayGridPlugin from '@fullcalendar/resource-daygrid';
 import resourceTimeGridPlugin from '@fullcalendar/resource-timegrid';
@@ -9,6 +9,7 @@ import resourceTimelinePlugin from '@fullcalendar/resource-timeline'; // Import 
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import { fr } from 'date-fns/locale'; // Import French locale
+
 import '@mobiscroll/react/dist/css/mobiscroll.min.css';
 
 import { useCallback,useMemo} from 'react';
@@ -23,7 +24,14 @@ import {
 } from '@mobiscroll/react';
 import { FC} from 'react';
 import './style.css'
-import { format, startOfWeek } from 'date-fns';
+import { format, set, startOfWeek } from 'date-fns';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { generateTimeOptions } from '../../settings/components/open-days-table';
+import { arrayUnion, doc, updateDoc } from 'firebase/firestore';
+import { db } from '@/firebase/firebase-config';
 // Function to generate a random color
 const getRandomColor = () => {
   const letters = '0123456789ABCDEF';
@@ -34,60 +42,9 @@ const getRandomColor = () => {
   return color;
 };
 
-// Helper function to format time strings to ISO datetime strings
-const formatTimeToDateTime = (timeString: string, date: string) => {
-  if (!timeString) return null;
-  const [hours, minutes] = timeString.split(':');
-  if (!hours || !minutes) return null;
-  const dateTime = new Date(`${date}T${hours}:${minutes}:00`);
-  return dateTime.toISOString();
-};
+// Function to map days to RRule compatibl
 
-// Function to map days to RRule compatible weekdays
-const mapDayToRRule = (day: string) => {
-  const daysMap: { [key: string]: number } = {
-    'Sunday': 0,
-    'Monday': 1,
-    'Tuesday': 2,
-    'Wednesday': 3,
-    'Thursday': 4,
-    'Friday': 5,
-    'Saturday': 6,
-  };
-  return daysMap[day];
-};
 
-const generateRecurringEvents = (startDateTime: string, endDateTime: string, day: string, room: string, subject: string, id: string) => {
-  const events = [];
-  const startDate = new Date(startDateTime);
-  const endDate = new Date(endDateTime);
-
-  const recurrenceEndDate = new Date('2025-06-20');
-
-  while (startDate <= recurrenceEndDate) {
-    const event: any  = {
-      title: subject,
-      id:id,
-      resourceId: room.trim(),  // Ensure this matches the resources' ids
-      start: new Date(startDate),
-      end: new Date(endDate),
-      backgroundColor: getRandomColor(),
-      extendedProps: {
-        day,
-        room,
-        subject,
-        
-      }
-    };
-    events.push(event);
-
-    // Move to the same day in the next week
-    startDate.setDate(startDate.getDate() + 7);
-    endDate.setDate(endDate.getDate() + 7);
-  }
-
-  return events;
-};
 setOptions({
   theme: 'ios',
   themeVariant: 'light'
@@ -123,62 +80,98 @@ const VerticalResourceView = () => {
   const [events,setEvents]=useState<MbscCalendarEvent[]>([])
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
   const [openCard, setOpenCard] = useState(false);
+  const [open,setOpen]=useState(false)
+  const timeOptions = generateTimeOptions("07:00","22:00", 30);
   useEffect(() => {
     const fetchAndFormatData = async () => {
       console.log('Fetched classes:', classes); // Log the fetched data
       const formattedEvents = classes.flatMap((classItem) => {
         // Extract groups array and other necessary fields
         const groups = classItem.groups || [];
+        const extraClasses = classItem.extraClasses || []; // Extract extraClasses if available
         const classId = classItem.id; // Extract the class ID from classItem
-        const color=getRandomColor()
-        return groups.flatMap((group) => {
+        const color = getRandomColor();
+      
+        const eventsFromGroups = groups.flatMap((group) => {
           const { day, start, end, room } = group;
-  
+      
           if (!start || !end || !room) {
             console.error('Missing required event properties:', group);
             return []; // Skip this event if any required property is missing
           }
-   
+      
           const targetDayAbbreviation = dayToWeekDay[day];
-                      
-                       
+      
           if (!targetDayAbbreviation) {
-            console.log("dddddd",classId);
+            console.log("Invalid day in group", classId);
             throw new Error("Invalid day provided");
           }
+      
           const firstDayOfMonth = new Date(year, month, 1);
           let targetDate = new Date(firstDayOfMonth);
           while (targetDate.getDay() !== Object.keys(dayToWeekDay).indexOf(day)) {
             targetDate.setDate(targetDate.getDate() + 1);
           }
+      
           const offset = new Date().getTimezoneOffset() * 60000; // Offset in milliseconds
           const startDate = new Date(year, month, targetDate.getDate(), ...start.split(':').map(Number));
           startDate.setTime(startDate.getTime() - offset); // Adjust for timezone offset
-          
+      
           const endDate = new Date(year, month, targetDate.getDate(), ...end.split(':').map(Number));
           endDate.setTime(endDate.getTime() - offset); // Adjust for timezone offset
+      
           const resourceNumber = extractRoomNumber(room);
+      
           return {
             start: startDate.toISOString(),
             end: endDate.toISOString(),
-            title: classItem.subject, // Add your event title here
+            title: classItem.subject,
             resource: resourceNumber, // Set your resource ID if needed
-            color:color,
+            color: color,
             recurring: {
               repeat: 'weekly',
               until: '2025-07-25',
               weekDays: targetDayAbbreviation,
               interval: 1
             },
-            extraInfo:{
-              classId:classItem.id,
-              group:classItem.group,
-              subject:classItem.subject,
-              year:classItem.year,
-              teacher:classItem.teacherName
+            extraInfo: {
+              classId: classItem.id,
+              group: classItem.group,
+              subject: classItem.subject,
+              year: classItem.year,
+              teacher: classItem.teacherName
             }
-          }
+          };
         });
+      
+        const eventsFromExtraClasses = extraClasses.map((extraClass) => {
+          const { startTime, endTime, room } = extraClass;
+      
+          if (!startTime || !endTime || !room) {
+            console.error('Missing required event properties in extraClasses:', extraClass);
+            return null;
+          }
+      
+      
+          const resourceNumber = extractRoomNumber(room);
+      
+          return {
+            start: startTime.toDate(),
+            end: endTime.toDate(),
+            title: `${classItem.subject} (Extra Class)`,
+            resource: resourceNumber,
+            color: color,
+            extraInfo: {
+              classId: classItem.id,
+              group: classItem.group,
+              subject: classItem.subject,
+              year: classItem.year,
+              teacher: classItem.teacherName
+            }
+          };
+        }).filter(Boolean); // Filter out null events
+      
+        return [...eventsFromGroups, ...eventsFromExtraClasses];
       });
   
       setEvents(formattedEvents);
@@ -188,7 +181,8 @@ const VerticalResourceView = () => {
   }, [classes]);
   const handleEventClick =(args) => {
     try {
-      // Validate the event object
+   console.log(args);
+   
       if (!args || !args.event || !args.event.start || !args.event.extraInfo) {
         throw new Error('Invalid event data provided');
       }
@@ -286,19 +280,285 @@ const VerticalResourceView = () => {
   };
   const defaultSelectedDate = getStartOfWeek();
 
+  
+  const [selectedSlot, setSelectedSlot] = useState(null)
+  const [formData, setFormData] = useState({
+    subject: '',
+    teacher: '',
+    group: '',
+    startTime: '',
+    endTime: '',
+       room:'',
+      isPaid:'false'
+  })
+
+  const handleSelectSlot = (slotInfo) => {
+    setSelectedSlot(slotInfo.event)
+    
+    setOpen(true)
+    setFormData({
+      ...formData,
+      startTime : format(new Date(slotInfo.event.start), 'HH:mm'),
+      endTime : format(new Date(slotInfo.event.end), 'HH:mm')
+    })
+  }
+
+  const handleInputChange = (field, value) => {
+    setFormData({ ...formData, [field]: value })
+    if (field==='group'){
+      setFormData({ ...formData, [field]: value })
+    }
+  }
+
+  const handleSubmit =async() => {
+    const selectedClass=classes.find(cls=>cls.id===formData.group)
+    const newEvent = {
+      title:formData.subject,
+      start : set(new Date(selectedSlot.start), {
+        hours: parseInt(formData.startTime.split(':')[0]),
+        minutes: parseInt(formData.startTime.split(':')[1]),
+      }),
+      
+    end : set(new Date(selectedSlot.start), {
+        hours: parseInt(formData.endTime.split(':')[0]),
+        minutes: parseInt(formData.endTime.split(':')[1]),
+      }),
+      resource:parseInt(formData.room.match(/\d+/)[0], 10),
+      color:getRandomColor(),
+      extraInfo:{
+        classId:selectedClass.id,
+        group:selectedClass.group,
+        subject:selectedClass.subject,
+        year:selectedClass.year,
+        teacher:selectedClass.teacherName
+      }
+
+    }
+
+    await updateDoc(doc(db,'Groups',formData.group),{
+      extraClasses:arrayUnion({
+        start:formData.startTime,end:formData.endTime,room:formData.room,startTime:newEvent.start,endTime:newEvent.end,isPaid:formData.isPaid
+      })
+    })
+       
+    setEvents([...events, newEvent])
+    setOpen(false)
+    setFormData({
+      subject: '',
+      teacher: '',
+      group: '',
+      startTime: '',
+      endTime: '',
+      room:'',
+      isPaid:'false'
+    })
+  }
+  const subjects =  [
+    "تحضيري",
+    "رياضيات",
+    "علوم",
+    "فيزياء",
+    "فلسفة",
+    "العربية",
+    "الإنجليزية",
+    "الفرنسية",
+    "اسبانية",
+    "المانية",
+    "ايطالية",
+    "محاسبة",
+    "هندسة مدنية",
+    "هندسة ميكانيكية",
+    "هندسة الطرائق",
+    "الهندسة الكهربائية",
+    "قانون",
+    "اقتصاد",
+    "العلوم الاسلامية",
+    "تاريخ وجغرافيا",
+    "Math",
+    "Algebre",
+    "Analyse",
+    "Physique",
+    "Chimie",
+    "Gestion",
+    "Informatique"
+  
+  ];
   return (
     <div>
  <Eventcalendar
+   clickToCreate={true}
       view={myView}
       data={events}
       resources={myResources}
       colors={myColors}
       onEventClick={handleEventClick}
+
+      onEventCreated={(e)=>handleSelectSlot(e)}
       groupBy='date'
       locale={locale['fr']}
 defaultSelectedDate={format(defaultSelectedDate, 'yyyy-MM-dd')}
     />
+<Dialog open={open} onOpenChange={(e)=>{setOpen(e);setEvents([...events])}}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Class</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="subject" className="text-right">
+                Subject
+              </Label>
+              <Select onValueChange={(value) => handleInputChange('subject', value)}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select subject" />
+                </SelectTrigger>
+                <SelectContent>
+                  {subjects.map((subject) => (
+                    <SelectItem key={subject} value={subject}>
+                      {subject}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="teacher" className="text-right">
+                Teacher
+              </Label>
+              <Select onValueChange={(value) => handleInputChange('teacher', value)}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select teacher" />
+                </SelectTrigger>
+                <SelectContent>
+                {formData.subject ? (
+  Array.from(
+    new Set(
+      classes
+        .filter(cls => cls.subject === formData.subject) // Assuming you're filtering based on formData.subject
+        .map(cls => cls.teacherName) // Map to teacherName to get a list of names
+    )
+  ).map(name => (
+    <SelectItem key={name} value={name}>
+      {name}
+    </SelectItem>
+  ))
+) : (
+  <p className="text-sm text-muted-foreground">Select Subject first</p>
+)}
+                </SelectContent>
+              </Select>
+            </div>
+<div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="group" className="text-right">
+                Group
+              </Label>
+              <Select value={classes.find(type => type.id === formData?.id)} onValueChange={(value) => handleInputChange('group', value)}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select group" />
+                </SelectTrigger>
+                <SelectContent>
+                  {formData.subject && formData.teacher ?classes.filter(cls => 
+                                      cls.subject === formData.subject && 
+                                     
+                                      cls.teacherName === formData.teacher
+                                    ).map((groupp, index) => (
+                                      <SelectItem key={groupp.id} value={groupp.id}>
+                                        {groupp.group}
+                                      </SelectItem>
+                                    )):(<p className="text-sm text-muted-foreground">Select Subject and name first</p>)
+                
+                }
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="teacher" className="text-right">
+                Room
+              </Label>
+              <Select onValueChange={(value) => handleInputChange('room', value)}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select room" />
+                </SelectTrigger>
+                <SelectContent>
+                {Array.from({ length: profile.NumberOfClasses }, (_, i) => `room ${i + 1}`).map((room) => (      
+       <SelectItem key={room} value={room}>{room}</SelectItem>
+      ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="teacher" className="text-right">
+                Paid sessions
+              </Label>
+              <Select onValueChange={(value) => handleInputChange('isPaid', value)}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select room" />
+                </SelectTrigger>
+                <SelectContent>
+               
+       <SelectItem  value={"true"}>{"true"}</SelectItem>
+       <SelectItem  value={"false"}>{"false"}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="startTime" className="text-right">
+                Start Time
+              </Label>
+              <Select
+                  value={formData.startTime}
+                  onValueChange={(e) => handleInputChange('startTime', e)}
+            
+                        >
+            
+                            <SelectTrigger
+                                  className="col-span-3"
+                              aria-label={`Select start time`}
+                            >
+                              <SelectValue placeholder={'select-start-time'} />
+                            </SelectTrigger>
 
+                          <SelectContent       className="col-span-3">
+                            {timeOptions.map((time) => (
+                              <SelectItem key={time} value={time}>
+                                {time}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="endTime" className="text-right">
+                End Time
+              </Label>
+              <Select
+                  value={formData.endTime}
+                  onValueChange={(e) =>handleInputChange('endTime', e)}
+              
+                        >
+            
+                            <SelectTrigger
+                                 className="col-span-3"
+                              aria-label={`Select start time`}
+                            >
+                              <SelectValue placeholder={'select-end-time'} />
+                            </SelectTrigger>
+
+                          <SelectContent     className="col-span-3">
+                            {timeOptions.map((time) => (
+                              <SelectItem key={time} value={time}>
+                                {time}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleSubmit}>Add Class</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
         <AttandenceDataModel
           open={openCard}
           setOpen={setOpenCard}

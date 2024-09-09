@@ -119,36 +119,6 @@ const EditTeacher: React.FC<openModelProps> = ({ setOpen, open,teacher }) => {
       
   }, [reset,teacher]); 
 
-  
-  const handleGroupChange = (
-    index: number, 
-    field: 'day' | 'name' | 'id' | 'subject' | 'time' | 'quota' | 'start' | 'end' | 'stream', 
-    value: string | number
-  ) => {
-    const classes = [...getValues('classes')]; 
-  
-  
-    if (field === 'stream') {
-      if (Array.isArray(classes[index].stream)) {
-        if (classes[index].stream.includes(value)) {
-          classes[index].stream = classes[index].stream.filter((item: string | number) => item !== value);
-        } else {
-          classes[index].stream.push(value);
-        }
-      } else {
-        classes[index].stream = [value];
-      }
-    } else {
-      classes[index][field] = value;
-    }
-  
-    setValue('classes', classes);
-  
-  };
-
-  
-console.log("clalwadwqdqw",watch("classes"));
-
 
 const middleSchoolYears = ["1AM", "2AM", "3AM", "4AM"];
 const highSchoolYears = ["1AS", "2AS", "3AS"];
@@ -1162,7 +1132,59 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
                 return std; // Return the student as is if not in studentsToRemove
               })
             );
-          }    
+          }
+          if(classesDetailes===true && classupdate.active===true){
+            const newClass = {
+              ...classupdate,
+              startDate: classupdate.active 
+                ? adjustStartDateToFirstSession(classupdate.startDate, classupdate.groups) 
+                : classupdate.startDate,
+              ...(classupdate.active && {
+                nextPaymentDate: getNextPaymentDate(classupdate.groups, classupdate.startDate),
+              }),
+            };
+            const updatedStudents =classupdate.students.map(std => ({
+              ...std,
+              nextPaymentDate: getNextPaymentDate(classupdate.groups, classupdate.startDate),
+            }));
+            await updateClassGroup(classupdate.id,newClass);
+            await activateStudents(classupdate.id,updatedStudents)
+            setClasses(prevClasses =>
+              prevClasses.map(cls => {
+                if (cls.id === newClass.id) {
+                  return {...newClass};
+                }
+                return cls;
+              })
+            );
+            setTeachers(prevTeachers =>
+              prevTeachers.map(cls => {
+                if (cls.id === teacher.id) {
+                  return {
+                    ...cls,
+                    classes: cls.classes.map(cls =>
+                      cls.id === newClass.id ? {...newClass } : cls
+                    )
+                  };
+                }
+                return cls;
+              })
+            );
+            setStudents(prevStudents =>
+              prevStudents.map(std => {
+                if (newClass.students.some(st => st.id === std.id)) {
+                  // If the student is in studentsToRemove, update their classes
+                  return {
+                    ...std,
+                    classes: std.classes.map(cls =>
+                      cls.id === newClass.id? {...newClass } : cls
+                    )
+                  };
+                }
+                return std; // Return the student as is if not in studentsToRemove
+              })
+            );
+          } 
         
         }
     }
@@ -1170,6 +1192,8 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
   const {toast}=useToast()
   const onSubmit = async(data:Teacher) => {
   const result=compareClasses(teacher.classes,data.classes)
+
+  
   await processStudentChanges(result)
     const { classes, ...teacherData } = data;
 
