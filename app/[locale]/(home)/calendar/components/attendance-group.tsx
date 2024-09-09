@@ -89,6 +89,7 @@ const [attendance, setAttendance] = useState(() => {
   return updatedAttendanceList;
 });
 
+console.log("dwqdqwd",selectedEvent);
 
 
 const removeStudent= async (student,classId,attendanceId) => {
@@ -135,37 +136,63 @@ const addStudent= async (student,classId,attendanceId) => {
   try {
     if(selectedEvent.paymentType==='monthly'){
       const updatedStudents=selectedEvent.students.map((std)=>std.id===student.id?{...std, sessionsLeft: std.sessionsLeft>0 ? std.sessionsLeft - 1:std.sessionsLeft }:std)
-    await addStudentFromAttendance({...student,status:"present"},classId,attendanceId,updatedStudents)
+      await addStudentFromAttendance(
+        { ...student, status: "present" }, // First argument, student with status
+        classId,                           // Second argument, classId
+        attendanceId,                       // Third argument, attendanceId
+        updatedStudents,                    // Fourth argument, updatedStudents
+        {                                   // Fifth argument, attendance object
+          id: selectedEvent.attendanceId,
+          start: selectedEvent.startDate,
+          end: selectedEvent.endDate,
+          group: selectedEvent.group
+        }
+      );
     
-    setClasses((prevClasses) => prevClasses.map((cls) => {
-      // Check if this is the class we want to update
-      if (cls.id === selectedEvent.classId) {
-        // Find the attendance record for the selected event
-        const attendance = cls.Attendance?.[selectedEvent.attendanceId];
-
-          
-        // Remove the student from the attendance list
-        if (attendance) {
-          attendance.attendanceList = [...attendance.attendanceList,{...student,status:"present"}];
+    setClasses((prevClasses) => {
+      // Find the class to update
+      const updatedClasses = [...prevClasses];
+      const classToUpdate = updatedClasses.find((cls) => cls.id === selectedEvent.classId);
+    
+      if (classToUpdate) {
+        // Find or create the attendance record
+        let attendance = classToUpdate.Attendance?.[selectedEvent.attendanceId];
+    
+        if (!attendance) {
+          // Create a new attendance record if it doesn't exist
+          attendance = {
+            attendanceList: [{ ...student, status: "present" }],
+            id: selectedEvent.attendanceId,
+            start: selectedEvent.startDate, 
+            end: selectedEvent.endDate,
+            group: selectedEvent.group};
+        } else {
+          // Add the student to the attendance list if attendance exists
+          attendance.attendanceList = [
+            ...attendance.attendanceList,
+            { ...student, status: "present" }
+          ];
         }
     
-        // Return the updated class with the modified attendanceList
-        return {
-          ...cls,
-          students:cls.students.map(std => std.id === student?.id
-            ? { ...std, sessionsLeft: std.sessionsLeft>0 ? std.sessionsLeft - 1:std.sessionsLeft }
+        // Update the students list for the class
+        classToUpdate.students = classToUpdate.students.map((std) =>
+          std.id === student?.id
+            ? { ...std, sessionsLeft: std.sessionsLeft > 0 ? std.sessionsLeft - 1 : std.sessionsLeft }
             : std
-          ),
-          attendanceList: attendance ? attendance.attendanceList : cls.attendanceList
+        );
+    
+        // Update the attendance object in the class
+        classToUpdate.Attendance = {
+          ...classToUpdate.Attendance,
+          [selectedEvent.attendanceId]: attendance,
         };
       }
     
-      // Return the class as is if it's not the one we want to update
-      return cls;
-    }));
+      return updatedClasses;
+    });
     setStudents((prev)=>prev.map(std => {
       if (std.id === student.id) {
-        std.classes = std.classes.map(cls => cls.id === clsid
+        std.classes = std.classes.map(cls => cls.id === selectedEvent.classId
           ? { ...cls, sessionsLeft: cls.sessionsLeft>0 ? cls.sessionsLeft - 1:cls.sessionsLeft}
           : cls
         );
@@ -173,30 +200,46 @@ const addStudent= async (student,classId,attendanceId) => {
     }));
     setAttendance((prevClasses) => prevClasses.map((std) => std.id === student.id?{...std,status:'present'}:std))
   }else{
-    await addStudentFromAttendance({...student,status:"present",isPaid:true},classId,attendanceId,undefined)
+    await addStudentFromAttendance({...student,status:"present",isPaid:true},classId,attendanceId,undefined,{  
+      id: selectedEvent.attendanceId,
+      start: selectedEvent.startDate,
+      end: selectedEvent.endDate,
+      group: selectedEvent.group
+    })
     
-    setClasses((prevClasses) => prevClasses.map((cls) => {
-      // Check if this is the class we want to update
-      if (cls.id === selectedEvent.classId) {
-        // Find the attendance record for the selected event
-        const attendance = cls.Attendance?.[selectedEvent.attendanceId];
-
-          
-        // Remove the student from the attendance list
-        if (attendance) {
-          attendance.attendanceList = [...attendance.attendanceList,{...student,status:"present",isPaid:true}];
+    setClasses((prevClasses) => {
+      // Find the class to update
+      const updatedClasses = [...prevClasses];
+      const classToUpdate = updatedClasses.find((cls) => cls.id === selectedEvent.classId);
+    
+      if (classToUpdate) {
+        // Find or create the attendance record
+        let attendance = classToUpdate.Attendance?.[selectedEvent.attendanceId];
+    
+        if (!attendance) {
+          // Create a new attendance record if it doesn't exist
+          attendance = {
+            attendanceList: [{ ...student, status: "present",isPaid:true }],
+            id: selectedEvent.attendanceId,
+            start: selectedEvent.startDate, 
+            end: selectedEvent.endDate,
+            group: selectedEvent.group};
+        } else {
+          // Add the student to the attendance list if attendance exists
+          attendance.attendanceList = [
+            ...attendance.attendanceList,
+            { ...student, status: "present",isPaid:true }
+          ];
         }
     
-        // Return the updated class with the modified attendanceList
-        return {
-          ...cls,
-          attendanceList: attendance ? attendance.attendanceList : cls.attendanceList
+        classToUpdate.Attendance = {
+          ...classToUpdate.Attendance,
+          [selectedEvent.attendanceId]: attendance,
         };
       }
     
-      // Return the class as is if it's not the one we want to update
-      return cls;
-    }));
+      return updatedClasses;
+    });
     setAttendance((prevClasses) => prevClasses.map((std) => std.id === student.id?{...std,status:'present',isPaid:true}:std))
     await addPaymentTransaction({paymentDate:new Date(),amount:student.amount},student.id)
   }

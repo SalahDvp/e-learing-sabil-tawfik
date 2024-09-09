@@ -245,6 +245,7 @@ export default function StudentForm() {
       studentIndex: students.length + 1,
       classes:[],
       classesUIDs:[],
+      actionTrack:[]
       
     }
   });

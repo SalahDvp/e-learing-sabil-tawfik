@@ -586,5 +586,6 @@
   "select-start-time": "حدد وقت البدء",
   "next-payment-day": "يوم الدفع التالي",
   "days-left-to-pay": "الأيام المتبقية للدفع",
-  "start date": "تاريخ البدء"
+  "start date": "تاريخ البدء",
+  "debt": "دَين"
 }

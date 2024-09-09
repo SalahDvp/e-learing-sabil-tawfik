@@ -86,7 +86,8 @@ const applyPayment = (totalAdvancePayment, paymentAmount) => {
         }
   
         if (cls.paymentType === 'monthly') {
-          // For monthly payment, check if the class is active and nextPaymentDate is in the past
+
+       
           return cls.active === true && new Date(cls.nextPaymentDate) < new Date();
         } else if (cls.paymentType === 'session') {
           // For session-based payment, check if any attendance date matches today's date

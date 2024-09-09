@@ -8,7 +8,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { useData } from "@/context/admin/fetchDataContext";
 import { Student } from "@/validators/auth";
-import { addDays, addMinutes, format, isAfter, isBefore, setHours, setMinutes } from 'date-fns';
+import { addDays, addMinutes, format, isAfter, isBefore, isSameDay, setHours, setMinutes } from 'date-fns';
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -72,7 +72,11 @@ function parseDateTimeRange(dateTimeRange) {
     endDateTime
   };
 }
-const checkClassTime = (scanTime: Date, student: any, groupClasses: any[]): any[] | null => {
+const checkClassTime = (
+  scanTime: Date,
+  student: any,
+  groupClasses: any[]
+): any[] | null => {
   // Get the day of the week for the scan time
   const scanDay = format(scanTime, 'EEEE');
 
@@ -89,6 +93,7 @@ const checkClassTime = (scanTime: Date, student: any, groupClasses: any[]): any[
 
   // Loop through each relevant group class
   for (const groupClass of relevantGroupClasses) {
+    // Check if regular group sessions match the scan day
     for (const groupElement of groupClass.groups) {
       const groupDay = groupElement.day;
 
@@ -107,11 +112,43 @@ const checkClassTime = (scanTime: Date, student: any, groupClasses: any[]): any[
             studentGroup: matchingClasses.group,
             name: groupClass.teacherName,
             sessionsLeft: matchingClasses.sessionsLeft,
-            nextPaymentDate:matchingClasses.nextPaymentDate,
-            paymentType:groupClass.paymentType,
-            isPaid:true,
-            amount:matchingClasses.amount
+            nextPaymentDate: matchingClasses.nextPaymentDate,
+            paymentType: groupClass.paymentType,
+            isPaid: true,
+            amount: matchingClasses.amount
           });
+        }
+      }
+    }
+
+    // Now check if extraClasses exist in this group class
+    if (groupClass.extraClasses && Array.isArray(groupClass.extraClasses)) {
+      for (const extraClass of groupClass.extraClasses) {
+        const startTime = extraClass.startTime.toDate(); // Firestore Timestamp to Date
+        const endTime = extraClass.endTime.toDate();
+
+        // Check if the scanTime is on the same day as the extra class startTime
+        if (isSameDay(scanTime, startTime)) {
+          const matchingClasses = student.classes.find((cls: any) => cls.id === groupClass.id);
+
+          if (matchingClasses) {
+            matchingClassesWithGroup.push({
+              ...extraClass, // Add extra class information
+              ...matchingClasses,
+              startTime, // Use the start and end times from the extra class
+              endTime,
+              subject: matchingClasses.subject,
+              id: matchingClasses.id,
+              studentIndex: matchingClasses.index,
+              studentGroup: matchingClasses.group,
+              name: extraClass.teacherName || groupClass.teacherName, // Default to group class teacher if not present
+              sessionsLeft: matchingClasses.sessionsLeft,
+              nextPaymentDate: matchingClasses.nextPaymentDate,
+              paymentType: extraClass.paymentType || groupClass.paymentType, // Default to group class payment if not present
+              isPaid: extraClass.isPaid,
+              amount: matchingClasses.amount
+            });
+          }
         }
       }
     }
@@ -171,8 +208,7 @@ export default function Home() {
     setStudentData(parsedData);
     const scanTime = new Date();
     const classInfo =checkClassTime(scanTime,parsedData,classes);
-    console.log("classinfo",parsedData);
-    
+
     if (classInfo) {
 
     
@@ -214,7 +250,7 @@ export default function Home() {
     setStudentData(parsedData);
     const scanTime = new Date();
     const classInfo =checkClassTime(scanTime,parsedData,classes);
-    console.log("classinfo",classInfo);
+
     
     if (classInfo) {
       audioRefSuccess.current?.play();
@@ -357,9 +393,18 @@ export default function Home() {
   
         updatedClasses[classIndex] = {
           ...updatedClasses[classIndex],
-          students: updatedClasses[classIndex].students.map(std => std.id === studentData?.id
-            ? { ...std, debt:selectedClass.isPaid?std.debt+0:std.debt+std.amount}
-            : std
+          students: updatedClasses[classIndex].students.map(std => 
+            std.id === studentData?.id
+              ? {
+                  ...std,
+                  sessionsLeft:
+                    selectedClass.isPaid === "true" || selectedClass.isPaid === true
+                      ? (std.sessionsLeft > 0 ? std.sessionsLeft - 1 : std.sessionsLeft)
+                      : selectedClass.isPaid === "false"
+                      ? std.sessionsLeft // No decrement if isPaid is "false"
+                      : (std.sessionsLeft > 0 ? std.sessionsLeft - 1 : std.sessionsLeft) // Default decrement if isPaid is missing
+                }
+              : std
           ),
           Attendance: {
             ...updatedClasses[classIndex].Attendance,
@@ -369,13 +414,21 @@ export default function Home() {
   
         updatedStudents.forEach(std => {
           if (std.id === studentData?.id) {
-            std.classes = std.classes.map(cls => cls.id === clsid
-              ? { ...cls,  debt:selectedClass.isPaid?cls.debt+0:cls.debt+cls.amount}
-              : cls
+            std.classes = std.classes.map(cls => 
+              cls.id === clsid
+                ? {
+                    ...cls,
+                    sessionsLeft:
+                      selectedClass.isPaid === "true" || selectedClass.isPaid === true
+                        ? (cls.sessionsLeft > 0 ? cls.sessionsLeft - 1 : cls.sessionsLeft)
+                        : selectedClass.isPaid === "false"
+                        ? cls.sessionsLeft // No decrement if isPaid is "false"
+                        : (cls.sessionsLeft > 0 ? cls.sessionsLeft - 1 : cls.sessionsLeft) // Default decrement if isPaid is missing
+                  }
+                : cls
             );
           }
         });
-  
         const attendanceDocRef = doc(db, 'Groups', clsid, 'Attendance', dateTimeUID);
         const docSnapshot = await getDoc(attendanceDocRef);
   
@@ -648,7 +701,7 @@ export default function Home() {
   };
 
   const [selectedClasses, setSelectedClasses] = useState({});
-console.log(selectedClasses);
+
 
   const handleSelection = (classObj, group) => {
     setSelectedClasses((prev) => {
@@ -675,7 +728,7 @@ console.log(selectedClasses);
 
   React.useEffect(() => {
     if (scannedCode) {
-      console.log("qr scanned",scannedCode);
+
       
       onQrScannedInput(scannedCode);
     
@@ -715,6 +768,8 @@ setCurrentClasses(classInfo)
       }
     }));
   };
+
+  
   return (
     <div className="grid md:grid-cols-3 gap-8 max-w-8xl mx-auto p-4 md:p-8">
     <div className="flex flex-col gap-6">
@@ -873,7 +928,7 @@ setCurrentClasses(classInfo)
                 <span>{classObj.name}</span>
                 <span>{`Group: ${group}`}</span>
                 <span>{`Séances restantes: ${classObj.sessionsLeft}`}</span>
-                <span>{`Prochaine date de paiment: ${classObj.nextPaymentDate}`}</span>
+                <span>{`Prochaine date de paiment: ${format(classObj.nextPaymentDate,'yyyy-MM-dd')}`}</span>
                 <span>{`Dette: ${classObj.debt}`}</span>
                 <span>{`${classObj.day}, ${classObj.start} - ${classObj.end}`}</span>
                 

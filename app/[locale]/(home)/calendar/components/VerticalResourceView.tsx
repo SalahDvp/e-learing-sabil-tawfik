@@ -30,7 +30,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { generateTimeOptions } from '../../settings/components/open-days-table';
-import { arrayUnion, doc, updateDoc } from 'firebase/firestore';
+import { arrayUnion, doc, Timestamp, updateDoc } from 'firebase/firestore';
 import { db } from '@/firebase/firebase-config';
 // Function to generate a random color
 const getRandomColor = () => {
@@ -76,7 +76,7 @@ const extractRoomNumber = (room:string) => {
 };
 
 const VerticalResourceView = () => {
-  const {classes,profile}=useData()
+  const {classes,profile,setClasses}=useData()
   const [events,setEvents]=useState<MbscCalendarEvent[]>([])
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
   const [openCard, setOpenCard] = useState(false);
@@ -209,7 +209,7 @@ const VerticalResourceView = () => {
       const attendanceDetail = attendance.Attendance?.[`${formattedDate}`] || { attendanceList: [] };
  const {Attendance,...rest}=attendance
       // Update the selected event with details and extra info
-      setSelectedEvent({ ...args.event.extraInfo, ...attendanceDetail,...rest,attendanceId:`${formattedDate}` });
+      setSelectedEvent({ ...args.event.extraInfo, ...attendanceDetail,...rest,attendanceId:`${formattedDate}`,endDate:args.event.end});
   
       // Open the event card
       setOpenCard(true);
@@ -337,10 +337,45 @@ const VerticalResourceView = () => {
 
     await updateDoc(doc(db,'Groups',formData.group),{
       extraClasses:arrayUnion({
-        start:formData.startTime,end:formData.endTime,room:formData.room,startTime:newEvent.start,endTime:newEvent.end,isPaid:formData.isPaid
+        start:formData.startTime,end:formData.endTime,room:formData.room,startTime:newEvent.start,endTime:newEvent.end,isPaid:formData.isPaid,day:format(new Date(selectedSlot.start), 'EEEE')
       })
     })
-       
+    setClasses((prev) =>
+      prev.map((cls) =>
+        cls.id === formData.group
+          ? {
+              ...cls,
+              extraClasses: cls.extraClasses
+                ? // If extraClasses exists, append the new event
+                  [
+                    ...cls.extraClasses,
+                    {
+                      start: formData.startTime,
+                      end: formData.endTime,
+                      room: formData.room,
+                      startTime: Timestamp.fromDate(new Date(newEvent.start)), // Convert to Firestore Timestamp
+                      endTime: Timestamp.fromDate(new Date(newEvent.end)), 
+                      isPaid: formData.isPaid,
+                      day: format(new Date(selectedSlot.start), 'EEEE'),
+                    },
+                  ]
+                : // If extraClasses doesn't exist, create a new array with the event
+                  [
+                    {
+                      start: formData.startTime,
+                      end: formData.endTime,
+                      room: formData.room,
+                      startTime: Timestamp.fromDate(new Date(newEvent.start)), // Convert to Firestore Timestamp
+                      endTime: Timestamp.fromDate(new Date(newEvent.end)), 
+                      isPaid: formData.isPaid,
+                      day: format(new Date(selectedSlot.start), 'EEEE'),
+                    },
+                  ],
+            }
+          : cls
+      )
+    );
+
     setEvents([...events, newEvent])
     setOpen(false)
     setFormData({

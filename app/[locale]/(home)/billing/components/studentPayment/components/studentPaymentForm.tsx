@@ -528,14 +528,14 @@ const billHtml = `
             <div class="header">
                 <h1 class="title">${profile.schoolName}</h1>
                 <p class="subtitle">${profile.bio}</p>
-                <p class="subtitle">2023/2024</p>
+                <p class="subtitle">2024/2025</p>
                 <p class="subtitle"><strong>وصل استلام</strong></p>
             </div>
             <div class="content">
                 <div class="row">
                     <span>${format(new Date(), "dd-MM-yyyy")}</span>
                 </div>
-                <div class="row">الاسم و اللقب: ${data.student.name}</div>
+                <div class="row">الاسم و اللقب: ${data.student.student}</div>
                 <div class="amount">المبلغ: ${data.filtredclasses.reduce((total, cls) => total + cls.amountPaid, 0)}</div>
                 <table>
                     <thead>
@@ -702,6 +702,7 @@ console.log(filtredclasses);
                 
                 <TableCell>
                 <Input
+                value={option.amountPaid||0}
   placeholder={t('amount-paid')}
   onChange={(event) => {
     const amountPaid = parseFloat(event.target.value) ||0;

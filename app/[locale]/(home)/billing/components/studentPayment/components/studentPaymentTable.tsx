@@ -165,7 +165,7 @@ import { exportTableToExcel } from "@/components/excelExport"
     },
     {
         accessorKey: "debt",
-        header: () => <div className="text-right">{t('total')}</div>,
+        header: () => <div className="text-right">{t('debt')}</div>,
         cell: ({ row }) => {
           const amount = parseFloat(row.getValue("debt"))
     

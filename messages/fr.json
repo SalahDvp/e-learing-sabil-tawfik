@@ -588,5 +588,6 @@
   "select-start-time": "sélectionner l'heure de début",
   "next-payment-day": "prochain jour de paiement",
   "days-left-to-pay": "jours restants pour payer",
-  "start date": "date de début"
+  "start date": "date de début",
+  "debt": "dette"
 }

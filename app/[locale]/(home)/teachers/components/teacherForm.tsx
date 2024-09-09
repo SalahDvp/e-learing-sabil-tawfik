@@ -104,6 +104,7 @@ export default function TeacherForm() {
       advancePayment:[],
       classes:[],
       totalAdvancePayment:0
+      actionTrack:[]
     }
    
   });
@@ -999,6 +1000,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
         advancePayment: [],
         totalAdvancePayment: 0,
         classes: [],
+        actionTrack:[]
       });
     } catch (error) {
       console.error("Error adding Teacher:", error);
