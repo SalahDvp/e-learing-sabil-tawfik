@@ -258,7 +258,7 @@ export const formatDateToYYYYMMDD = (date: Date): string => {
     
         const classDocRef = doc(db, 'Groups',classId);
         await updateDoc(classDocRef, {
-          students
+          students:students
         }); 
 
       }

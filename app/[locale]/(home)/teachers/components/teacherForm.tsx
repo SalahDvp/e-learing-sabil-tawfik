@@ -103,7 +103,7 @@ export default function TeacherForm() {
       salaryDate:new Date(),
       advancePayment:[],
       classes:[],
-      totalAdvancePayment:0
+      totalAdvancePayment:0,
       actionTrack:[]
     }
    

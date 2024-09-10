@@ -345,10 +345,6 @@ const addStudent= async (student,classId,attendanceId) => {
     },
   })
 
-  
-console.log(selectedEvent);
-
-
   return (
     <div className="max-w-5xl mx-auto">
       <div className="flex flex-col md:flex-row items-center justify-between mb-6">

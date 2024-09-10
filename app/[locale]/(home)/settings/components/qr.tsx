@@ -154,10 +154,10 @@ export const Component = ()   => {
     const handleDownload = async () => {
       try {
         // Step 1: Generate Unique IDs
-        const uniqueIds = await generateUniqueIds(50);
+        const uniqueIds = await generateUniqueIds(100);
     
         // Step 2: Save to Firestore
-        await setDoc(doc(db, 'Qrs',"sabiltawfikecole50cartes"), {
+        await setDoc(doc(db, 'Qrs',"royalaecole100cartes"), {
           qrs: uniqueIds
         });
     

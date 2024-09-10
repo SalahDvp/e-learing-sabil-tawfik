@@ -669,6 +669,9 @@ if(["تحضيري"].includes(e)) {
         <SelectItem  value={"no"}>
                         No
                       </SelectItem>
+        <SelectItem  value={"false"}>
+                        No
+                      </SelectItem>
         <SelectItem  value={"teacher"}>
                         Teacher
                       </SelectItem>
@@ -964,13 +967,14 @@ std.id === student.id ? {
       ? { ...std, cs:cs }  // Update the student with the new group
       : std
   );
+
   await changeStudentGroup(id,student.id,updatedStudents,data.classesUIDs)
         setClasses((prevClasses: any[]) =>
           prevClasses.map((cls: { id: any; students: any[]; }) =>
             cls.id === id? {
               ...cls,
               students: cls.students.map((std: { id: any; }) =>
-                std.id === student.id? { ...std, cs:cs} : student
+                std.id === student.id? { ...std, cs:cs} : std
               )
             } : cls
           )
@@ -991,7 +995,8 @@ std.id === student.id ? {
 const onSubmit = async (data: Student) => {
 
  const result=compareClasses(data.classes,student.classes)
-
+  console.log("sdsdds",result);
+  
  await processStudentChanges(result,data)
 const StudentInfoToUpdate = {
   monthlypayment: calculatedAmount,
@@ -1022,7 +1027,7 @@ toast({
 });
 
 
-   setOpen(false)
+  setOpen(false)
   };
 
   return (

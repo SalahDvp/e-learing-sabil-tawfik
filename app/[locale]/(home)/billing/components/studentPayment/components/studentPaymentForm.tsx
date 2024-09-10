@@ -684,7 +684,7 @@ console.log(filtredclasses);
                     className="w-16"
                     {...field}
                     placeholder={t('amount')}
-                    value={option.debt || 0}
+                    value={option.debt}
                   />
                 </TableCell>
 
