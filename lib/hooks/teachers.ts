@@ -24,6 +24,25 @@ interface Class {
     return eachDayOfInterval({ start, end });
 }
 
+async function logAction(userId: string, userType: string, resourceType: string, resourceId: string, action: string, additionalInfo: object = {}) {
+  const actionLog = {
+    userId,
+    userType,
+    resourceType,
+    resourceId,
+    action,
+    timestamp: new Date().toISOString(),
+    additionalInfo
+  };
+
+  // Save the action log in Firestore
+  const log = await doc(db, resourceType, resourceId)
+  await updateDoc(log,{
+    actionTrack: arrayUnion(actionLog)
+  });
+  return log;
+}
+
 // Function to get the next occurrence of a specific day of the week
 function getNextDayOfWeek(dayOfWeek: string, startDate: Date): Date {
     const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -94,12 +113,16 @@ function getNextDayOfWeek(dayOfWeek: string, startDate: Date): Date {
   
     return adjustedDate;
   }
-  export const addTeacher = async (teacher: Teacher) => {
+  export const addTeacher = async (teacher: Teacher,user) => {
     try {
+      const role = user.role === null ? 'admin' : user.role;
+
       const teacherData = { ...teacher, groupUIDs: [] };
       const teacherRef = await addDoc(collection(db, "Teachers"), teacherData);
       console.log("Teacher added successfully:", teacherRef.id);
   
+      await logAction(user.uid, role, 'Teachers', teacherRef.id, 'add new teacher', { teacherName: teacherData.name ,teacherid: teacherRef.id});
+
       // Function to prepare group data, excluding undefined fields
       const prepareGroupData = (cls) => {
         const groupData: any = {
@@ -137,6 +160,7 @@ function getNextDayOfWeek(dayOfWeek: string, startDate: Date): Date {
         });
       }
   
+
       return { id: teacherRef.id, groupUIDs, classesgrouped };
     } catch (error) {
       console.error("Error adding Teacher:", error);
@@ -144,26 +168,39 @@ function getNextDayOfWeek(dayOfWeek: string, startDate: Date): Date {
     }
   };
 
-export const updateTeacher = async(updatedteacher: Teacher,teacherId:string)=>{
+export const updateTeacher = async(updatedteacher: Teacher,teacherId:string,user)=>{
     try {
+      const role = user.role === null ? 'admin' : user.role;
+
         await updateDoc(doc(db, "Teachers",teacherId), updatedteacher);
         console.log("Teacher updated successfully:");
+       await logAction(user.uid, role, 'Teachers', teacherId, 'Edit teacher', { teacherId: teacherId });
+
         return true; // Assuming you want to return the ID of the added Teacher
+
+
+        
     } catch (error) {
         console.error("Error updating Teacher:", error);
         // Handle the error here, such as displaying a message to the user or logging it for further investigation
         throw error; // Optionally re-throw the error to propagate it further if needed
     }
+    
 }
-export const deleteTeacher = async(teacherId:string,classes:any)=>{
+export const deleteTeacher = async(teacherId:string,classes:any,user)=>{
   try {
     for (const classData of classes) {
     
           await deleteDoc(doc(db, "Groups", classData.id)); // Delete the class document
 
+
   }
 
-          await deleteDoc(doc(db, "Teachers",teacherId));
+        const role = user.role === null ? 'admin' : user.role;
+
+        await deleteDoc(doc(db, "Teachers",teacherId));
+     //    await logAction(user.uid, role, 'Teachers', teacherId, 'Delete Teacher', { teacherId: teacherId });
+
       console.log("Teacher deleted successfully:");
       return true; // Assuming you want to return the ID of the added Teacher
   } catch (error) {
@@ -172,12 +209,15 @@ export const deleteTeacher = async(teacherId:string,classes:any)=>{
       throw error; // Optionally re-throw the error to propagate it further if needed
   }
 }
-export const addGroup=async(added:any,teacherId)=>{
+export const addGroup=async(added:any,teacherId,user)=>{
+const role = user.role === null ? 'admin' : user.role;
 const classDocRef = collection(db, 'Groups');
  const id=await addDoc(classDocRef,added)  
  await updateDoc(doc(db,'Teachers',teacherId),{
     groupUIDs:arrayUnion(id.id)
  })
+ await logAction(user.uid, role, 'Teachers', teacherId, 'Add new group/groups', { teacherId: teacherId ,groupName:added.name});
+
 return  id.id
 
 }
@@ -206,6 +246,7 @@ export const removeGroupFromDoc = async (clss,studentArray) => {
         if (userRef) {
       
             await updateDoc(userRef, {...updatedGroupDetails});
+
             console.log('Task updated successfully!');
           } else {
             console.log('Task not found.');
@@ -227,15 +268,18 @@ export const removeGroupFromDoc = async (clss,studentArray) => {
       export const addNewClasses = async (clss:any,teacherId:string) => {
         try {
     
-                const groupUIDs: string[] = [];
+
+          const groupUIDs: string[] = [];
     
-                const groupRef= await addDoc(collection(db, "Groups"), clss);
+          const groupRef= await addDoc(collection(db, "Groups"), clss);
                 groupUIDs.push(groupRef.id);
     
-            await updateDoc(doc(db, "Teachers", teacherId), {
+          await updateDoc(doc(db, "Teachers", teacherId), {
                 groupUIDs: arrayUnion(groupRef.id),
                 
-            });
+          });
+      //    await logAction(user.uid, role, 'Teachers', teacherId, 'Add new Class/Classes to the teacher ', { teacherId: teacherId ,groupID:clss});
+
             return {...clss,classId:groupRef.id};
         } catch (error) {
             console.error("Error adding Teacher:", error);

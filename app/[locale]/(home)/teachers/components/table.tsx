@@ -1,6 +1,8 @@
 
 
 import * as React from "react"
+import {useUser} from '@/lib/auth'
+
 import {
   ChevronDownIcon,
   DotsHorizontalIcon,
@@ -254,6 +256,8 @@ interface DataTableDemoProps {
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
   )
+  const user = useUser()
+
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
@@ -284,10 +288,11 @@ interface DataTableDemoProps {
   })
   const deleteTeacherAndClasses = async (teacher: any, classes: any) => {
     try {
+
       const classesToDelete = classes.filter((classData: any) => classData.teacherUID === teacher.id);
   
       // Delete the teacher and associated classes
-      await deleteTeacher(teacher.id, classesToDelete);
+      await deleteTeacher(teacher.id, classesToDelete,user);
   
       // Update the state by removing the deleted classes and teacher
       setClasses((prevClasses: any) =>

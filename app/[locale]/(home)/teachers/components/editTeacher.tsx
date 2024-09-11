@@ -1,5 +1,6 @@
 "use client"
 import React, { useMemo,useCallback } from 'react';
+import {useUser} from '@/lib/auth'
 import {
   ChevronDownIcon,
 } from "@radix-ui/react-icons"
@@ -899,7 +900,10 @@ function adjustStartDateToFirstSession(startDate: Date, sessions: Session[]): Da
   return adjustedDate;
 }
 const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teacher}) => {
+  const user = useUser()
+
   const t=useTranslations()
+
   const {
     nextStep,
     prevStep,
@@ -956,7 +960,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
           startDate:adjustStartDateToFirstSession(clss.startDate, clss.groups),
           nextPaymentDate:getNextPaymentDate(clss.groups, clss.startDate),
           active:clss.active
-        }, formData.id);
+        }, formData.id,user);
     
         setClasses(prevClasses => [
           ...prevClasses,
@@ -1211,7 +1215,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
     description: `The Teacher, ${data.name} info are updated `,
   });
   // Update the teacher in Firestore
-  await updateTeacher(teacherInfoToUpdate,teacher.id);
+  await updateTeacher(teacherInfoToUpdate,teacher.id,user);
   setTeachers((prev: Teacher[]) => 
   prev.map(t => t.id === teacher.id ? { ...t, ...teacherInfoToUpdate } : t)
 );

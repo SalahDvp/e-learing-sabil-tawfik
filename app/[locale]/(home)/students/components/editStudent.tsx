@@ -57,6 +57,7 @@ import { UseFormReturn } from 'react-hook-form';
 import { useData } from '@/context/admin/fetchDataContext';
 import { useTranslations } from 'next-intl';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {useUser} from '@/lib/auth'
 interface FooterProps {
   formData: Student;
   student: Student;
@@ -741,6 +742,8 @@ if(["تحضيري"].includes(e)) {
 }
 
 const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,student,setOpen,calculatedAmount}) => {
+  const user = useUser()
+
   const {
     nextStep,
     prevStep,
@@ -832,7 +835,6 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,stud
   }
   async function processStudentChanges(result: { added: any; removed: any; updated: any; },data: { classesUIDs: any; }) {
     const { added, removed, updated } = result;
-  
     // Add students to classes
     if (added && Array.isArray(added)) {
       for (const cls of added) {
@@ -874,7 +876,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,stud
     amount:amount,
     debt:debt,
     ...(active && { nextPaymentDate: cls?.nextPaymentDate }),
-    sessionsToStudy:sessionsToStudy},cls.id,student.id)
+    sessionsToStudy:sessionsToStudy},cls.id,student.id,user)
         }
         else{
           setClasses((prevClasses: any[]) => 
@@ -911,7 +913,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,stud
     amount:amount,
     debt:0,
     ...(active && { nextPaymentDate: cls?.nextPaymentDate }),
-    sessionsToStudy:sessionsToStudy},cls.id,student.id)}
+    sessionsToStudy:sessionsToStudy},cls.id,student.id,user)}
         }
 
 
@@ -931,7 +933,7 @@ await removeStudentFromClass({ group:cls.group, id:student.id,cs:cls.cs,
   amount:amount,
   debt:debt,
   ...(active && { nextPaymentDate: cls?.nextPaymentDate }),
-  sessionsToStudy:sessionsToStudy},student.id,cls.id)
+  sessionsToStudy:sessionsToStudy},student.id,cls.id,user)
 
 
        setClasses((prevClasses: any[]) => 
@@ -968,7 +970,7 @@ std.id === student.id ? {
       : std
   );
 
-  await changeStudentGroup(id,student.id,updatedStudents,data.classesUIDs)
+  await changeStudentGroup(id,student.id,updatedStudents,data.classesUIDs,user)
         setClasses((prevClasses: any[]) =>
           prevClasses.map((cls: { id: any; students: any[]; }) =>
             cls.id === id? {
@@ -1010,10 +1012,10 @@ const StudentInfoToUpdate = {
 };
 
 if(student.photo != formData.photo){
-  await updateStudentPicture(student.id,formData.photo)
+  await updateStudentPicture(student.id,formData.photo,user)
 }
 // Update the teacher in Firestore
-await updateStudent(StudentInfoToUpdate,student.id);
+await updateStudent(StudentInfoToUpdate,student.id,user);
 setStudents((prev: Student[]) => 
 prev.map(t => t.id === student.id ? { ...t, ...StudentInfoToUpdate } : t)
 );

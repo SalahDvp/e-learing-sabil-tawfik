@@ -42,6 +42,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {useUser} from '@/lib/auth'
+
 import { ChevronDown, PlusCircle, Trash2 } from 'lucide-react';
 import {
   Select,
@@ -924,6 +926,8 @@ function adjustStartDateToFirstSession(startDate: Date, sessions: Session[]): Da
 }
 
 const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) => {
+  const user = useUser()
+
   const {
     nextStep,
     prevStep,
@@ -940,7 +944,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
   const onSubmit = async (data: any) => {
     try {
       // Add the teacher and get the teacherId
-      const teacherId = await addTeacher(data);
+      const teacherId = await addTeacher(data,user);
   
       // Function to prepare collective group data
       const prepareCollectiveGroup = (cls: any) => {

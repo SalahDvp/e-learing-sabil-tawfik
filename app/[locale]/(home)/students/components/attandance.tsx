@@ -122,12 +122,12 @@ export default function StudentAttendance({ student, classes }) {
   const attendanceField = classData?.Attendance || {};
 
   const attendanceRecords: AttendanceRecord[] = Object.keys(attendanceField).map(date => {
-    const { attendanceList, start, end } = attendanceField[date];
-    const isPresent = attendanceList.some(record => record.id === student.id);
+    const { attendanceList, start, end ,group} = attendanceField[date];
+    const isPresent = attendanceList?.some(record => record.id === student.id);
 
     return {
       date,  // The date as a string (e.g., yyyy-mm-dd)
-      group: attendanceList[0]?.group || 'Unknown',
+      group: group || 'Unknown',
       status: isPresent ? 'present' : 'absent',
       start: start.toDate().toISOString(),  // Convert timestamp to string
       end: end.toDate().toISOString(),

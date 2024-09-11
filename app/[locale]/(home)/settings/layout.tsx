@@ -13,10 +13,10 @@ const sidebarNavItems = [
     title: "Profile",
     href: "/settings",
   },
-  // {
-  //   title: "level",
-  //   href: "/settings/level",
-  // },
+   {
+    title: "Action History",
+    href: "/settings/history",
+  },
 ]
 
 interface SettingsLayoutProps {

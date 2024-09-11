@@ -1,7 +1,7 @@
 "use client"
 import React, { useState, useRef } from 'react';
 import { useToast } from "@/components/ui/use-toast"
-
+import {useUser} from '@/lib/auth'
 import {
   Dialog,
   DialogClose,
@@ -245,6 +245,7 @@ const Footer: React.FC<FooterProps> = ({ formData, newId,student,setOpen}) => {
   };
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const {setStudents,setClasses,students,classes}=useData()
+  const user = useUser()
   React.useEffect(() => {
     const fetchQrCode = async () => {
       const url = await generateQrCode(formData.id);
@@ -255,7 +256,7 @@ const Footer: React.FC<FooterProps> = ({ formData, newId,student,setOpen}) => {
   }, [newId]);
  const {toast}=useToast()
   const onSubmit = async () => {
-await changeStudentCard(student.id,newId)
+await changeStudentCard(student.id,newId,user)
 setStudents((prev: Student[]) => 
 prev.map(t => t.id === student.id ? { ...t, newId:newId } : t)
 );

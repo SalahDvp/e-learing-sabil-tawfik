@@ -1,6 +1,8 @@
 "use client"
 import React, {  useState, useRef, useEffect, useMemo} from 'react';
 import { Timestamp } from 'firebase/firestore';
+import {useUser} from '@/lib/auth'
+
 import {
   Dialog,
   DialogClose,
@@ -929,6 +931,8 @@ if(["تحضيري"].includes(e)) {
 }
 
 const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset, calculatedAmount}) => {
+  const user = useUser()
+
   const {
     nextStep,
     prevStep,
@@ -988,7 +992,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset, cal
       nextPaymentDate: Timestamp.fromDate(new Date(new Date().setMonth(new Date().getMonth() + 1))),  // Current date + 1 month
       registrationAndInsuranceFee: 'notPaid',
       totalAmount: calculatedAmount
-      })
+      },user)
     generateQrCode(data.id);
     setStudents((prev: Student[]) => {
       // Create updated classes by mapping through the data.classes

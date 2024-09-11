@@ -13,13 +13,16 @@ export async function signOut() {
   return firebaseSignOut(auth);
 }
 interface ExtendedFirebaseUser extends FirebaseUser {
+  user: {}| any,
   role?: string | null |{};
 }
 export function useUser() {
-  const [user, setUser] = useState<ExtendedFirebaseUser | null | false>(false);
+  const [user, setUser] = useState<ExtendedFirebaseUser | null | false >(false);
 
+  console.log('rrrr',user);
+  
   useEffect(() => {
-    return onAuthStateChanged(auth, async (user) =>{
+    return onAuthStateChanged(auth, async (user:any) =>{
       if (user) {
       const idTokenResult = await user.getIdTokenResult();
       const role = idTokenResult.claims.role || null;

@@ -4,6 +4,26 @@ import { getDownloadURL, ref, uploadBytes, uploadString } from "firebase/storage
 import { storage } from "@/firebase/firebase-config";
 import { StudentSchema,Student } from "@/validators/auth";
 import { parse } from "date-fns";
+
+
+async function logAction(userId: string, userType: string, resourceType: string, resourceId: string, action: string, additionalInfo: object = {}) {
+  const actionLog = {
+    userId,
+    userType,
+    resourceType,
+    resourceId,
+    action,
+    timestamp: new Date().toISOString(),
+    additionalInfo
+  };
+
+  // Save the action log in Firestore
+  const log = await doc(db, resourceType, resourceId)
+  await updateDoc(log,{
+    actionTrack: arrayUnion(actionLog)
+  });
+  return log;
+}
 function dataURLtoFile(dataurl:string, filename:string) {
     var arr = dataurl.split(','),
         mime = arr[0].match(/:(.*?);/)[1],
@@ -37,8 +57,9 @@ export async function uploadAndLinkToCollection(
     // Assuming you want to return an array of objects with metadata
     return downloadUrl
   }
-  export const addStudent = async (student: Student) => {
+  export const addStudent = async (student: Student,user:any) => {
     try {
+      const role = user.role === null ? 'admin' : user.role;
       // Add the student document outside of the transaction
       const studentRef = doc(db, "Students", student.id);
       await setDoc(studentRef, student);
@@ -130,6 +151,7 @@ export async function uploadAndLinkToCollection(
             transaction:[]
             });
 
+            await logAction(user.uid, role, 'Students', student.id, 'add new student', { studentName: student.name });
       return result;
     } catch (error) {
       console.error("Error adding Student:", error);
@@ -138,10 +160,18 @@ export async function uploadAndLinkToCollection(
     }
   };
   
-export const updateStudent = async(updatedstudent: any,studnetId:string)=>{
+export const updateStudent = async(updatedstudent: any,studnetId:string,user:any)=>{
+
+  
   try {
+    const role = user.role === null ? 'admin' : user.role;
+    console.log('Role id',user.uid);
+    console.log('Role ',role);
           await updateDoc(doc(db, "Students",studnetId), updatedstudent);
-      console.log("student updated successfully:");
+    console.log("student updated successfully:");
+
+      await logAction(user.uid, role, 'Students', studnetId, 'edit student', { studentName: updatedstudent.name });
+
       return true; // Assuming you want to return the ID of the added Teacher
   } catch (error) {
       console.error("Error updating Teacher:", error);
@@ -217,9 +247,11 @@ export const formatDateToYYYYMMDD = (date: Date): string => {
       console.error("Error writing attendance: ", error);
     }
   };
-  export async function addStudentToClass(student,classId,studentId) {
+  export async function addStudentToClass(student,classId,studentId,user) {
     const { group, id, index, name, year,cs,studentName,studentID } = student;
   
+    const role = user.role === null ? 'admin' : user.role;
+
     const classDocRef = doc(db, 'Groups', classId);
     await updateDoc(classDocRef, {
       students: arrayUnion(student)
@@ -229,11 +261,17 @@ export const formatDateToYYYYMMDD = (date: Date): string => {
     await updateDoc(studentDocRef, {
       classesUIDs: arrayUnion({ id: classId, group: group })
     });
+
+    await logAction(user.uid, role, 'Students',studentId , 'Add Student to a group', { studentID:studentId,classId:classId });
+
+    
   
   }
-  export async function removeStudentFromClass(student,studentId,classId) {
+  export async function removeStudentFromClass(student,studentId,classId,user) {
     const { id, group,index,name,year,cs } = student;
   
+    const role = user.role === null ? 'admin' : user.role;
+
     const studentDocRef = doc(db, 'Students', studentId);  
 
   
@@ -245,21 +283,29 @@ export const formatDateToYYYYMMDD = (date: Date): string => {
       await updateDoc(classDocRef, {
         students: arrayRemove(student)
       });
+
+      await logAction(user.uid, role, 'Students',studentId , 'Remove a Student from a group', { studentID:studentId,classId:classId });
+
      }
     
-     export  async function changeStudentGroup(classId,studentId,students,classesUIDs) {
+     export  async function changeStudentGroup(classId,studentId,students,classesUIDs,user) {
     
+      const role = user.role === null ? 'admin' : user.role;
 
-        const studentDocRef = doc(db, 'Students', studentId);  
+
+      const studentDocRef = doc(db, 'Students', studentId);  
+
+      await updateDoc(studentDocRef, {
+       classesUIDs
+      });
   
-        await updateDoc(studentDocRef, {
-         classesUIDs
-        });
-    
-        const classDocRef = doc(db, 'Groups',classId);
-        await updateDoc(classDocRef, {
-          students:students
-        }); 
+      const classDocRef = doc(db, 'Groups',classId);
+      await updateDoc(classDocRef, {
+        students:students
+      }); 
+
+   
+        await logAction(user.uid, role, 'Students',studentId , 'Change the Student group', { studentID:studentId,classId:classId });
 
       }
   
@@ -270,11 +316,14 @@ export async function markAttendance(classId,attendanceId,student){
     })
   }
 
-  export async function changeStudentCard(studentId:string,newId:string){
+  export async function changeStudentCard(studentId:string,newId:string,user){
 
+    const role = user.role === null ? 'admin' : user.role;
     await updateDoc(doc(db,'Students',studentId),{
       newId:newId
     })
+    await logAction(user.uid, role, 'Students',studentId , 'Change student Card', { studentID:studentId });
+
   }
   export async function getStudentCount(classId: string): Promise<number> {
     const classRef = doc(db, 'Groups', classId);
@@ -303,11 +352,14 @@ export async function markAttendance(classId,attendanceId,student){
         return currentStudentCount;
       });
   
+
       return newStudentIndex; // Adding 1 to get the new index
     } catch (error) {
       console.error('Error fetching student count:', error);
       throw error;
     }
+
+
   }
 
 
@@ -323,8 +375,10 @@ export async function markAttendance(classId,attendanceId,student){
       });
 
 }
-export const updateStudentPicture = async (studentId: string, image:any) => {
+export const updateStudentPicture = async (studentId: string, image:any,user) => {
   try {
+
+    const role = user.role === null ? 'admin' : user.role;
 
     const storageRef = ref(storage, `Students/${studentId}/photo`); // Assuming you're storing pictures in a folder named 'students' with a unique ID for each student
     var file = dataURLtoFile(image ?image:'null','photo.jpeg');
@@ -332,9 +386,12 @@ export const updateStudentPicture = async (studentId: string, image:any) => {
     await uploadBytes(storageRef, file);
     console.log("Profile picture updated successfully.");
 
+    await logAction(user.uid, role, 'Students',studentId , 'Change Profile Picture', { studentID:studentId});
+
     console.log("Firestore document updated successfully.");
   } catch (error) {
     console.error("Error updating profile picture:", error);
     throw error;
   }
+
 };
