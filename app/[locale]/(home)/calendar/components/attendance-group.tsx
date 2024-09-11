@@ -32,9 +32,11 @@ import {
 import { Button, buttonVariants } from "@/components/ui/button"
 import { addStudentFromAttendance, removeStudentFromAttendance } from "@/lib/hooks/calendar";
 import React from "react";
-import { doc, updateDoc } from "firebase/firestore";
+import { arrayRemove, doc, updateDoc } from "firebase/firestore";
 import { addPaymentTransaction } from "@/lib/hooks/billing/student-billing";
 import { addPayment } from "@/lib/hooks/billing/otherPayments";
+import { format } from "date-fns";
+import { db } from "@/firebase/firebase-config";
 
 
 
@@ -344,7 +346,41 @@ const addStudent= async (student,classId,attendanceId) => {
       sorting: [{ id: 'index', desc:true }], // Sort by 'index' column in ascending order by default
     },
   })
-
+  const removeExtraClass = async (selectedEvent: any) => {
+    try {
+      // Reference the document in Firestore
+      const classDoc = doc(db, "Groups", selectedEvent.classId);
+  
+      // Prepare the object to remove
+      const classToRemove = {
+        start: selectedEvent.startClass,
+        end: selectedEvent.endClass,
+        room: selectedEvent.room,
+        startTime: selectedEvent.startTime,
+        endTime: selectedEvent.endTime,
+        day: format(new Date(selectedEvent.start), 'EEEE'),
+        isPaid:selectedEvent.isPaid
+      };
+  
+      // Update the Firestore document, removing the specified class
+      await updateDoc(classDoc, {
+        extraClasses: arrayRemove(classToRemove)
+      });
+      setClasses((prev) => 
+        prev.map(cls => 
+          cls.id === selectedEvent.classId
+            ? {
+                ...cls,
+                extraClasses: cls.extraClasses.filter(cs => cs.startTime !== selectedEvent.startTime)
+              }
+            : cls
+        )
+      );
+      console.log('Class removed successfully');
+    } catch (error) {
+      console.error('Error removing class:', error);
+    }
+  };
   return (
     <div className="max-w-5xl mx-auto">
       <div className="flex flex-col md:flex-row items-center justify-between mb-6">
@@ -362,7 +398,7 @@ const addStudent= async (student,classId,attendanceId) => {
           className="max-w-sm"
         /> */}
         <div className="text-muted-foreground">
-         
+        {selectedEvent.extra && (<Button variant="destructive" className="ml-2" onClick={() => removeExtraClass(selectedEvent)}>Retirer la classe</Button>)} 
         </div>
       </div>
 

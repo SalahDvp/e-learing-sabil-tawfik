@@ -168,6 +168,3 @@ export const deleteTeacherSalary = async(transactionID:string)=>{
     } 
 }
 
-//function increment(salaryAmount: any) {
-//    throw new Error("Function not implemented.");
-//}

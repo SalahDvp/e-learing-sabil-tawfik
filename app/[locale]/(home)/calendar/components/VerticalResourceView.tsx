@@ -162,11 +162,15 @@ const VerticalResourceView = () => {
             resource: resourceNumber,
             color: color,
             extraInfo: {
-              classId: classItem.id,
+              ...extraClass,
+              startClass:extraClass.start,
+              endClass:extraClass.end,
+              classId:classId,
               group: classItem.group,
               subject: classItem.subject,
               year: classItem.year,
-              teacher: classItem.teacherName
+              teacher: classItem.teacherName,
+              extra:true
             }
           };
         }).filter(Boolean); // Filter out null events
@@ -209,7 +213,7 @@ const VerticalResourceView = () => {
       const attendanceDetail = attendance.Attendance?.[`${formattedDate}`] || { attendanceList: [] };
  const {Attendance,...rest}=attendance
       // Update the selected event with details and extra info
-      setSelectedEvent({ ...args.event.extraInfo, ...attendanceDetail,...rest,attendanceId:`${formattedDate}`,endDate:args.event.end});
+      setSelectedEvent({ ...args.event.extraInfo, ...attendanceDetail,...rest,attendanceId:`${formattedDate}-${group}`,start:args.event.start,});
   
       // Open the event card
       setOpenCard(true);

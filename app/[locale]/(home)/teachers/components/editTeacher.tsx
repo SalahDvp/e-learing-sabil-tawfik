@@ -363,7 +363,7 @@ const [isOn, setIsOn] = React.useState(false); // Initialize with form value
     
    
 
-{/* <FormField
+<FormField
         control={control}
         name="year"
         render={({ field }) => (
@@ -393,7 +393,7 @@ const [isOn, setIsOn] = React.useState(false); // Initialize with form value
             <FormMessage />
           </FormItem>
         )}
-      /> */}
+      />
 
 
 <FormField

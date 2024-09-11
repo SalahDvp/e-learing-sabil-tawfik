@@ -702,10 +702,10 @@ console.log(filtredclasses);
                 
                 <TableCell>
                 <Input
-                value={option.amountPaid||0}
+                value={option.amountPaid}
   placeholder={t('amount-paid')}
   onChange={(event) => {
-    const amountPaid = parseFloat(event.target.value) ||0;
+    const amountPaid = parseFloat(event.target.value) ;
     const numberOfSessionsLeft = amountPaid /option.amountPerSession; // Calculate the number of sessions left
     const oldsessions=watch(`initialClasses.${index}.sessionsLeft`) ||0;
     // Update the form fields
