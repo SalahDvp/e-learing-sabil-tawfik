@@ -135,9 +135,10 @@ function getNextDayOfWeek(dayOfWeek: string, startDate: Date): Date {
           subject: teacher["educational-subject"],
         };
   
-        if (teacher.active) {
+        if (cls.active) {
+          const day=adjustStartDateToFirstSession(cls.startDate, cls.groups);
           groupData.startDate = adjustStartDateToFirstSession(cls.startDate, cls.groups);
-          groupData.nextPaymentDate = getNextPaymentDate(cls.groups, cls.startDate);
+          groupData.nextPaymentDate = getNextPaymentDate(cls.groups, day);
         }
   
         return groupData;

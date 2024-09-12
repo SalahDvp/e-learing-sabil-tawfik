@@ -958,9 +958,10 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
           subject: data["educational-subject"],
         };
   
-        if (data.active) {
+        if (cls.active) {
+          const day= adjustStartDateToFirstSession(cls.startDate, cls.groups);
           groupData.startDate = adjustStartDateToFirstSession(cls.startDate, cls.groups);
-          groupData.nextPaymentDate = getNextPaymentDate(cls.groups, cls.startDate);
+          groupData.nextPaymentDate = getNextPaymentDate(cls.groups, day);
         }
   
         return groupData;
