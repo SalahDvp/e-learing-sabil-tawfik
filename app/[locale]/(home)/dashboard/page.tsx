@@ -928,7 +928,7 @@ setCurrentClasses(classInfo)
                 <span>{classObj.name}</span>
                 <span>{`Group: ${group}`}</span>
                 <span>{`Séances restantes: ${classObj.sessionsLeft}`}</span>
-                <span>{`Prochaine date de paiment: ${format(classObj.nextPaymentDate,'yyyy-MM-dd')}`}</span>
+                {classObj.nextPaymentDate && (<span>{`Prochaine date de paiment: ${format(classObj.nextPaymentDate,'yyyy-MM-dd')}`}</span>)}
                 <span>{`Dette: ${classObj.debt}`}</span>
                 <span>{`${classObj.day}, ${classObj.start} - ${classObj.end}`}</span>
                 
