@@ -67,7 +67,7 @@ import { useData } from "@/context/admin/fetchDataContext";
 
 import { generateTimeOptions } from '../../settings/components/open-days-table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { parse, isBefore, isAfter, isEqual, addWeeks, startOfWeek, endOfWeek, getDay, setHours, setMinutes, addHours } from 'date-fns';
+import { parse, isBefore, isAfter, isEqual, addWeeks, startOfWeek, endOfWeek, getDay, setHours, setMinutes, addHours, addMonths, eachDayOfInterval } from 'date-fns';
 import { Label } from '@/components/ui/label';
 const parseTime = (timeString) => parse(timeString, 'HH:mm', new Date());
 interface FooterProps {
@@ -488,10 +488,15 @@ const [isOn, setIsOn] = React.useState(false); // Initialize with form value
       <FormItem className="grid grid-cols-4 items-center gap-4">
         <FormLabel className="text-right">{label}</FormLabel>
         <FormControl>
-          <Input
-            {...field}
-            onChange={event => field.onChange(+event.target.value)}
-          />
+        <Input
+  type="number"
+
+  {...field}
+  onChange={event => {
+    const value = event.target.value;
+    field.onChange(parseFloat(value)); // Convert to float
+  }}
+/>
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -504,339 +509,368 @@ const [isOn, setIsOn] = React.useState(false); // Initialize with form value
   </div>
 
 ) : (
-<div className="w-full h-full">
-  <ScrollArea className="h-[400px] w-full pr-4">
-    {fields.map((group, groupIndex) => (
-      <div key={groupIndex} className="mb-8">
-        <div className="flex items-center gap-4 mb-4">
-          <h3 className="text-xl font-bold">{group.name}</h3>
-          <div>
-            <FormField
-              control={form.control}
-              key={groupIndex}
-              name={`classes.${groupIndex}.group`} // Use groupIndex to map fields correctly
-              render={({ field }) => (
-                <FormItem className="w-32">
-                  <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Group Code:</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                </FormItem>
-              )}
+  <div className="w-full h-full">
+    <ScrollArea className="h-[400px] w-full pr-4">
+      {fields.map((group, groupIndex) => (
+        <div key={groupIndex} className="mb-8">
+          <div className="flex items-center gap-4 mb-4">
+            <h3 className="text-xl font-bold">{group.name}</h3>
+            <div>
+              <FormField
+                control={form.control}
+                key={groupIndex}
+                name={`classes.${groupIndex}.group`} // Use groupIndex to map fields correctly
+                render={({ field }) => (
+                  <FormItem className="w-32">
+                    <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Group Code:</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div>
+                    <FormField
+      control={form.control}
+      name={`classes.${groupIndex}.paymentType`}
+      render={({ field }) => (
+        <FormItem className="w-[120px]">
+          <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">type de payment:</FormLabel>
+          <FormControl>
+            <Select
+     onValueChange={field.onChange}
+     defaultValue={field.value}
+            >
+              <SelectTrigger className="w-[120px]">
+                <SelectValue placeholder="Payment type" />
+              </SelectTrigger>
+              <SelectContent>
+              {['monthly','session'].map((type) => (
+                  <SelectItem key={type} value={type}>{t(type)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormControl>
+        </FormItem>
+      )}
+    />
+                    </div>
+                    {watch(`classes.${groupIndex}.paymentType`) === 'monthly' && schoolType !== "تحضيري" && (
+    <FormField
+      control={form.control}
+      name={`classes.${groupIndex}.numberOfSessions`}
+      render={({ field }) => (
+        <FormItem className="w-24">
+          <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">
+            Nombre de séances par mois:
+          </FormLabel>
+          <FormControl>
+            <Input
+              {...field}
+              id={`group-code-${groupIndex}`}  // Ensure ID matches label
+              type="number"
+              placeholder="Sessions"
+              min={1}  // Only allow positive numbers
+              onChange={event => field.onChange(+event.target.value)}
             />
-          </div>
-          <div>
-                  <FormField
-    control={form.control}
-    name={`classes.${groupIndex}.paymentType`}
-    render={({ field }) => (
-      <FormItem className="w-[120px]">
-        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">type de payment:</FormLabel>
-        <FormControl>
-          <Select
-   onValueChange={field.onChange}
-   defaultValue={field.value}
-          >
-            <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="Payment type" />
-            </SelectTrigger>
-            <SelectContent>
-            {['monthly','session'].map((type) => (
-                <SelectItem key={type} value={type}>{t(type)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </FormControl>
-      </FormItem>
-    )}
-  />
-                  </div>
-{watch(`classes.${groupIndex}.paymentType`)==='monthly' &&(          <FormField
-    control={form.control}
-    name={`classes.${groupIndex}.numberOfSessions`}
-    render={({ field }) => (
-      <FormItem className="w-24">
-        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">
-        Nombre de séances par mois:</FormLabel>
-        <FormControl>
-          <Input
-            {...field}
-            type="number"
-            placeholder="Sessions"
-            onChange={event => field.onChange(+event.target.value)}
-          />
-        </FormControl>
-      </FormItem>
-    )}
-  />)}
-                  <div>
-                  <FormField
-    control={form.control}
-    name={`classes.${groupIndex}.amount`}
-    render={({ field }) => (
-      <FormItem className="w-24">
-        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Montant:</FormLabel>
-        <FormControl>
-          <Input
-            {...field}
-            type="number"
-            placeholder="Amount"
-            onChange={event => field.onChange(+event.target.value)}
-          />
-        </FormControl>
-      </FormItem>
-    )}
-  />
-                  </div>
-  {watch('year').every(year => ["1AS","2AS","3AS"].includes(year))&& (<div className="flex flex-col">
-
-                  <Label htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">spécialité:</Label>
-                  <DropdownMenu >
-                            <DropdownMenuTrigger asChild       className="w-24">
-                            <Button variant="outline" className="w-[150px] overflow-hidden text-ellipsis whitespace-nowrap">
-  {/* {group.stream.length > 0 ? group.stream.join(', ') : 'Select Field'} */}
-  <ChevronDown className="ml-2 h-4 w-4" />
-</Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent className="w-56">
-                            {['علوم تجريبية', 'تقني رياضي', 'رياضيات', 'تسيير واقتصاد ', 'لغات اجنبية ', 'اداب وفلسفة'].map((field) => (
-                                       <DropdownMenuItem
-                                       key={field}
-                                       value={field}
-                                       className={`flex items-center ${group.stream?.includes(field) ? 'selected' : ''}`}
-                                       onClick={() =>toggleField(groupIndex,field) } 
-                                       
-                                     >
-                                       <span className="mr-2"> { t(`${field}`)}</span>
-                                       {group.stream?.includes(field) && <CheckIcon className="h-4 w-4 text-green-500" />}
-                                     </DropdownMenuItem>
-                              ))}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                  </div>)}
-                  <div>
-                  <FormField
-    control={form.control}
-    name={`classes.${groupIndex}.year`}
-    render={({ field }) => (
-      <FormItem className="w-[100px]">
-        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Annee:</FormLabel>
-        <FormControl>
-          <Select
-      onValueChange={field.onChange}
-      defaultValue={field.value}
-          >
-            <SelectTrigger className="w-[100px]">
-              <SelectValue placeholder="Select year" />
-            </SelectTrigger>
-            <SelectContent>
-              {watch("year").map((yearOption) => (
-                <SelectItem key={yearOption} value={yearOption}>{yearOption}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </FormControl>
-      </FormItem>
-    )}
-  />
-
-                  </div>
-                  <FormField
-    control={form.control}
-    name={`classes.${groupIndex}.active`}
-    render={({ field }) => (
-      <FormItem className="w-[100px]">
-        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Active:</FormLabel>
-        <FormControl>
-        <Button 
-                  type="button"
-        onClick={()=>setValue(`classes.${groupIndex}.active`,!watch(`classes.${groupIndex}.active`))} 
-        className={` ${watch(`classes.${groupIndex}.active`) ? 'bg-green-500' : 'bg-red-500'} text-white`}
-      >
-        {watch(`classes.${groupIndex}.active`) ? 'Turn Off' : 'Turn On'}
-      </Button>
-        </FormControl>
-      </FormItem>
-    )}
-  />
-      
-                 {watch(`classes.${groupIndex}.active`)&&(
-                  <FormField
-                  control={form.control}
-                  name={`classes.${groupIndex}.startDate`}
-                  render={({ field }) => (
-                    <FormItem className="w-[100px]">
-                      <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">{t('start date')}:</FormLabel>
-                      <FormControl>
-                      <CalendarDatePicker
-                          {...field}
-                          date={getValues(`classes.${groupIndex}.startDate`)}
-                          setDate={(selectedValue) => {
-                            if (selectedValue === undefined) {
-                              // Handle undefined case if needed
-                            } else {
-                              form.setValue(`classes.${groupIndex}.startDate`, selectedValue);
-              
-              
-                            }
-                          }}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                 )} 
-                  <Button
+          </FormControl>
+        </FormItem>
+      )}
+    />
+  )}
+  
+                    <div>
+                    <FormField
+      control={form.control}
+      name={`classes.${groupIndex}.amount`}
+      render={({ field }) => (
+        <FormItem className="w-24">
+          <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Montant:</FormLabel>
+          <FormControl>
+            <Input
+              {...field}
+              type="number"
+              placeholder="Amount"
+              onChange={event => field.onChange(+event.target.value)}
+            />
+          </FormControl>
+        </FormItem>
+      )}
+    />
+                    </div>
+    {schoolType==="high" && (<div className="flex flex-col">
+  
+                    <Label htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">spécialité:</Label>
+                    <DropdownMenu >
+                              <DropdownMenuTrigger asChild       className="w-24">
+                              <Button variant="outline" className="w-[150px] overflow-hidden text-ellipsis whitespace-nowrap">
+    {/* {group.stream.length > 0 ? group.stream.join(', ') : 'Select Field'} */}
+    <ChevronDown className="ml-2 h-4 w-4" />
+  </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent className="w-56">
+                              {['علوم تجريبية', 'تقني رياضي', 'رياضيات', 'تسيير واقتصاد ', 'لغات اجنبية ', 'اداب وفلسفة'].map((field) => (
+                                         <DropdownMenuItem
+                                         key={field}
+                                         value={field}
+                                         className={`flex items-center ${group.stream?.includes(field) ? 'selected' : ''}`}
+                                         onClick={() =>toggleField(groupIndex,field) } 
+                                         
+                                       >
+                                         <span className="mr-2"> { t(`${field}`)}</span>
+                                         {group.stream?.includes(field) && <CheckIcon className="h-4 w-4 text-green-500" />}
+                                       </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                    </div>)}
+                    <div className="flex">
+                    <FormField
+      control={form.control}
+      name={`classes.${groupIndex}.year`}
+      render={({ field }) => (
+        <FormItem className="w-[100px]">
+          <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Annee:</FormLabel>
+          <FormControl>
+            <Select
+        onValueChange={field.onChange}
+        defaultValue={field.value}
+            >
+              <SelectTrigger className="w-[100px]">
+                <SelectValue placeholder="Select year" />
+              </SelectTrigger>
+              <SelectContent>
+                {watch("year").map((yearOption) => (
+                  <SelectItem key={yearOption} value={yearOption}>{yearOption}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormControl>
+        </FormItem>
+      )}
+    />
+  
+                    </div>
+     
+        <FormField
+      control={form.control}
+      name={`classes.${groupIndex}.active`}
+      render={({ field }) => (
+        <FormItem className="w-[100px]">
+          <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">Active:</FormLabel>
+          <FormControl>
+          <Button 
                     type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => removeClass(groupIndex)}
-                    className="ml-auto"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Remove Group
-                  </Button>
-        </div>
-        <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t('Day')}</TableHead>
-                      <TableHead>{t('Start Time')}</TableHead>
-                      <TableHead>{t('End Time')}</TableHead>
-                      <TableHead>{t('Room')}</TableHead>
-             
-                      <TableHead>Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {group.groups.map((session, sessionIndex) => (
-                      <TableRow key={`${groupIndex}-${sessionIndex}`}>
-                        <TableCell>
+          onClick={()=>setValue(`classes.${groupIndex}.active`,!watch(`classes.${groupIndex}.active`))} 
+          className={` ${watch(`classes.${groupIndex}.active`) ? 'bg-green-500' : 'bg-red-500'} text-white`}
+        >
+          {watch(`classes.${groupIndex}.active`) ? 'Turn Off' : 'Turn On'}
+        </Button>
+          </FormControl>
+        </FormItem>
+      )}
+    />
+        
+                   {watch(`classes.${groupIndex}.active`)&&(
+                    <FormField
+                    control={form.control}
+                    name={`classes.${groupIndex}.startDate`}
+                    render={({ field }) => (
+                      <FormItem className="w-[100px]">
+                        <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">{t('start date')}:</FormLabel>
+                        <FormControl>
+                        <CalendarDatePicker
+                            {...field}
+                            date={getValues(`classes.${groupIndex}.startDate`)}
+                            setDate={(selectedValue) => {
+                              if (selectedValue === undefined) {
+                                // Handle undefined case if needed
+                              } else {
+  
+                                const startDate = selectedValue;
+                                  const nextMonthDate = addMonths(startDate, 1);  // Get the date one month later
+                              const nextPaymentDate = new Date(nextMonthDate.setDate(startDate.getDate()));  // Set the next month with the same day (e.g., 15th)
+      
+      // Update the form field with the selected start date and calculated next payment date
+                     form.setValue(`classes.${groupIndex}.startDate`, startDate);
+      form.setValue(`classes.${groupIndex}.nextPaymentDate`, nextPaymentDate);
+  
+      if (schoolType === "تحضيري") {
+        // Calculate the number of Sunday to Thursday days between the start date and next payment date
+        const workingDays = eachDayOfInterval({
+          start: startDate,
+          end: nextPaymentDate,
+        }).filter(date => {
+          const day = getDay(date);
+          return day >= 0 && day <= 4;  // Sunday (0) to Thursday (4)
+        });
+        form.setValue(`classes.${groupIndex}.numberOfSessions`, workingDays.length);
+      }
+                
+                
+                              }
+                            }}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                   )} 
+        
+                 
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => removeClass(groupIndex)}
+                      className="ml-auto"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Remove Group
+                    </Button>
+          </div>
+          <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t('Day')}</TableHead>
+                        <TableHead>{t('Start Time')}</TableHead>
+                        <TableHead>{t('End Time')}</TableHead>
+                        <TableHead>{t('Room')}</TableHead>
+               
+                        <TableHead>Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {group.groups.map((session, sessionIndex) => (
+                        <TableRow key={`${groupIndex}-${sessionIndex}`}>
+                          <TableCell>
+                            <Select
+                              value={session.day}
+                              onValueChange={(value) => updateSessionField(groupIndex, sessionIndex, 'day', value)}
+                            >
+                              <SelectTrigger className="w-[120px]">
+                                <SelectValue placeholder="Select day" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {days.map((day) => (
+                                  <SelectItem key={day} value={day}>{t(day)}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell>
                           <Select
-                            value={session.day}
-                            onValueChange={(value) => updateSessionField(groupIndex, sessionIndex, 'day', value)}
+                            onValueChange={(e)=>updateSessionField(groupIndex, sessionIndex, 'start', e)}
+                            value={session.start}
                           >
-                            <SelectTrigger className="w-[120px]">
-                              <SelectValue placeholder="Select day" />
-                            </SelectTrigger>
+              
+                              <SelectTrigger
+                                id={`start-${index}`}
+                                aria-label={`Select start time`}
+                              >
+                                <SelectValue placeholder={t('select-start-time')} />
+                              </SelectTrigger>
+  
                             <SelectContent>
-                              {days.map((day) => (
-                                <SelectItem key={day} value={day}>{t(day)}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                        <Select
-                          onValueChange={(e)=>updateSessionField(groupIndex, sessionIndex, 'start', e)}
-                          value={session.start}
-                        >
-            
-                            <SelectTrigger
-                              id={`start-${index}`}
-                              aria-label={`Select start time`}
-                            >
-                              <SelectValue placeholder={t('select-start-time')} />
-                            </SelectTrigger>
-
-                          <SelectContent>
-                            {timeOptions.map((time) => (
-                              <SelectItem key={time} value={time}>
-                                {time}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        </TableCell>
-                        <TableCell>
-                        <Select
-                          onValueChange={(e)=>updateSessionField(groupIndex, sessionIndex, 'end', e)}
-                          value={session.end}
-                        >
-            
-                            <SelectTrigger
-                              id={`end-${index}`}
-                              aria-label={`Select end time`}
-                            >
-                              <SelectValue placeholder={t('select-end-time')} />
-                            </SelectTrigger>
-
-                          <SelectContent>
-                            {timeOptions.map((time) => (
-                              <SelectItem key={time} value={time}>
-                                {time}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        </TableCell>
-                        <TableCell>
-                          <Select
-                            value={session.room}
-                            onValueChange={(value) => updateSessionField(groupIndex, sessionIndex, 'room', value)}>
-                            <SelectTrigger className="w-[120px]">
-                              <SelectValue placeholder="Select room" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Array.from({ length: profile.NumberOfClasses }, (_, i) => `room ${i + 1}`).map((room) => (
-                                <SelectItem key={room} value={room}>
-                                  {room}
+                              {timeOptions.map((time) => (
+                                <SelectItem key={time} value={time}>
+                                  {time}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => removeSession(groupIndex, sessionIndex)}
+                          </TableCell>
+                          <TableCell>
+                          <Select
+                            onValueChange={(e)=>updateSessionField(groupIndex, sessionIndex, 'end', e)}
+                            value={session.end}
                           >
-                            Remove
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))} 
-                  </TableBody>
-                </Table>
-                 <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="mt-2 w-full"
-                  onClick={() => addSession(groupIndex)}
-                >
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Add Session
-                </Button> 
-      </div>
-    ))}
-    <Button
-      type="button"
-      variant="outline"
-      className="mt-4 w-full"
-      onClick={() => {
-        appendClass({
-          name: `Group ${fields.length + 1}`,
-          group: '',
-          groups:[],
-          numberOfSessions: 0,
-          amount: 0,
-          stream: schoolType === 'high'?[]:[schoolType],
-          year: '',
-          paymentType: '',
-          startDate:new Date(),
-          active:false
-        });
-      }}
-    >
-      <PlusCircle className="h-4 w-4 mr-2" />
-      {t('Add New Group')}
-    </Button>
-  </ScrollArea>
-</div>
-)}
+              
+                              <SelectTrigger
+                                id={`end-${index}`}
+                                aria-label={`Select end time`}
+                              >
+                                <SelectValue placeholder={t('select-end-time')} />
+                              </SelectTrigger>
+  
+                            <SelectContent>
+                              {timeOptions.map((time) => (
+                                <SelectItem key={time} value={time}>
+                                  {time}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          </TableCell>
+                          <TableCell>
+                            <Select
+                              value={session.room}
+                              onValueChange={(value) => updateSessionField(groupIndex, sessionIndex, 'room', value)}
+                            >
+                              <SelectTrigger className="w-[120px]">
+                                <SelectValue placeholder="Select room" />
+                              </SelectTrigger>
+                              <SelectContent>
+                              {
+                              Array.from({ length: profile.NumberOfClasses }, (_, i) => `room ${i + 1}`).map((room) => (      
+                                 <SelectItem key={room} value={room}>{room}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => removeSession(groupIndex, sessionIndex)}
+                            >
+                              Remove
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))} 
+                    </TableBody>
+                  </Table>
+                   <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="mt-2 w-full"
+                    onClick={() => addSession(groupIndex)}
+                  >
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    Add Session
+                  </Button> 
+        </div>
+      ))}
+      <Button
+        type="button"
+        variant="outline"
+        className="mt-4 w-full"
+        onClick={() => {
+          appendClass({
+            name: `Group ${fields.length + 1}`,
+            group: '',
+            groups:[],
+            numberOfSessions:schoolType === "تحضيري"?24:0,
+            amount: 0,
+            stream: schoolType === 'high'?[]:[schoolType],
+            year: '',
+            paymentType: '',
+            startDate:new Date(),
+            active:false
+          
+          });
+        }}
+      >
+        <PlusCircle className="h-4 w-4 mr-2" />
+        {t('Add New Group')}
+      </Button>
+    </ScrollArea>
+  </div>
+  )}
               </div>
             </Step>
           )
@@ -855,7 +889,7 @@ const [isOn, setIsOn] = React.useState(false); // Initialize with form value
 export default EditTeacher;
 const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-function getNextPaymentDate(sessions: Session[], classStartDate: Date): Date {
+function getNextPaymentDate(sessions: Session[], classStartDate: Date,numberOfSessions:number): Date {
   // Step 1: Find the last session of the week
   const lastSession = sessions.reduce((last, current) => {
     return daysOfWeek.indexOf(current.day) > daysOfWeek.indexOf(last.day) ? current : last;
@@ -876,7 +910,8 @@ function getNextPaymentDate(sessions: Session[], classStartDate: Date): Date {
   lastSessionDate.setHours(startHours, startMinutes);
 
   // Step 3: Calculate the same session date on the 4th week
-  const nextPaymentDate = addWeeks(lastSessionDate, 3); // Move to the 4th week
+  const weeksToAdd = Math.floor(numberOfSessions / sessions.length)-1
+
 
   return nextPaymentDate;
 }
@@ -947,8 +982,8 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
     // Add students to classes
     if (addedClasses && Array.isArray(addedClasses)) {
       for (const clss of addedClasses) {
-    
-    
+        const day= adjustStartDateToFirstSession(clss.startDate, clss.groups);
+        
         const clssId = await addGroup({
           ...clss,
           year: clss.year,
@@ -957,11 +992,11 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
           teacherUID: formData.id,
           teacherName: formData.name,
           subject: formData["educational-subject"],
-          startDate:adjustStartDateToFirstSession(clss.startDate, clss.groups),
-          nextPaymentDate:getNextPaymentDate(clss.groups, clss.startDate),
+          startDate:formData["educational-subject"] != "تحضيري"?day:clss.startDate,
+          nextPaymentDate:formData["educational-subject"] != "تحضيري"?getNextPaymentDate(clss.groups, day,clss.numberOfSessions):clss.nextPaymentDate,
           active:clss.active
         }, formData.id,user);
-    
+
         setClasses(prevClasses => [
           ...prevClasses,
           {
@@ -971,8 +1006,8 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
             students: [],
             reimbursements: [],
             subject: formData['educational-subject'],
-            startDate:adjustStartDateToFirstSession(clss.startDate, clss.groups),
-            nextPaymentDate:getNextPaymentDate(clss.groups, clss.startDate),
+            startDate:formData["educational-subject"] != "تحضيري"?day:clss.startDate,
+            nextPaymentDate:formData["educational-subject"] != "تحضيري"?getNextPaymentDate(clss.groups, day,clss.numberOfSessions):clss.nextPaymentDate,
             teacherName: formData.name,
             teacherUID: formData.id
           }
@@ -994,8 +1029,8 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
                       subject: formData['educational-subject'],
                       teacherName: formData.name,
                       teacherUID: formData.id,
-                      startDate:adjustStartDateToFirstSession(clss.startDate, clss.groups),
-                      nextPaymentDate:getNextPaymentDate(clss.groups, clss.startDate)
+                      startDate:formData["educational-subject"] != "تحضيري"?day:clss.startDate,
+                      nextPaymentDate:formData["educational-subject"] != "تحضيري"?getNextPaymentDate(clss.groups, day,clss.numberOfSessions):clss.nextPaymentDate,
                     }
                   ],
                   groupUIDs: [...tchr.groupUIDs, clssId]  // Correctly add the new group UID
@@ -1042,21 +1077,22 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
       }
   
       if (updatedClasses && Array.isArray(updatedClasses)) {
-        for (const classupdate of updatedClasses) {    
+        for (const classupdate of updatedClasses) {  
+          const day=adjustStartDateToFirstSession(classupdate.startDate, classupdate.groups)   
           const classesDetailes=classes.find(cls=>cls.id===classupdate.id).active
           if (classesDetailes===false && classupdate.active===true){
             const newClass = {
               ...classupdate,
               startDate: classupdate.active 
-                ? adjustStartDateToFirstSession(classupdate.startDate, classupdate.groups) 
+                ? formData["educational-subject"] != "تحضيري"?day:classupdate.startDate
                 : classupdate.startDate,
               ...(classupdate.active && {
-                nextPaymentDate: getNextPaymentDate(classupdate.groups, classupdate.startDate),
+                nextPaymentDate:formData["educational-subject"] != "تحضيري"?getNextPaymentDate(classupdate.groups, day,classupdate.numberOfSessions):classupdate.nextPaymentDate,
               }),
             };
             const updatedStudents =classupdate.students.map(std => ({
               ...std,
-              nextPaymentDate: getNextPaymentDate(classupdate.groups, classupdate.startDate),
+              nextPaymentDate:formData["educational-subject"] != "تحضيري"?getNextPaymentDate(classupdate.groups, day,classupdate.numberOfSessions):classupdate.nextPaymentDate,
             }));
             await updateClassGroup(classupdate.id,newClass);
             await activateStudents(classupdate.id,updatedStudents)
@@ -1138,18 +1174,19 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
             );
           }
           if(classesDetailes===true && classupdate.active===true){
+            const day=adjustStartDateToFirstSession(classupdate.startDate, classupdate.groups) 
             const newClass = {
               ...classupdate,
               startDate: classupdate.active 
-                ? adjustStartDateToFirstSession(classupdate.startDate, classupdate.groups) 
-                : classupdate.startDate,
-              ...(classupdate.active && {
-                nextPaymentDate: getNextPaymentDate(classupdate.groups, classupdate.startDate),
+              ? formData["educational-subject"] != "تحضيري"?day:classupdate.startDate
+              : classupdate.startDate,
+            ...(classupdate.active && {
+              nextPaymentDate:formData["educational-subject"] != "تحضيري"?getNextPaymentDate(classupdate.groups, day,classupdate.numberOfSessions):classupdate.nextPaymentDate,
               }),
             };
             const updatedStudents =classupdate.students.map(std => ({
               ...std,
-              nextPaymentDate: getNextPaymentDate(classupdate.groups, classupdate.startDate),
+              nextPaymentDate:formData["educational-subject"] != "تحضيري"?getNextPaymentDate(classupdate.groups, day,classupdate.numberOfSessions):classupdate.nextPaymentDate,
             }));
             await updateClassGroup(classupdate.id,newClass);
             await activateStudents(classupdate.id,updatedStudents)

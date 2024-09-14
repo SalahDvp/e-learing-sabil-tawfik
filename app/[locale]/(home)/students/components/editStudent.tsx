@@ -31,7 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Upload } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -316,6 +316,19 @@ if(selectedClassId.paymentType==='monthly'){
     if (!Array.isArray(amounts)) return 0; // Handle cases where "fields" is not an array
     return fields.reduce((acc, field) => acc + field.amount, 0)
   }, [watch("classes")]);
+  const fileInputRef = useRef(null)
+
+
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setValue('photo', reader.result)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
   return (
     <Dialog open={open} onOpenChange={setOpen} >
  <DialogContent className="sm:max-w-[1300px]">
@@ -513,29 +526,61 @@ if(["تحضيري"].includes(e)) {
         <div className="w-[300px] items-center justify-center flex flex-col">
           
           <Camera ref={camera} aspectRatio={16/9} errorMessages={{noCameraAccessible:"no Cemera"}}  facingMode='environment' />
-          <Button
-            onClick={() => {
-              if (camera.current) {
-                setValue('photo',camera.current.takePhoto());
-               
-                
-              } else {
-                console.error('Camera reference is null');
-              }
-            }}
-            variant="link"
-            type='button'
-          >
-            {t('Take photo')}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => {
+                if (camera.current) {
+                  setValue('photo', camera.current.takePhoto())
+                } else {
+                  console.error('Camera reference is null')
+                }
+              }}
+              variant="secondary"
+              type='button'
+            >
+              {t('Take photo')}
+            </Button>
+            <Button
+              onClick={() => fileInputRef.current.click()}
+              variant="secondary"
+              type='button'
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              {t('Upload photo')}
+            </Button>
+            <Input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+          </div>
         </div>
       ) : (
         <>
-          <img src={watch('photo')?watch('photo'):null} alt="Taken photo"  className='w-[300px]'/>
-          <Button onClick={() =>   setValue('photo',null)} variant="link" type='button'>
+        <img src={watch('photo')} alt="Captured photo" className='w-[300px] h-auto object-cover rounded-lg' />
+        <div className="flex gap-2">
+          <Button onClick={() => setValue('photo', null)} variant="secondary" type='button'>
             {t('Retake photo')}
           </Button>
-        </>
+          <Button
+            onClick={() => fileInputRef.current.click()}
+            variant="secondary"
+            type='button'
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            {t('Upload different photo')}
+          </Button>
+          <Input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+        </div>
+      </>
       )}
 
 

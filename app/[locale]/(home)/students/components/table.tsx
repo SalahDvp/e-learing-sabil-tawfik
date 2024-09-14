@@ -389,7 +389,7 @@ const orderedMonths = [
         table.getColumn("name")?.setFilterValue(name);
       }} />
           <div className=" ml-auto space-y-4 ">
-            <StudentForm/>
+            <StudentForm filter={filter}/>
             <VerifyStudent/>
     <DropdownMenu>
           <DropdownMenuTrigger asChild>

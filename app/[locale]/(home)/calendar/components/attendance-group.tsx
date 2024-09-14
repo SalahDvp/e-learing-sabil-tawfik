@@ -91,7 +91,7 @@ const [attendance, setAttendance] = useState(() => {
   return updatedAttendanceList;
 });
 
-console.log("dwqdqwd",selectedEvent);
+
 
 
 const removeStudent= async (student,classId,attendanceId) => {
@@ -145,8 +145,8 @@ const addStudent= async (student,classId,attendanceId) => {
         updatedStudents,                    // Fourth argument, updatedStudents
         {                                   // Fifth argument, attendance object
           id: selectedEvent.attendanceId,
-          start: selectedEvent.startDate,
-          end: selectedEvent.endDate,
+          start: selectedEvent.start,
+          end: selectedEvent.end,
           group: selectedEvent.group
         }
       );
@@ -165,8 +165,8 @@ const addStudent= async (student,classId,attendanceId) => {
           attendance = {
             attendanceList: [{ ...student, status: "present" }],
             id: selectedEvent.attendanceId,
-            start: selectedEvent.startDate, 
-            end: selectedEvent.endDate,
+            start: selectedEvent.start, 
+            end: selectedEvent.end,
             group: selectedEvent.group};
         } else {
           // Add the student to the attendance list if attendance exists
@@ -192,20 +192,30 @@ const addStudent= async (student,classId,attendanceId) => {
     
       return updatedClasses;
     });
-    setStudents((prev)=>prev.map(std => {
-      if (std.id === student.id) {
-        std.classes = std.classes.map(cls => cls.id === selectedEvent.classId
-          ? { ...cls, sessionsLeft: cls.sessionsLeft>0 ? cls.sessionsLeft - 1:cls.sessionsLeft}
-          : cls
-        );
-      }
-    }));
+    setStudents((prev) =>
+      prev.map((std) => {
+        if (std.id === student.id) {
+          return {
+            ...std,
+            classes: std.classes.map((cls) =>
+              cls.id === selectedEvent.classId
+                ? {
+                    ...cls,
+                    sessionsLeft: cls.sessionsLeft > 0 ? cls.sessionsLeft - 1 : cls.sessionsLeft,
+                  }
+                : cls
+            ),
+          };
+        }
+        return std; // Return the student unchanged if no match
+      })
+    );
     setAttendance((prevClasses) => prevClasses.map((std) => std.id === student.id?{...std,status:'present'}:std))
   }else{
     await addStudentFromAttendance({...student,status:"present",isPaid:true},classId,attendanceId,undefined,{  
       id: selectedEvent.attendanceId,
-      start: selectedEvent.startDate,
-      end: selectedEvent.endDate,
+      start: selectedEvent.start,
+      end: selectedEvent.end,
       group: selectedEvent.group
     })
     
@@ -223,8 +233,8 @@ const addStudent= async (student,classId,attendanceId) => {
           attendance = {
             attendanceList: [{ ...student, status: "present",isPaid:true }],
             id: selectedEvent.attendanceId,
-            start: selectedEvent.startDate, 
-            end: selectedEvent.endDate,
+            start: selectedEvent.start, 
+            end: selectedEvent.end,
             group: selectedEvent.group};
         } else {
           // Add the student to the attendance list if attendance exists

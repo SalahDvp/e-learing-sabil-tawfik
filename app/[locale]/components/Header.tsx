@@ -20,7 +20,7 @@ import { useUser } from "@/lib/auth";
 
 export default function Header() {
   const pathname = usePathname()
-  const role = useUser(); // Get the user's role
+  const user = useUser(); // Get the user's role
   const t = useTranslations()
 
   return (
@@ -63,25 +63,27 @@ export default function Header() {
         </Link>
 
         {/* Conditionally render the Teachers and Settings links if the role is not null */}
-        {role !== null && (
-         
-            <Link
-              href="/teachers"
-              className={`${
-                pathname === '/teachers' ? 'text-black-500 dark:text-white' : 'text-muted-foreground hover:text-foreground transition-colors'
-              }`}
-            >
-              {t('teachers-0')}
-            </Link>
-            )}
+        {console.log('Role:', user.role)}
+{user.role === null && (
+  <Link
+    href="/teachers"
+    className={`${
+      pathname === '/teachers' 
+        ? 'text-black-500 dark:text-white' 
+        : 'text-muted-foreground hover:text-foreground transition-colors'
+    }`}
+  >
+    {t('teachers-0')}
+  </Link>
+)}
             <Link
           href="/billing"
           className={`${pathname=== '/billing' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
-          disabled={role} >
+         >
           {t('billing')} </Link>
 
 
-          {role !== null && (
+          {user.role === null && (
             <Link
               href="/settings"
               className={`${
@@ -136,11 +138,11 @@ export default function Header() {
             <Link
           href="/billing"
           className={`${pathname=== '/billing' ?'text-black-500 dark:text-white ' : 'text-muted-foreground hover:text-foreground foreground transition-colors'}`}
-          disabled={role} >
+          >
           {t('billing')} </Link>
 
             {/* Conditionally render the Teachers and Settings links if the role is not null */}
-            {role !== null && (
+            {user.role === null && (
               <>
                 <Link
                   href="/teachers"

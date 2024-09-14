@@ -84,7 +84,7 @@ const VerticalResourceView = () => {
   const timeOptions = generateTimeOptions("07:00","22:00", 30);
   useEffect(() => {
     const fetchAndFormatData = async () => {
-      console.log('Fetched classes:', classes); // Log the fetched data
+
       const formattedEvents = classes.flatMap((classItem) => {
         // Extract groups array and other necessary fields
         const groups = classItem.groups || [];
@@ -185,7 +185,7 @@ const VerticalResourceView = () => {
   }, [classes]);
   const handleEventClick =(args) => {
     try {
-   console.log(args);
+
    
       if (!args || !args.event || !args.event.start || !args.event.extraInfo) {
         throw new Error('Invalid event data provided');
@@ -213,7 +213,7 @@ const VerticalResourceView = () => {
       const attendanceDetail = attendance.Attendance?.[`${formattedDate}`] || { attendanceList: [] };
  const {Attendance,...rest}=attendance
       // Update the selected event with details and extra info
-      setSelectedEvent({ ...args.event.extraInfo, ...attendanceDetail,...rest,attendanceId:`${formattedDate}-${group}`,start:args.event.start,});
+      setSelectedEvent({ ...args.event.extraInfo, ...attendanceDetail,...rest,attendanceId:`${formattedDate}`,start:args.event.start,end:args.event.end});
   
       // Open the event card
       setOpenCard(true);

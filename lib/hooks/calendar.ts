@@ -22,26 +22,46 @@ export const removeStudentFromAttendance = async (student,classId,attendanceId,u
     }
 
 }
-export const addStudentFromAttendance = async (student,classId,attendanceId,updatedStudents,attendanceDoc) => {
+export const addStudentFromAttendance = async (
+    student: any, 
+    classId: string, 
+    attendanceId: string, 
+    updatedStudents: any[], 
+    attendanceDoc: any
+  ) => {
     try {
-        // Reference to the specific document in the Groups collection
-        const docRef = doc(db, 'Groups', classId,'Attendance',attendanceId);
-        const attendanceExist=(await getDoc(docRef)).exists()
-     if(attendanceExist){
+      // Reference to the specific document in the Groups collection
+      const docRef = doc(db, 'Groups', classId, 'Attendance', attendanceId);
+      console.log("Document reference:", docRef);
+      
+      // Check if the attendance document exists
+      const attendanceSnap = await getDoc(docRef);
+      const attendanceExist = attendanceSnap.exists();
+      console.log("Attendance exists:", attendanceExist);
+      
+      if (attendanceExist) {
+        console.log("Updating attendance with student:", student);
         await updateDoc(docRef, {
-            attendanceList: arrayUnion(student)
+          attendanceList: arrayUnion(student),
         });
-     }else{
-        const att={...attendanceDoc,attendanceList:[student]}
-        await setDoc(docRef,att)
-     }
-    if(updatedStudents){
-    await updateDoc(doc(db,'Groups',classId),{
-        students:updatedStudents
-    })
-}
-
+      } else {
+        console.log("Creating new attendance document for student:", student);
+        const att = { ...attendanceDoc, attendanceList: [student] };
+        console.log("attenadnace",att);
+        
+        await setDoc(docRef, att);
+      }
+  
+      // Update students in the group if updatedStudents is provided
+      if (updatedStudents) {
+        console.log("Updating students for classId:", classId, "with:", updatedStudents);
+        await updateDoc(doc(db, 'Groups', classId), {
+          students: updatedStudents,
+        });
+      }
+  
+      console.log("Student successfully added to attendance.");
     } catch (error) {
+      console.error("Error in addStudentFromAttendance:", error);
     }
-
-}
+  };

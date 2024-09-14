@@ -308,7 +308,7 @@ const onSelected = (selectedStudent: any) => {
             if (selectedClass) {
               return {
                 ...clsUID,
-                amountPerSession: clsUID.amount / selectedClass.numberOfSessions,
+                amountPerSession: clsUID.amount / clsUID.sessionsToStudy,
                 nextPaymentDate: selectedClass.nextPaymentDate,
               };
             }

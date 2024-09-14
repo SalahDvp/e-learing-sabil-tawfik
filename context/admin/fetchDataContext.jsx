@@ -178,7 +178,8 @@ export const  FetchDataProvider = ({ children }) => {
             phoneNumber: doc.data().phoneNumber,
             year: doc.data().year,
             value:doc.id,
-            label:doc.data().name
+            label:doc.data().name,
+            actionTrack: doc.data().actionTrack || []
           }
           const result = teacher.groupUIDs.flatMap(cls => {
             const classDetail = classesData.find(clss => clss.id === cls);
@@ -207,6 +208,7 @@ export const  FetchDataProvider = ({ children }) => {
               student: `${doc.data().name}`,
               value: `${doc.data().name}`,
               label: `${doc.data().name}`,
+              actionTrack: doc.data().actionTrack || []
             };
   
             // Calculate the result for each student

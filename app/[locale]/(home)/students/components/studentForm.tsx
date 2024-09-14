@@ -34,7 +34,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { PlusCircle, ScanIcon } from 'lucide-react';
+import { PlusCircle, ScanIcon, Upload } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -235,8 +235,29 @@ function calculateAmountDue(
 
   return { totalDue, numberOfSessionsLeft: sessionsLeft };
 }
+const generateFirestoreId = (students: { id: string }[]) => {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const charactersLength = characters.length;
 
-export default function StudentForm() {
+  const generateId = () => {
+    let result = '';
+    for (let i = 0; i < 20; i++) {
+      result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    }
+    return result;
+  };
+
+  let newId = generateId();
+
+  // Check if the generated ID already exists in the students array
+  const existingIds = students.map(student => student.id);
+  while (existingIds.includes(newId)) {
+    newId = generateId(); // Generate a new ID if the current one exists
+  }
+
+  return newId;
+};
+export default function StudentForm({filter}) {
   const camera = useRef<null | { takePhoto: () => string }>(null);
   const {setStudents,teachers,classes,students,profile}=useData()
   const t=useTranslations()
@@ -361,7 +382,7 @@ if(selectedClassId.paymentType==='monthly'){
       audioRefError.current?.play();
       return;
     }
-    console.log("eqewqwe",parsedData)
+
 
     setValue("id",result.data)
     audioRefSuccess.current?.play();
@@ -401,9 +422,10 @@ if(selectedClassId.paymentType==='monthly'){
 
 
 
+
   React.useEffect(() => {
     if (scannedCode) {
-      console.log("qr scanned",scannedCode);
+   
       
       onQrScannedInput(scannedCode);
     
@@ -428,6 +450,20 @@ if(selectedClassId.paymentType==='monthly'){
 
     
   }
+
+  const fileInputRef = useRef(null)
+
+
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setValue('photo', reader.result)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
   return (
     <Dialog >
       <DialogTrigger asChild className='mr-3'>
@@ -445,7 +481,7 @@ if(selectedClassId.paymentType==='monthly'){
 
         <div className="flex w-full flex-col gap-4">
 
-      <Stepper initialStep={0} steps={steps} >
+      <Stepper initialStep={filter==="تحضيري"?1:0} steps={steps} >
 
         {steps.map(({ label }, index) => {
           return (
@@ -701,29 +737,61 @@ if(["تحضيري"].includes(e)) {
         <div className="w-[300px] items-center justify-center flex flex-col">
           
           <Camera ref={camera} aspectRatio={16/9} errorMessages={{noCameraAccessible:"no Cemera"}}  facingMode='environment' />
-          <Button
-            onClick={() => {
-              if (camera.current) {
-                setValue('photo',camera.current.takePhoto());
-                console.log(camera.current.takePhoto());
-                
-              } else {
-                console.error('Camera reference is null');
-              }
-            }}
-            variant="link"
-            type='button'
-          >
-            {t('Take photo')}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => {
+                if (camera.current) {
+                  setValue('photo', camera.current.takePhoto())
+                } else {
+                  console.error('Camera reference is null')
+                }
+              }}
+              variant="secondary"
+              type='button'
+            >
+              {t('Take photo')}
+            </Button>
+            <Button
+              onClick={() => fileInputRef.current.click()}
+              variant="secondary"
+              type='button'
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              {t('Upload photo')}
+            </Button>
+            <Input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+          </div>
         </div>
       ) : (
         <>
-          <img src={watch('photo')?watch('photo'):null} alt="Taken photo"  className='w-[300px]'/>
-          <Button onClick={() =>   setValue('photo',null)} variant="link" type='button'>
+        <img src={watch('photo')} alt="Captured photo" className='w-[300px] h-auto object-cover rounded-lg' />
+        <div className="flex gap-2">
+          <Button onClick={() => setValue('photo', null)} variant="secondary" type='button'>
             {t('Retake photo')}
           </Button>
-        </>
+          <Button
+            onClick={() => fileInputRef.current.click()}
+            variant="secondary"
+            type='button'
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            {t('Upload different photo')}
+          </Button>
+          <Input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+        </div>
+      </>
       )}
 
 
@@ -983,222 +1051,180 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset, cal
   }
   const {setStudents,setClasses,students,classes,profile}=useData()
   const {toast}=useToast()
-  const onSubmit = async(data:any) => {
-
-    const newData=await addStudent({...data,studentIndex:students.length+1, 
-      debt:calculatedAmount,
-      monthlypayment: calculatedAmount,
-      lastPaymentDate: Timestamp.fromDate(currentDate),  // Firebase Timestamp for the current date and time
-      nextPaymentDate: Timestamp.fromDate(new Date(new Date().setMonth(new Date().getMonth() + 1))),  // Current date + 1 month
-      registrationAndInsuranceFee: 'notPaid',
-      totalAmount: calculatedAmount
-      },user)
-    generateQrCode(data.id);
-    setStudents((prev: Student[]) => {
-      // Create updated classes by mapping through the data.classes
-      const updatedClasses = data.classes.map(cls => {
-        const classUpdate = newData.classUpdates.find(update => update.classID === cls.id);
-        if (classUpdate) {
-          // Return the updated class with the new index
-          return { ...cls, index: classUpdate.newIndex };
-        }
-        // Return the existing class if no update is found
-        return cls;
-      });
-    
-
-
-      // Add the new student to the previous state
-      return [
+  const onSubmit = async (data: any) => {
+    try {
+      const id = data.id === null ? generateFirestoreId(students) : data.id;
+  
+      // Prepare the student object
+      const newStudent = {
+        ...data,
+        id,
+        studentIndex: students.length + 1,
+        debt: calculatedAmount,
+        monthlypayment: calculatedAmount,
+        lastPaymentDate: Timestamp.fromDate(currentDate),
+        nextPaymentDate: Timestamp.fromDate(new Date(new Date().setMonth(new Date().getMonth() + 1))),
+        registrationAndInsuranceFee: 'notPaid',
+        totalAmount: calculatedAmount,
+        value: data.name,
+        label: data.name,
+        student: data.name
+      };
+  
+      // Add student to database and fetch newData
+      const newData = await addStudent(newStudent, user);
+  
+      // Generate QR code
+      generateQrCode(id);
+  
+      // Update state for students
+      setStudents(prev => [
         ...prev,
         {
-          ...data,
-        studentIndex: students.length + 1,  // Basic student details
-        classes: updatedClasses,  // Updated classes with new indexes
-        monthlypayment: calculatedAmount,
-        lastPaymentDate: Timestamp.fromDate(currentDate),  // Firebase Timestamp for the current date and time
-        nextPaymentDate: Timestamp.fromDate(new Date(new Date().setMonth(new Date().getMonth() + 1))),  // Current date + 1 month
-        registrationAndInsuranceFee: 'notPaid',
-        totalAmount: calculatedAmount, 
-        value:data.name,
-        label:data.name,
-        student:data.name,
+          ...newStudent,
+          classes: data.classes.map(cls => {
+            const classUpdate = newData.classUpdates.find(update => update.classID === cls.id);
+            return classUpdate ? { ...cls, index: classUpdate.newIndex } : cls;
+          })
         }
-      ];
-    });
+      ]);
   
-    setClasses((prev: any[]) =>
-      prev.map((cls) => {
-        // Find the matching class from the updatedClasses data
-        const matchingClass = newData.classUpdates.find((sls) => sls.classID === cls.id);
-    
+      // Update state for classes
+      setClasses(prev => prev.map(cls => {
+        const matchingClass = newData.classUpdates.find(sls => sls.classID === cls.id);
+  
         if (matchingClass) {
- if(cls.paymentType="monthly"){
-  return {
-    ...cls,
-    students: [
-      ...cls.students,
-      {
-        id: data.id, // The ID of the newly added student
-        name: data.name, // The name of the newly added student
-        index: matchingClass.newIndex, // The new index for the student
-        year: data.year, // The year of the student
-        group: cls.group,
-        cs:matchingClass.cs,
-        sessionsLeft:matchingClass.numberOfSessions,
-        amount:matchingClass.amount,
-        debt:matchingClass.debt,
-        ...(matchingClass.active && { nextPaymentDate:matchingClass?.nextPaymentDate }),
-        sessionsToStudy:matchingClass.numberOfSessionsLeft
-      },
-    ],
-  };
- }else{
-  return {
-    ...cls,
-    students: [
-      ...cls.students,
-      {
-        id: data.id, // The ID of the newly added student
-        name: data.name, // The name of the newly added student
-        index: matchingClass.newIndex, // The new index for the student
-        year: data.year, // The year of the student
-        group: cls.group,
-        cs:matchingClass.cs,
-        sessionsLeft:0,
-        amount:matchingClass.amount,
-        debt:0,
-        ...(matchingClass.active && { nextPaymentDate:matchingClass?.nextPaymentDate }),
-        sessionsToStudy:0
-      },
-    ],
-  };
- }
-     
-        }
-        // Return the class unchanged if no matching class was found
-        return cls;
-      })
-    );
-    nextStep()
-    toast({
-      title: "Student Added!",
-      description: `The student, ${data.name} added successfully`,
-    });
-    const billHtml = `
-    <html>
-    <head>
-      <style>
-        body {
-          font-family: Arial, sans-serif;
-          margin: 0;
-          padding: 0;
-          width: 21cm;
-          height: 29.7cm;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-        }
-        .bill-container {
-          padding: 10px;
-          width: 100%;
-          height: 100%;
-          box-sizing: border-box;
-      
-        }
-        .header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 48px;
-        }
-        .logo-container {
-          display: flex;
-          align-items: center;
-          gap: 24px;
-        }
-        .logo-container img {
-          border-radius: 50%;
-          width: 120px;
-          height: 120px;
-          object-fit: cover;
-        }
-        h2 {
-          font-size: 48px;
-          font-weight: 700;
-        }
-        .bill-item {
-          margin-bottom: 32px;
-          font-size: 36px;
-        }
-        .bill-item label {
-          font-weight: bold;
-        }
-        .total {
-          font-size: 60px;
-          font-weight: 700;
-        }
-        .footer {
-          margin-top: 64px;
-          text-align: center;
-          font-size: 36px;
-          color: #6c757d;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="bill-container">
-        <div class="header">
-          <div class="logo-container">
-            <img src="/smartschool.jpg" alt="School Logo" />
-            <h2>Smart School</h2>
-          </div>
-          <div style="font-size: 36px; color: #6c757d;"></div>
-        </div>
-        <div style="display: grid; gap: 24px;">
-          <div class="bill-item">
-            <label>Nom:</label>
-            <span>${data.name}</span>
-          </div>
-          <div class="bill-item">
-            <label>Frais d inscription:</label>
-            <span>DZD ${profile.RegistrationFee}</span>
-          </div>
-          <div class="bill-item">
-            <label>Date:</label>
-            <span>${format(new Date(), "dd-MM-yyyy")}</span>
-          </div>
-        </div>
-        <hr style="margin: 48px 0;" />
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-          <span class="total">Total:</span>
-          <span class="total">DZD ${profile.RegistrationFee}</span>
-        </div>
-        <div class="footer">
-          Merci!
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
-
-  const printWindow = window.open('', '_blank');
+          const updatedStudent = {
+            id,
+            name: data.name,
+            index: matchingClass.newIndex,
+            year: data.year,
+            group: cls.group,
+            cs: matchingClass.cs,
+            sessionsLeft: matchingClass.numberOfSessions,
+            amount: matchingClass.amount,
+            debt: matchingClass.debt,
+            ...(matchingClass.active && { nextPaymentDate: matchingClass.nextPaymentDate }),
+            sessionsToStudy: matchingClass.numberOfSessionsLeft
+          };
   
-  if (printWindow) {
-    printWindow.document.open();
-    printWindow.document.write(billHtml);
-    printWindow.document.close();
-
-    printWindow.onload = () => {
-      printWindow.focus();
-      printWindow.print();
-      printWindow.onafterprint = () => {
-        printWindow.close(); // Close the window after printing
-      };
-    };
-  } 
-
+          return {
+            ...cls,
+            students: [...cls.students, updatedStudent]
+          };
+        }
+  
+        return cls;
+      }));
+  
+      // Proceed to the next step
+      nextStep();
+  
+      // Show success toast
+      toast({
+        title: "Student Added!",
+        description: `The student, ${data.name} added successfully`,
+      });
+  
+      // Print the bill
+      printBill(data.name, profile.RegistrationFee);
+  
+    } catch (error) {
+      console.error("Error adding student:", error);
+    }
   };
+  
+  // Function to print bill
+  const printBill = (studentName: string, fee: number) => {
+    const billHtml = `
+      <html>
+      <head>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            width: 21cm;
+            height: 29.7cm;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+          }
+          .bill-container {
+            padding: 10px;
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+          }
+          .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 48px;
+          }
+          .logo-container img {
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            object-fit: cover;
+          }
+          h2 {
+            font-size: 48px;
+            font-weight: 700;
+          }
+          .bill-item {
+            margin-bottom: 32px;
+            font-size: 36px;
+          }
+          .total {
+            font-size: 60px;
+            font-weight: 700;
+          }
+          .footer {
+            margin-top: 64px;
+            text-align: center;
+            font-size: 36px;
+            color: #6c757d;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="bill-container">
+          <div class="header">
+            <div class="logo-container">
+              <img src="/smartschool.jpg" alt="School Logo" />
+              <h2>Smart School</h2>
+            </div>
+          </div>
+          <div class="bill-item">
+            <label>Nom:</label> <span>${studentName}</span>
+          </div>
+          <div class="bill-item">
+            <label>Frais d'inscription:</label> <span>DZD ${fee}</span>
+          </div>
+          <hr style="margin: 48px 0;" />
+          <div style="display: flex; justify-content: space-between;">
+            <span class="total">Total:</span>
+            <span class="total">DZD ${fee}</span>
+          </div>
+          <div class="footer">Merci!</div>
+        </div>
+      </body>
+      </html>
+    `;
+  
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(billHtml);
+      printWindow.document.close();
+      printWindow.onload = () => {
+        printWindow.focus();
+        printWindow.print();
+        printWindow.onafterprint = () => printWindow.close();
+      };
+    }
+  };
+
 
   return (
     <>
@@ -1254,7 +1280,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset, cal
         ) : (
           <>
             <Button
-              disabled={isDisabledStep}
+              disabled={currentStep.label==='Step 2'?true:isDisabledStep}
               onClick={prevStep}
               size="sm"
               variant="secondary"
@@ -1265,7 +1291,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset, cal
             {isLastStep?(        <LoadingButton size="sm"    loading={isSubmitting}        type={'button'}   onClick={form.handleSubmit(onSubmit)}>
               Finish
             </LoadingButton>):(        <Button size="sm"   
-            disabled={formData.id === null}   
+            //disabled={formData.id === null}   
                  type={"button"}    onClick={nextStep}>
               {isLastStep ? "Finish" : isOptionalStep ? "Skip" : "Next"}
             </Button>)}

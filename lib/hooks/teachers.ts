@@ -69,7 +69,7 @@ function getNextDayOfWeek(dayOfWeek: string, startDate: Date): Date {
   };
   const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-  function getNextPaymentDate(sessions: Session[], classStartDate: Date): Date {
+  function getNextPaymentDate(sessions: Session[], classStartDate: Date, numberOfSessions: number): Date {
     // Step 1: Find the last session of the week
     const lastSession = sessions.reduce((last, current) => {
       return daysOfWeek.indexOf(current.day) > daysOfWeek.indexOf(last.day) ? current : last;
@@ -77,7 +77,6 @@ function getNextDayOfWeek(dayOfWeek: string, startDate: Date): Date {
   
     // Step 2: Calculate the date of the last session in the first week
     const classStartWeekStart = startOfWeek(classStartDate);
-    const classStartWeekEnd = endOfWeek(classStartDate);
   
     // Find the date for the last session in the first week
     let lastSessionDate = new Date(classStartWeekStart);
@@ -89,11 +88,15 @@ function getNextDayOfWeek(dayOfWeek: string, startDate: Date): Date {
     const [startHours, startMinutes] = lastSession.end.split(':').map(Number);
     lastSessionDate.setHours(startHours, startMinutes);
   
-    // Step 3: Calculate the same session date on the 4th week
-    const nextPaymentDate = addWeeks(lastSessionDate, 3); // Move to the 4th week
+    // Step 3: Calculate the sessions to move forward based on numberOfSessions and sessions.length
+    const weeksToAdd = Math.floor((numberOfSessions / sessions.length) - 1);
+  
+    // Step 4: Move forward the calculated number of weeks
+    const nextPaymentDate = addWeeks(lastSessionDate, weeksToAdd);
   
     return nextPaymentDate;
   }
+
   function adjustStartDateToFirstSession(startDate: Date, sessions: Session[]): Date {
     // Step 1: Find the first session of the week
     const firstSession = sessions.reduce((first, current) => {
@@ -119,7 +122,7 @@ function getNextDayOfWeek(dayOfWeek: string, startDate: Date): Date {
 
       const teacherData = { ...teacher, groupUIDs: [] };
       const teacherRef = await addDoc(collection(db, "Teachers"), teacherData);
-      console.log("Teacher added successfully:", teacherRef.id);
+
   
       await logAction(user.uid, role, 'Teachers', teacherRef.id, 'add new teacher', { teacherName: teacherData.name ,teacherid: teacherRef.id});
 
@@ -134,11 +137,12 @@ function getNextDayOfWeek(dayOfWeek: string, startDate: Date): Date {
           teacherName: teacher.name,
           subject: teacher["educational-subject"],
         };
-  
         if (cls.active) {
+          if(teacher["educational-subject"] != "تحضيري"){
           const day=adjustStartDateToFirstSession(cls.startDate, cls.groups);
           groupData.startDate = adjustStartDateToFirstSession(cls.startDate, cls.groups);
-          groupData.nextPaymentDate = getNextPaymentDate(cls.groups, day);
+          groupData.nextPaymentDate = getNextPaymentDate(cls.groups, day,cls.numberOfSessions);
+          }
         }
   
         return groupData;

@@ -69,7 +69,7 @@ import { useData } from "@/context/admin/fetchDataContext";
 
 import { generateTimeOptions } from '../../settings/components/open-days-table';
 import { setgroups } from 'process';
-import { parse, isBefore, isAfter, isEqual, addWeeks, startOfWeek, endOfWeek, getDay, setHours, setMinutes, addHours } from 'date-fns';
+import { parse, isBefore, isAfter, isEqual, addWeeks, startOfWeek, endOfWeek, getDay, setHours, setMinutes, addHours, addMonths, eachDayOfInterval } from 'date-fns';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 const parseTime = (timeString) => parse(timeString, 'HH:mm', new Date());
@@ -507,10 +507,15 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
       <FormItem className="grid grid-cols-4 items-center gap-4">
         <FormLabel className="text-right">{label}</FormLabel>
         <FormControl>
-          <Input
-            {...field}
-            onChange={event => field.onChange(+event.target.value)}
-          />
+        <Input
+  type="number"
+
+  {...field}
+  onChange={event => {
+    const value = event.target.value;
+    field.onChange(parseFloat(value)); // Convert to float
+  }}
+/>
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -570,24 +575,29 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
     )}
   />
                   </div>
-{watch(`classes.${groupIndex}.paymentType`)==='monthly' &&(          <FormField
+                  {watch(`classes.${groupIndex}.paymentType`) === 'monthly' && schoolType !== "تحضيري" && (
+  <FormField
     control={form.control}
     name={`classes.${groupIndex}.numberOfSessions`}
     render={({ field }) => (
       <FormItem className="w-24">
         <FormLabel htmlFor={`group-code-${groupIndex}`} className="text-sm font-medium">
-        Nombre de séances par mois:</FormLabel>
+          Nombre de séances par mois:
+        </FormLabel>
         <FormControl>
           <Input
             {...field}
+            id={`group-code-${groupIndex}`}  // Ensure ID matches label
             type="number"
             placeholder="Sessions"
+            min={1}  // Only allow positive numbers
             onChange={event => field.onChange(+event.target.value)}
           />
         </FormControl>
       </FormItem>
     )}
-  />)}
+  />
+)}
 
                   <div>
                   <FormField
@@ -696,7 +706,26 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
                             if (selectedValue === undefined) {
                               // Handle undefined case if needed
                             } else {
-                              form.setValue(`classes.${groupIndex}.startDate`, selectedValue);
+
+                              const startDate = selectedValue;
+                                const nextMonthDate = addMonths(startDate, 1);  // Get the date one month later
+                            const nextPaymentDate = new Date(nextMonthDate.setDate(startDate.getDate()));  // Set the next month with the same day (e.g., 15th)
+    
+    // Update the form field with the selected start date and calculated next payment date
+                   form.setValue(`classes.${groupIndex}.startDate`, startDate);
+    form.setValue(`classes.${groupIndex}.nextPaymentDate`, nextPaymentDate);
+
+    if (schoolType === "تحضيري") {
+      // Calculate the number of Sunday to Thursday days between the start date and next payment date
+      const workingDays = eachDayOfInterval({
+        start: startDate,
+        end: nextPaymentDate,
+      }).filter(date => {
+        const day = getDay(date);
+        return day >= 0 && day <= 4;  // Sunday (0) to Thursday (4)
+      });
+      form.setValue(`classes.${groupIndex}.numberOfSessions`, workingDays.length);
+    }
               
               
                             }
@@ -846,7 +875,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
           name: `Group ${fields.length + 1}`,
           group: '',
           groups:[],
-          numberOfSessions: 0,
+          numberOfSessions:schoolType === "تحضيري"?24:0,
           amount: 0,
           stream: schoolType === 'high'?[]:[schoolType],
           year: '',
@@ -879,8 +908,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
   )
 }
 const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
-function getNextPaymentDate(sessions: Session[], classStartDate: Date): Date {
+function getNextPaymentDate(sessions: Session[], classStartDate: Date, numberOfSessions: number): Date {
   // Step 1: Find the last session of the week
   const lastSession = sessions.reduce((last, current) => {
     return daysOfWeek.indexOf(current.day) > daysOfWeek.indexOf(last.day) ? current : last;
@@ -888,7 +916,6 @@ function getNextPaymentDate(sessions: Session[], classStartDate: Date): Date {
 
   // Step 2: Calculate the date of the last session in the first week
   const classStartWeekStart = startOfWeek(classStartDate);
-  const classStartWeekEnd = endOfWeek(classStartDate);
 
   // Find the date for the last session in the first week
   let lastSessionDate = new Date(classStartWeekStart);
@@ -900,8 +927,11 @@ function getNextPaymentDate(sessions: Session[], classStartDate: Date): Date {
   const [startHours, startMinutes] = lastSession.end.split(':').map(Number);
   lastSessionDate.setHours(startHours, startMinutes);
 
-  // Step 3: Calculate the same session date on the 4th week
-  const nextPaymentDate = addWeeks(lastSessionDate, 3); // Move to the 4th week
+  // Step 3: Calculate the sessions to move forward based on numberOfSessions and sessions.length
+  const weeksToAdd = Math.floor(numberOfSessions / sessions.length)-1;
+
+  // Step 4: Move forward the calculated number of weeks
+  const nextPaymentDate = addWeeks(lastSessionDate, weeksToAdd);
 
   return nextPaymentDate;
 }
@@ -959,9 +989,14 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
         };
   
         if (cls.active) {
-          const day= adjustStartDateToFirstSession(cls.startDate, cls.groups);
-          groupData.startDate = adjustStartDateToFirstSession(cls.startDate, cls.groups);
-          groupData.nextPaymentDate = getNextPaymentDate(cls.groups, day);
+          if(data["educational-subject"] != "تحضيري"){
+
+            const day= adjustStartDateToFirstSession(cls.startDate, cls.groups);
+            groupData.startDate = adjustStartDateToFirstSession(cls.startDate, cls.groups);
+            groupData.nextPaymentDate = getNextPaymentDate(cls.groups, day,cls.numberOfSessions);
+            
+          }
+
         }
   
         return groupData;
