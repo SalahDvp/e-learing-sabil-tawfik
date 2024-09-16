@@ -39,12 +39,14 @@ exports.createUserAndAssignRole = onCall(async (request) => {
     throw new HttpsError("internal", "Error creating user and assigning role");
   }
 });
+
 exports.deductSessions = functions.pubsub
-  .schedule('every day 00:00') // This runs the function every day at midnight
-  .timeZone('Africa/Algiers') // Optional: Set your timezone
+  .schedule('every day 00:00')
+  .timeZone('Africa/Algiers')
   .onRun(async (context) => {
     const db = admin.firestore();
-    const today = format(new Date(), 'EEEE'); // Get the day of the week, e.g., 'Monday', 'Tuesday'
+    const today = format(new Date(), 'EEEE'); // Get today's day of the week
+    const todayDateString = format(new Date(), 'yyyy-MM-dd'); // Get today's date as yyyy-MM-dd
 
     try {
       // Get all the groups where paymentType is 'monthly' and active is true
@@ -72,17 +74,43 @@ exports.deductSessions = functions.pubsub
         if (matchingClasses.length > 0) {
           console.log(`Processing group with matching day: ${today}`);
 
-          // Loop through the students and decrement their sessionsLeft
-          updatedStudents = updatedStudents.map((student) => {
-            const currentSessionsLeft = student.sessionsLeft || 0;
+          // Check if today's attendance document exists
+          const attendanceDoc = await db
+            .collection('Groups')
+            .doc(groupDoc.id)
+            .collection('Attendance')
+            .doc(todayDateString)
+            .get();
 
-            // Decrement by 1 if sessionsLeft is greater than 0, otherwise leave it at 0
-            student.sessionsLeft =
-              currentSessionsLeft > 0 ? currentSessionsLeft - 1 : 0;
-
+          let attendanceList = [];
+          if (attendanceDoc.exists) {
+            attendanceList = attendanceDoc.data().attendanceList || [];
             console.log(
-              `Updated sessionsLeft for student ${student.id}: ${student.sessionsLeft}`
+              `Found attendance for ${todayDateString} with ${attendanceList.length} students.`
             );
+          } else {
+            console.log(`No attendance found for ${todayDateString}`);
+          }
+
+          // Loop through the students and decrement their sessionsLeft if they're not in the attendance list
+          updatedStudents = updatedStudents.map((student) => {
+            // Check if the student is present in today's attendance list
+            const isInAttendance = attendanceList.some(
+              (attendedStudent) => attendedStudent.id === student.id
+            );
+
+            if (!isInAttendance) {
+              const currentSessionsLeft = student.sessionsLeft || 0;
+              // Decrement by 1 if sessionsLeft is greater than 0, otherwise leave it at 0
+              student.sessionsLeft =
+                currentSessionsLeft > 0 ? currentSessionsLeft - 1 : 0;
+
+              console.log(
+                `Updated sessionsLeft for student ${student.id}: ${student.sessionsLeft}`
+              );
+            } else {
+              console.log(`Skipping session deduction for student ${student.id} as they are marked in attendance.`);
+            }
 
             return student; // Return the updated student object
           });
@@ -101,6 +129,7 @@ exports.deductSessions = functions.pubsub
 
     return null;
   });
+
   exports.updateDebtsAndNextPaymentDate = functions.pubsub
   .schedule('every day 00:00') // Run every night at midnight
   .timeZone('Africa/Algiers') // Optional: Set your timezone

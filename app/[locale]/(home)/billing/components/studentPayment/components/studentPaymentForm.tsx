@@ -662,10 +662,7 @@ console.log(filtredclasses);
         </TableHeader>
 
         <TableBody>
-          {filtredclasses.map((option, index) => {
-         
-
-            return (
+          {filtredclasses.map((option, index) => (
               <TableRow key={index}>
                 <TableCell className="font-semibold">
                   <Input value={option.group} readOnly />
@@ -719,9 +716,13 @@ console.log(filtredclasses);
                 <TableCell>
               <CalendarDatePicker
                 className="w-20"
-                date={option.nextPaymentDate}
+                date={watch(`filtredclasses.${index}.nextPaymentDate`)}
                 setDate={(selectedValue) => {
-                  if (selectedValue) {
+                  if (selectedValue === undefined) {
+                    // Handle undefined case if needed
+                  } else {
+                    console.log(selectedValue);
+                    
                     form.setValue(`filtredclasses.${index}.nextPaymentDate`, selectedValue);
                   }
                 }}
@@ -729,8 +730,8 @@ console.log(filtredclasses);
 </TableCell>
 
               </TableRow>
-            );
-          })}
+            )
+  )}
         </TableBody>
 
         <TableFooter>

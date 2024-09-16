@@ -19,6 +19,9 @@ import { useData } from "@/context/admin/fetchDataContext";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslations } from "next-intl";
 import { addDays, endOfMonth, format, startOfMonth } from "date-fns";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { addStudentFromAttendance, removeStudentFromAttendance } from "@/lib/hooks/calendar";
+import { addPaymentTransaction } from "@/lib/hooks/billing/student-billing";
 
 
 export type studentAttandance = {
@@ -36,14 +39,6 @@ const getStatusIcon = (status: string) => {
  
 };
 
-// Generate date columns dynamically
-const generateDateColumns = (dates: string[]) => {
-  return dates.map(date => ({
-    accessorKey: date,
-    header: () => <div>{date}</div>,
-    cell: ({ row }) => <div>{getStatusIcon(row.getValue(date))}</div>,
-  }));
-};
 const getNextFourDates = (day: string, startTime: string, endTime: string) => {
   const daysOfWeek = { Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6 };
   const targetDay = daysOfWeek[day];
@@ -67,20 +62,32 @@ const generateTableData = (classes: any[]) => {
   classes.forEach(cls => {
     cls.groups.forEach(group => {
       // Generate the next 4 dates for the group
-      const dates = getNextFourDates(group.day, group.start, group.end);
+      const generatedDates = getNextFourDates(group.day, group.start, group.end);
 
+      // Extract dates from the attendance records
+      const attendanceDates = cls.Attendance 
+        ? Object.keys(cls.Attendance) // Get all date keys from the attendance
+        : [];
+
+      // Merge generated dates and attendance dates (to avoid duplicates)
+      const allDates = Array.from(new Set([...generatedDates, ...attendanceDates]));
+
+      // Process students and attendance
       cls.students.forEach(student => {
         if (student.group === cls.group) {
           const row = {
+            id:student.id,
             index: student.index,
             group: cls.group,
-            name:student.name,
-            ...dates.reduce((acc, date) => {
-              const [yearStrOnly,monthStr,dayStr] = date.split('-');
+            name: student.name,
+            classId:cls.id,
+            ...allDates.reduce((acc, date) => {
+              const [yearStrOnly, monthStr, dayStr] = date.split('-');
               const dateKey = `${yearStrOnly}-${monthStr}-${dayStr}`;
+
               const attendanceEntry = cls.Attendance?.[dateKey];
-               
-                
+
+
               if (attendanceEntry) {
                 const isPresent = attendanceEntry.attendanceList.some(att => att.id === student.id);
                 acc[date] = isPresent ? 'present' : 'Absent';
@@ -91,6 +98,7 @@ const generateTableData = (classes: any[]) => {
               return acc;
             }, {} as { [key: string]: string })
           };
+
           tableData.push(row);
         }
       });
@@ -99,35 +107,9 @@ const generateTableData = (classes: any[]) => {
 
   return tableData;
 };
-const generateColumns = (dates: string[]): ColumnDef<any>[] => {
-  const baseColumns: ColumnDef<any>[] = [
-    {
-      accessorKey: "index",
-      header: () => <div>Index</div>,
-      cell: ({ row }) => <div>{row.getValue("index")}</div>,
-    },
-    {
-      accessorKey: "name",
-      header: () => <div>Student Name</div>,
-      cell: ({ row }) => <div>{row.getValue("name")}</div>,
-    },
-    {
-      accessorKey: "group",
-      header: () => <div>Group</div>,
-      cell: ({ row }) => <div>{row.getValue("group")}</div>,
-    },
 
-    ...dates.map(date => ({
-      accessorKey: date,
-      header: () => <div>{date}</div>,
-      cell: ({ row }) => <div>{getStatusIcon(row.getValue(date))}</div>,
-    }))
-  ];
-
-  return baseColumns;
-};
 export const ArchiveDataTable = ({teacher}) => {
-  const {classes,teachers}=useData()
+  const {students,classes,setClasses,setStudents,teachers}=useData()
   const teacherClasses = useMemo(() => classes.filter((cls) => cls.teacherUID === teacher.id), [classes, teacher.id]);
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
 
@@ -137,12 +119,24 @@ export const ArchiveDataTable = ({teacher}) => {
           teacherClasses
             .filter(group => group.group === selectedGroup)
             .flatMap(cls => 
-              cls.groups.flatMap(group => getNextFourDates(group.day, group.start, group.end))
+              cls.groups.flatMap(group => {
+                const generatedDates = getNextFourDates(group.day, group.start, group.end);
+                const attendanceDates = cls.Attendance 
+                  ? Object.keys(cls.Attendance) // Extract dates from the Attendance subcollection
+                  : [];
+                return [...generatedDates, ...attendanceDates]; // Merge generated and attendance dates
+              })
             )
         ))
       : Array.from(new Set(
           teacherClasses.flatMap(cls => 
-            cls.groups.flatMap(group => getNextFourDates(group.day, group.start, group.end))
+            cls.groups.flatMap(group => {
+              const generatedDates = getNextFourDates(group.day, group.start, group.end);
+              const attendanceDates = cls.Attendance 
+                ? Object.keys(cls.Attendance) // Extract dates from the Attendance subcollection
+                : [];
+              return [...generatedDates, ...attendanceDates]; // Merge generated and attendance dates
+            })
           )
         ));
   
@@ -153,11 +147,73 @@ export const ArchiveDataTable = ({teacher}) => {
       return dateA.getTime() - dateB.getTime();
     });
   }, [teacherClasses, selectedGroup]);
-  const data = useMemo(() => generateTableData(teacherClasses), [teacherClasses]);
-  const columns = useMemo(() => generateColumns(dates), [dates,selectedGroup]);
+  const generateColumns = (dates: string[]): ColumnDef<any>[] => {
+    const baseColumns: ColumnDef<any>[] = [
+      {
+        accessorKey: "index",
+        header: () => <div>Index</div>,
+        cell: ({ row }) => <div>{row.getValue("index")}</div>,
+      },
+      {
+        accessorKey: "name",
+        header: () => <div>Student Name</div>,
+        cell: ({ row }) => <div>{row.getValue("name")}</div>,
+      },
+      {
+        accessorKey: "group",
+        header: () => <div>Group</div>,
+        cell: ({ row }) => <div>{row.getValue("group")}</div>,
+      },
+  
+      ...dates.map(date => ({
+        accessorKey: date,
+        header: () => <div>{date}</div>,
+        cell: ({ row }) => {
+          const [year, month, day] = date.split('-');
+          const formattedDate = `${year}-${month}-${day}`;
+          const currentStatus = row.getValue(date);
+          console.log("status",currentStatus);
+          
+          const student=row.original
+          const handleChange = async (event: string) => {
+            const newStatus = event;
+           const cls=classes.find(c=>c.id===row.original.classId);
+            if(event==="present" && currentStatus==='Absent'){
+              await addStudent({index:student.index,id:student.id,name:student.name,group:student.group,status:currentStatus},row.original.classId,formattedDate,{...cls,start:new Date(),end:new Date(),attendanceId:formattedDate,classId:cls.id})
+            
+            }
+             if(event==="Absent" && currentStatus==='present'){
+              await removeStudent({index:student.index,id:student.id,name:student.name,group:student.group,status:currentStatus},row.original.classId,formattedDate,{...cls,start:new Date(),end:new Date(),attendanceId:formattedDate,classId:cls.id})
+
+            }
+          };
+          return (
+            <Select
+            onValueChange={handleChange}
+            value={currentStatus}
+                >
+                  <SelectTrigger            className="ml-5 w-20 border rounded p-1">
+                    <SelectValue placeholder="Select year" />
+                  </SelectTrigger>
+                  <SelectContent            className="ml-5 w-20 border rounded p-1">
+  
+                      <SelectItem  value="present"> <CheckIcon className="ml-5 w-5 h-5 text-green-500" /></SelectItem>
+                      <SelectItem  value="Absent">          <XIcon className="ml-5 w-5 h-5 text-red-500" /></SelectItem>
+  
+                  </SelectContent>
+                </Select>
+          );
+        },
+      }))
+    ];
+  
+    return baseColumns;
+  };
+  const data = useMemo(() => generateTableData(teacherClasses), [teacherClasses,classes]);
+  const columns = useMemo(() => generateColumns(dates), [dates,selectedGroup,classes]);
   const filteredData = useMemo(() => 
     selectedGroup ? data.filter(item => item.group === selectedGroup) : data, 
-    [data, selectedGroup]
+    [data, selectedGroup,classes]
   );
 
 
@@ -190,10 +246,10 @@ export const ArchiveDataTable = ({teacher}) => {
       },
     },
   });
-  const headerGroups = useMemo(() => table.getHeaderGroups(), [table,selectedGroup]);
+  const headerGroups = useMemo(() => table.getHeaderGroups(), [table,selectedGroup,classes]);
 
   // Memoize the rows
-  const rows = useMemo(() => table.getRowModel().rows, [table,selectedGroup]);
+  const rows = useMemo(() => table.getRowModel().rows, [table,selectedGroup,classes]);
   const t=useTranslations()
   const handleTabClick = (value: string | number) => {
     if (value === 'All') {
@@ -203,6 +259,173 @@ export const ArchiveDataTable = ({teacher}) => {
     }
     table.resetColumnFilters();
   };
+  const removeStudent= async (student,classId,attendanceId,selectedEvent) => {
+    try {
+      if(selectedEvent.paymentType==='monthly'){
+        const updatedStudents=selectedEvent.students.map((std)=>std.id===student.id?{...std, sessionsLeft: std.sessionsLeft>0 ? std.sessionsLeft + 1:std.sessionsLeft }:std)
+        await removeStudentFromAttendance(student,classId,attendanceId,updatedStudents)
+      }else{
+        await removeStudentFromAttendance(student,classId,attendanceId,undefined)
+        // await addPayment()
+      }
+  
+  
+      
+      setClasses((prevClasses) => prevClasses.map((cls) => {
+        // Check if this is the class we want to update
+        if (cls.id === selectedEvent.classId) {
+          // Find the attendance record for the selected event
+          const attendance = cls.Attendance?.[selectedEvent.attendanceId];
+  
+            
+          // Remove the student from the attendance list
+          if (attendance) {
+            attendance.attendanceList = attendance.attendanceList.filter((std) => std.id !== student.id);
+          }
+      
+          // Return the updated class with the modified attendanceList
+          return {
+            ...cls,
+            attendanceList: attendance ? attendance.attendanceList : cls.attendanceList
+          };
+        }
+      
+        // Return the class as is if it's not the one we want to update
+        return cls;
+      }));
+      setAttendance((prevClasses) => prevClasses.map((std) => std.id === student.id?{...std,status:'absent'}:std))
+      
+    } catch (error) {
+    }
+  
+  }
+  const addStudent= async (student,classId,attendanceId,selectedEvent) => {
+    try {
+ 
+      
+      if(selectedEvent.paymentType==='monthly'){
+        const updatedStudents=selectedEvent.students.map((std)=>std.id===student.id?{...std, sessionsLeft: std.sessionsLeft>0 ? std.sessionsLeft - 1:std.sessionsLeft }:std)
+        await addStudentFromAttendance(
+          { ...student, status: "present" }, // First argument, student with status
+          classId,                           // Second argument, classId
+          attendanceId,                       // Third argument, attendanceId
+          updatedStudents,                    // Fourth argument, updatedStudents
+          {                                   // Fifth argument, attendance object
+            id: selectedEvent.attendanceId,
+            start: selectedEvent.start,
+            end: selectedEvent.end,
+            group: selectedEvent.group
+          }
+        );
+      
+      setClasses((prevClasses) => {
+        // Find the class to update
+        const updatedClasses = [...prevClasses];
+        const classToUpdate = updatedClasses.find((cls) => cls.id === selectedEvent.classId);
+      
+        if (classToUpdate) {
+          // Find or create the attendance record
+          let attendance = classToUpdate.Attendance?.[selectedEvent.attendanceId];
+      
+          if (!attendance) {
+            // Create a new attendance record if it doesn't exist
+            attendance = {
+              attendanceList: [{ ...student, status: "present" }],
+              id: selectedEvent.attendanceId,
+              start: selectedEvent.start, 
+              end: selectedEvent.end,
+              group: selectedEvent.group};
+          } else {
+            // Add the student to the attendance list if attendance exists
+            attendance.attendanceList = [
+              ...attendance.attendanceList,
+              { ...student, status: "present" }
+            ];
+          }
+      
+          // Update the students list for the class
+          classToUpdate.students = classToUpdate.students.map((std) =>
+            std.id === student?.id
+              ? { ...std, sessionsLeft: std.sessionsLeft > 0 ? std.sessionsLeft - 1 : std.sessionsLeft }
+              : std
+          );
+      
+          // Update the attendance object in the class
+          classToUpdate.Attendance = {
+            ...classToUpdate.Attendance,
+            [selectedEvent.attendanceId]: attendance,
+          };
+        }
+      
+        return updatedClasses;
+      });
+      setStudents((prev) =>
+        prev.map((std) => {
+          if (std.id === student.id) {
+            return {
+              ...std,
+              classes: std.classes.map((cls) =>
+                cls.id === selectedEvent.classId
+                  ? {
+                      ...cls,
+                      sessionsLeft: cls.sessionsLeft > 0 ? cls.sessionsLeft - 1 : cls.sessionsLeft,
+                    }
+                  : cls
+              ),
+            };
+          }
+          return std; // Return the student unchanged if no match
+        })
+      );
+     
+    }else{
+      await addStudentFromAttendance({...student,status:"present",isPaid:true},classId,attendanceId,undefined,{  
+        id: selectedEvent.attendanceId,
+        start: selectedEvent.start,
+        end: selectedEvent.end,
+        group: selectedEvent.group
+      })
+      
+      setClasses((prevClasses) => {
+        // Find the class to update
+        const updatedClasses = [...prevClasses];
+        const classToUpdate = updatedClasses.find((cls) => cls.id === selectedEvent.classId);
+      
+        if (classToUpdate) {
+          // Find or create the attendance record
+          let attendance = classToUpdate.Attendance?.[selectedEvent.attendanceId];
+      
+          if (!attendance) {
+            // Create a new attendance record if it doesn't exist
+            attendance = {
+              attendanceList: [{ ...student, status: "present",isPaid:true }],
+              id: selectedEvent.attendanceId,
+              start: selectedEvent.start, 
+              end: selectedEvent.end,
+              group: selectedEvent.group};
+          } else {
+            // Add the student to the attendance list if attendance exists
+            attendance.attendanceList = [
+              ...attendance.attendanceList,
+              { ...student, status: "present",isPaid:true }
+            ];
+          }
+      
+          classToUpdate.Attendance = {
+            ...classToUpdate.Attendance,
+            [selectedEvent.attendanceId]: attendance,
+          };
+        }
+      
+        return updatedClasses;
+      });
+
+      await addPaymentTransaction({paymentDate:new Date(),amount:student.amount},student.id)
+    }
+    } catch (error) {
+    }
+  
+  }
   return (
     <div className="max-w-4xl mx-auto">
       <div className="flex flex-col md:flex-row items-center justify-between mb-6">
