@@ -304,14 +304,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
 
   const [isOn, setIsOn] = useState(false); // Initialize with form value
 
-  // Watch the started field to keep `isOn` in sync with form state
-  
 
-  const handleToggle = (isOn) => {
-  
-   setIsOn(prevState => !prevState);
-   setValue('activate', isOn);
-  };
   
   return (
     <Dialog>
@@ -394,6 +387,10 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
                 onValueChange={(value) => handleSchoolTypeChange(value)}
                 defaultValue={schoolType}
               >
+
+
+
+              
                 <SelectTrigger
                   id={`schoolType`}
                   aria-label={`Select School Type`}
