@@ -2,7 +2,7 @@
 import React, {  useState, useRef, useEffect, useMemo} from 'react';
 import { Timestamp } from 'firebase/firestore';
 import {useUser} from '@/lib/auth'
-
+import { z } from 'zod';
 import {
   Dialog,
   DialogClose,
@@ -257,12 +257,15 @@ const generateFirestoreId = (students: { id: string }[]) => {
 
   return newId;
 };
+
+type StudentSchemaType = z.infer<typeof StudentSchema> & {id:string };
+
 export default function StudentForm({filter}) {
   const camera = useRef<null | { takePhoto: () => string }>(null);
   const {setStudents,teachers,classes,students,profile}=useData()
   const t=useTranslations()
   const form = useForm<any>({
-    //resolver: zodResolver(StudentSchema),
+    resolver: zodResolver(StudentSchema),
     defaultValues:{
       id:null,
       studentIndex: students.length + 1,
@@ -1051,7 +1054,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset, cal
   }
   const {setStudents,setClasses,students,classes,profile}=useData()
   const {toast}=useToast()
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: StudentSchemaType) => {
     try {
       const id = data.id === null ? generateFirestoreId(students) : data.id;
   
@@ -1291,7 +1294,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset, cal
             {isLastStep?(        <LoadingButton size="sm"    loading={isSubmitting}        type={'button'}   onClick={form.handleSubmit(onSubmit)}>
               Finish
             </LoadingButton>):(        <Button size="sm"   
-            //disabled={formData.id === null}   
+            disabled={formData.id === null}   
                  type={"button"}    onClick={nextStep}>
               {isLastStep ? "Finish" : isOptionalStep ? "Skip" : "Next"}
             </Button>)}
