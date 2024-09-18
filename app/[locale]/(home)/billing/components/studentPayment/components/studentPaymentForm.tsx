@@ -527,7 +527,6 @@ const billHtml = `
         <div>
             <div class="header">
                 <h1 class="title">${profile.schoolName}</h1>
-                <p class="subtitle">${profile.bio}</p>
                 <p class="subtitle">2024/2025</p>
                 <p class="subtitle"><strong>وصل استلام</strong></p>
             </div>

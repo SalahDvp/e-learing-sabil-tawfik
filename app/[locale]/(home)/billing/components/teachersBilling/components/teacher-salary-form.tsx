@@ -196,7 +196,7 @@ const applyPayment = (totalAdvancePayment, paymentAmount) => {
     }
   };
   const ReceiptPrint = React.forwardRef((props, ref) => {
-    const { receipt } = props;
+    const { receipt,profile } = props;
   
     if (receipt.teacher) {
       return (
@@ -234,15 +234,15 @@ const applyPayment = (totalAdvancePayment, paymentAmount) => {
               <TableBody>
                 <TableRow>
                   <TableCell className="font-medium">Nom de l'Employeur :</TableCell>
-                  <TableCell>{"Smart School"}</TableCell>
+                  <TableCell>{profile.schoolName}</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="font-medium">Adresse :</TableCell>
-                  <TableCell>{"address"}</TableCell>
+                  <TableCell>{profile.schoolAddress}</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="font-medium">Informations de Contact :</TableCell>
-                  <TableCell>{"055555555"}</TableCell>
+                  <TableCell>{profile.schoolContact}</TableCell>
                 </TableRow>
               </TableBody>
             </Table>
@@ -291,7 +291,7 @@ const applyPayment = (totalAdvancePayment, paymentAmount) => {
 export default function PaymentForm() {
   const { toast } = useToast();
   const {setTeachersSalary} = useData()
-  const {teachers,setAnalytics,classes,setTeachers,setClasses,analytics}= useData()
+  const {teachers,setAnalytics,classes,setTeachers,setClasses,analytics,profile}= useData()
   const[printBill,setPrintBill]=useState(false)
 
   const [filesToUpload, setFilesToUpload] = useState<FileUploadProgress[]>([]);
@@ -665,29 +665,6 @@ const [teacherModal,setTeacherModal]=useState(false)
           }, []);
         
         
-          const [receipt, setReceipt] = React.useState({
-            employeeName: "John Doe",
-            employeeId: "T12345",
-            position: "Senior Teacher",
-            department: "Education",
-            dateOfIssue: "May 31, 2023",
-            payPeriod: "May 1, 2023 to May 31, 2023",
-            schoolName: "Evergreen Academy",
-            schoolAddress: "123 Learning Lane, Education City, EC 12345",
-            schoolContact: "Phone: (555) 123-4567, Email: info@evergreenacademy.edu",
-            earnings: [
-              { description: "Mathematics 101", hours: 16, rate: 50, amount: 800 },
-              { description: "Physics 202", hours: 16, rate: 60, amount: 960 },
-              { description: "Chemistry 301", hours: 16, rate: 55, amount: 880 },
-            ],
-            deductions: [
-              { description: "Health Insurance", amount: -100 },
-            ],
-            taxRate: 0.15,
-            paymentMethod: "Bank Transfer",
-            bankDetails: "National Bank, Account No. 1234567890",
-            transactionId: "TRN123456789",
-          });
   return (
     <Card className="overflow-hidden" x-chunk="dashboard-05-chunk-4">
             <div>
@@ -698,7 +675,7 @@ const [teacherModal,setTeacherModal]=useState(false)
         removeAfterPrint
       />
       <div style={{display:'none'}}>
-        <ReceiptPrint ref={componentRef} receipt={getValues()}/>
+        <ReceiptPrint ref={componentRef} receipt={getValues()} profile={profile}/>
         </div>
     </div>
       <CardHeader className="flex flex-row items-start bg-muted/50">

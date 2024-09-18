@@ -886,7 +886,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,stud
         const { group, id,  name,cs,active,amount,debt,sessionsLeft,sessionsToStudy} = cls;
         const studentCount = await getStudentCount(id);
         const index = studentCount ;
-        if(cls.paymentType==='monthly'){
+   
           setClasses((prevClasses: any[]) => 
             prevClasses.map((cls: { id: any; students: any; }) =>
         cls.id === id ? {
@@ -922,43 +922,9 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,stud
     debt:debt,
     ...(active && { nextPaymentDate: cls?.nextPaymentDate }),
     sessionsToStudy:sessionsToStudy},cls.id,student.id,user)
-        }
-        else{
-          setClasses((prevClasses: any[]) => 
-            prevClasses.map((cls: { id: any; students: any; }) =>
-        cls.id === id ? {
-          ...cls,
-          students: [...cls.students, { group, id,cs, 
-            index:index, 
-            name, 
-            year:student.year,
-            sessionsLeft:0,
-            amount:amount,
-            debt:0,
-            ...(active && { nextPaymentDate: cls?.nextPaymentDate }),
-            sessionsToStudy:0}]
-        } : cls
-      )
-    );
-  
-    setStudents((prevStudents: any[]) => 
-      prevStudents.map((std: { id: any; classesUIDs: any; classes: any; }) =>
-  std.id === student.id ? {
-    ...std,
-    classesUIDs: [...std.classesUIDs, { id:id,group:group }],
-    classes:[...std.classes,{...cls,index:index}]
-  } : std
-  )
-  );  
-  await addStudentToClass({ group:cls.group, id:student.id,cs:cls.cs, 
-    index:index, 
-    name:student.name, 
-    year:student.year,
-    sessionsLeft:0,
-    amount:amount,
-    debt:0,
-    ...(active && { nextPaymentDate: cls?.nextPaymentDate }),
-    sessionsToStudy:sessionsToStudy},cls.id,student.id,user)}
+        
+
+        
         }
 
 

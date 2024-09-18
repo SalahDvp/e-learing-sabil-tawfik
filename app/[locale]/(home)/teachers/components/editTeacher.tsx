@@ -889,7 +889,7 @@ const [isOn, setIsOn] = React.useState(false); // Initialize with form value
 export default EditTeacher;
 const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-function getNextPaymentDate(sessions: Session[], classStartDate: Date,numberOfSessions:number): Date {
+function getNextPaymentDate(sessions: Session[], classStartDate: Date, numberOfSessions: number): Date {
   // Step 1: Find the last session of the week
   const lastSession = sessions.reduce((last, current) => {
     return daysOfWeek.indexOf(current.day) > daysOfWeek.indexOf(last.day) ? current : last;
@@ -897,7 +897,6 @@ function getNextPaymentDate(sessions: Session[], classStartDate: Date,numberOfSe
 
   // Step 2: Calculate the date of the last session in the first week
   const classStartWeekStart = startOfWeek(classStartDate);
-  const classStartWeekEnd = endOfWeek(classStartDate);
 
   // Find the date for the last session in the first week
   let lastSessionDate = new Date(classStartWeekStart);
@@ -909,9 +908,11 @@ function getNextPaymentDate(sessions: Session[], classStartDate: Date,numberOfSe
   const [startHours, startMinutes] = lastSession.end.split(':').map(Number);
   lastSessionDate.setHours(startHours, startMinutes);
 
-  // Step 3: Calculate the same session date on the 4th week
-  const weeksToAdd = Math.floor(numberOfSessions / sessions.length)-1
+  // Step 3: Calculate the sessions to move forward based on numberOfSessions and sessions.length
+  const weeksToAdd = Math.floor(numberOfSessions / sessions.length)-1;
 
+  // Step 4: Move forward the calculated number of weeks
+  const nextPaymentDate = addWeeks(lastSessionDate, weeksToAdd);
 
   return nextPaymentDate;
 }
@@ -1079,7 +1080,10 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset,teac
       if (updatedClasses && Array.isArray(updatedClasses)) {
         for (const classupdate of updatedClasses) {  
           const day=adjustStartDateToFirstSession(classupdate.startDate, classupdate.groups)   
-          const classesDetailes=classes.find(cls=>cls.id===classupdate.id).active
+          const a=classes.find(cls=>cls.id===classupdate.id)
+
+          
+          const classesDetailes=a.active
           if (classesDetailes===false && classupdate.active===true){
             const newClass = {
               ...classupdate,
