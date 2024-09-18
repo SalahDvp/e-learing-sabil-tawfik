@@ -22,7 +22,7 @@ export const SubjectsSchema = z.array(
     group: z.string().min(1),
     groups: GroupSchema, // Referencing the GroupSchema
     name: z.string().min(1),
-    numberOfSessions:z.number().min(1),
+    numberOfSessions:z.number().min(0),
     paymentType:z.string().min(1),
     startDate:z.date().optional(),
     stream:z.array(z.string().min(1)),
