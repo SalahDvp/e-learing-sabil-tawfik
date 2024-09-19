@@ -19,7 +19,6 @@ interface ExtendedFirebaseUser extends FirebaseUser {
 export function useUser() {
   const [user, setUser] = useState<ExtendedFirebaseUser | null | false >(false);
 
-  console.log('rrrr',user);
   
   useEffect(() => {
     return onAuthStateChanged(auth, async (user:any) =>{

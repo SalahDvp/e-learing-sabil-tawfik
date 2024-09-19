@@ -2,6 +2,7 @@ import { db } from "@/firebase/firebase-config";
 import { doc, updateDoc, setDoc, getDoc } from "firebase/firestore";
 import { z } from "zod";
 import { profileFormSchema } from "@/validators/general-info";
+import { uploadAndLinkToCollection } from "./students";
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
@@ -16,10 +17,15 @@ export const addProfile = async (updatedProfile: ProfileFormValues) => {
     if (docSnap.exists()) {
       // Document exists, so update it
       await updateDoc(generalInfoDocRef, updatedProfile); // This updates existing fields
-      console.log("Profile updated successfully");
+      if (updatedProfile.photo) {
+        await uploadAndLinkToCollection(updatedProfile.photo, 'Profile', 'GeneralInformation', 'photo');
+      }
     } else {
       // Document does not exist, so create it
       await setDoc(generalInfoDocRef, updatedProfile); // This creates the document
+      if (updatedProfile.photo) {
+        await uploadAndLinkToCollection(updatedProfile.photo, 'Profile', 'GeneralInformation', 'photo');
+      }
       console.log("Profile created successfully");
     }
 

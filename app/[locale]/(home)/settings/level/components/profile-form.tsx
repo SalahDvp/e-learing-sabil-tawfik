@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useRef } from "react";
 import {addProfile} from "@/lib/hooks/profile"
 import { useData } from "@/context/admin/fetchDataContext";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { LoadingButton } from "@/components/ui/loadingButton";
 import OpenDaysTable from "../../components/open-days-table";
 import { useTranslations } from "next-intl";
+import { Upload } from "lucide-react";
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
@@ -82,8 +83,7 @@ const t=useTranslations()
   
 
 
- 
-  const {reset} = form;
+  const { reset,formState, setValue, getValues,control,watch} = form;
   const {profile,setProfile}=useData()
   React.useEffect(() => {
     reset(profile)
@@ -118,6 +118,19 @@ const t=useTranslations()
     });
   }
 */
+const fileInputRef = useRef(null)
+
+
+const handleFileUpload = (event) => {
+  const file = event.target.files[0]
+  if (file) {
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setValue('photo', reader.result)
+    }
+    reader.readAsDataURL(file)
+  }
+}
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -312,7 +325,51 @@ const t=useTranslations()
             </FormItem>
           )}
         />
+ {!watch('photo') ? (
+        <div className="w-[300px] items-center justify-center flex flex-col">
+          
+          <img src={watch('photo')} alt="Captured photo" className='w-[300px] h-auto object-cover rounded-lg' />
+          <div className="flex gap-2">
 
+            <Button
+              onClick={() => fileInputRef.current.click()}
+              variant="secondary"
+              type='button'
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              {t('Upload photo')}
+            </Button>
+            <Input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+          </div>
+        </div>
+      ) : (
+        <>
+        <img src={watch('photo')} alt="Captured photo" className='w-[300px] h-auto object-cover rounded-lg' />
+        <div className="flex gap-2">
+          <Button
+            onClick={() => fileInputRef.current.click()}
+            variant="secondary"
+            type='button'
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            {t('Upload different photo')}
+          </Button>
+          <Input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+        </div>
+      </>
+      )}
 
         {/* URL fields */}
         <div>
@@ -375,7 +432,8 @@ const t=useTranslations()
             */}
         </div>
           <OpenDaysTable openDays={openDays} form={form}/>
-          <ImageUpload filesToUpload={filesToUpload} setFilesToUpload={setFilesToUpload}/>
+          {/* <ImageUpload filesToUpload={filesToUpload} setFilesToUpload={setFilesToUpload}/> */}
+
         <LoadingButton  
          loading={form.formState.isSubmitting}
 >{t('update-profile-0')}</LoadingButton>

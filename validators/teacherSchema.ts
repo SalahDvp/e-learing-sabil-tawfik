@@ -1,48 +1,88 @@
-import { ZodSchema, z } from 'zod';
+import { z } from 'zod';
+import { parseISO, isBefore, startOfToday, startOfYear } from 'date-fns';
 
-export const teacherRegistrationSchema: ZodSchema<{
-  id:string;
-  year: string;
-  firstName: string;
-  lastName: string;
-  dateOfBirth: Date;
-  joiningDate:Date;
-  gender: 'male' | 'female' | 'other' | string;
-  address: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  country: string;
-  teacherEmail: string;
-  teacherPhone: string;
-  teacherSubject: string;
-  emergencyContactName: string;
-  emergencyContactPhone: string;
-  medicalConditions: string | null;
-  salary: number| null;
-  status:string;
-  officeHours:{day:string;start:string;end:string}[]
-
-}> = z.object({
+const GroupSchema = z.array(
+  z.object({
+    day: z.string(),
+    end: z.string(),
+    room: z.string(),
+    start: z.string(),
+  })
+);
+const ClassesUIDsSchema = z.array(z.object({
   id: z.string(),
-  year: z.string().min(2, 'Please enter a value between 2 and 10 characters.').max(10, 'Please enter a value between 2 and 10 characters.'),
-  firstName: z.string().min(2, 'Please enter a value between 2 and 50 characters.').max(50, 'Please enter a value between 2 and 50 characters.'),
-  lastName: z.string().min(2, 'Please enter a value between 2 and 50 characters.').max(50, 'Please enter a value between 2 and 50 characters.'),
-  dateOfBirth: z.date().refine((value:Date) => value < new Date(), { message: 'Please enter a valid date of birth.' }),
-  joiningDate: z.date().refine((valuee:Date) => valuee < new Date(), { message: 'Please enter a valid date of birth.' }),
-  gender: z.enum(['male', 'female', 'other'])||z.string(),
-  salary: z.number().min(0, 'Enter a valid value for salary').nullable(),
-  address: z.string().min(5, 'Please enter a value between 5 and 255 characters.').max(255, 'Please enter a value between 5 and 255 characters.'),
-  city: z.string().min(2, 'Please enter a value between 2 and 50 characters.').max(50, 'Please enter a value between 2 and 50 characters.'),
-  state: z.string().min(2, 'Please enter a value between 2 and 50 characters.').max(50, 'Please enter a value between 2 and 50 characters.'),
-  postalCode: z.string().length(5, 'Please enter a 5-character postal code.'),
-  country: z.string().min(2, 'Please enter a value between 2 and 50 characters.').max(50, 'Please enter a value between 2 and 50 characters.'),
-  teacherSubject: z.string().min(2, 'Please enter a value between 2 and 50 characters.').max(50, 'Please enter a value between 2 and 50 characters.'),
-  teacherEmail: z.string().email('Please enter a valid email address.'),
-  teacherPhone: z.string().min(10, 'Please enter a value between 10 and 15 characters.').max(15, 'Please enter a value between 10 and 15 characters.'),
-  emergencyContactName: z.string().min(2, 'Please enter a value between 2 and 50 characters.').max(50, 'Please enter a value between 2 and 50 characters.'),
-  emergencyContactPhone: z.string().min(10, 'Please enter a value between 10 and 15 characters.').max(15, 'Please enter a value between 10 and 15 characters.'),
-  medicalConditions: z.string().max(255).nullable(),
-  status: z.enum(['active', 'suspended', 'expelled'])||z.string(),
-  officeHours:z.array(z.object({day:z.string(),start:z.string(),end:z.string()}))
+  group: z.string(),
+}));
+
+export const SubjectsSchema = z.array(
+  
+  z.object({
+    active: z.boolean().optional(),
+    amount: z.number().min(1),
+    group: z.string().min(1),
+    groups: GroupSchema, // Referencing the GroupSchema
+    name: z.string().min(1),
+    numberOfSessions:z.number().min(0),
+    paymentType:z.string().min(1),
+    startDate:z.date().optional(),
+    stream:z.array(z.string().min(1)),
+    year:z.string().min(1),
+  }),
+);
+
+const ActionTrackSchema = 
+  z.object({
+    action: z.string().optional(),
+    additionalInfo: z.object({
+      classId: z.string().optional(),
+      studentID: z.string().optional(),
+      studentName: z.string().optional(),
+      resourceId: z.string().optional(),
+      resourceType: z.string().optional(),
+      birthdate: z.date().optional(),
+      birthplace: z.string().optional(),
+    }),
+    timestamp: z.string().optional(),
+    userId: z.string().optional(),
+    userType: z.string().optional(),
+  });
+
+// Define the StudentSchema
+export const teacherRegistrationSchema = z.object({
+  actionTrack: z.array(ActionTrackSchema).optional(),// Referencing the ActionTrackSchema
+  advancePayment: z.array().optional(),
+  amount:z.number(),
+  birthdate:z.date().refine((value: Date) => value < new Date(), {
+    message: '',
+  }), 
+  classes: SubjectsSchema,
+  [`educational-subject`]: z.string(),
+  name: z.string().min(1),
+  paymentType: z.string().min(1),
+  phoneNumber: z.string().min(10).max(15),
+  salaryDate:  z.date().optional(),
+  totalAdvancePayment:z.number(),
+  year: z.array(z.string().min(1)).min(1)
 });
+
+// Generate TypeScript type from the Zod schema
+export type Teacher = z.infer<typeof teacherRegistrationSchema>;
+
+
+
+/**
+ * 
+  debt: z.number( { message: 'Name is required' }),
+ 
+  lastPaymentDate: z.date( { message: 'Name is required' }),
+  monthlypayment: z.number( { message: 'Name is required' }),
+  nextPaymentDate: z.date( { message: 'Name is required' }),
+  totalAmount: z.number( { message: 'Name is required' }),
+  newId:z.string().optional(),
+
+
+classes
+
+      nextPaymentDate: z.date(),
+
+ */

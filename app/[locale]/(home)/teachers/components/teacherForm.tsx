@@ -1,4 +1,5 @@
 "use client"
+import { z } from 'zod';
 
 import {
   ChevronDownIcon,
@@ -54,9 +55,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Teacher, TeacherSchema } from '@/validators/teacher';
+import { Teacher, teacherRegistrationSchema } from '@/validators/teacherSchema';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import CalendarDatePicker from '../../students/components/date-picker';
 
@@ -96,10 +98,14 @@ const highSchoolYears = ["1AS", "2AS", "3AS"];
 const universitySchoolYears=["L1","L2","L3","M1"]
 const priarySchoolYears=["1AP","2AP","3AP","4AP","5AP"]
 const languageSchoolYears=["A1","A2","B1","B2","C1","C2"]
+
+type TeacherSchemaType = z.infer<typeof teacherRegistrationSchema> & {id:string };
+
 export default function TeacherForm() {
   const t=useTranslations()
   const timeOptions = generateTimeOptions("07:00","22:00", 30);
   const form = useForm<any>({
+    resolver: zodResolver(teacherRegistrationSchema),
     defaultValues:{
       year:[],
       salaryDate:new Date(),
@@ -387,10 +393,6 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
                 onValueChange={(value) => handleSchoolTypeChange(value)}
                 defaultValue={schoolType}
               >
-
-
-
-              
                 <SelectTrigger
                   id={`schoolType`}
                   aria-label={`Select School Type`}
@@ -411,6 +413,7 @@ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
           </FormItem>
         )}
       />
+
 
 
 <FormField
@@ -968,7 +971,7 @@ const Footer: React.FC<FooterProps> = ({ formData, form, isSubmitting,reset}) =>
   const  {setTeachers,setClasses}= useData()
 
   const {toast}=useToast()
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: TeacherSchemaType) => {
     try {
       // Add the teacher and get the teacherId
       const teacherId = await addTeacher(data,user);
