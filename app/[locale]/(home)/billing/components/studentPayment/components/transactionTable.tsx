@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { useState,useMemo, useEffect } from "react";
 import {
   CaretSortIcon,
   ChevronDownIcon,
@@ -59,6 +60,7 @@ export const TransactionDataTableDemo = () => {
   const [invoice, setInvoice] = React.useState<any>(null);
   const t = useTranslations();
   const [open, setOpen] = React.useState(false);
+console.log('ffff',invoices );
 
   const openEditSheet = (student: any) => {
     setInvoice(student);
@@ -95,23 +97,30 @@ export const TransactionDataTableDemo = () => {
     exportTableToExcel(t("students-payments-transactions-table"), exceldata);
   };
 
-  const transactionsData = React.useMemo(() => {
-    if (!Array.isArray(invoices)) {
-      return []; // Return an empty array if invoices is not an array or is undefined
-    }
   
+
+  
+
+
+
+  const transactionsData = useMemo(() => {
+    if (!Array.isArray(invoices)) {
+      return [];
+    }
+
     return invoices.flatMap((invoice: any) =>
       (Array.isArray(invoice?.transaction) ? invoice.transaction : []).map((trans: any) => ({
-        ...invoice, // Include other invoice details
-        ...trans,   // Include transaction details as separate fields
+        ...invoice,
+        ...trans,
       }))
-    ).sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime()); // Sort by latest paymentDate
+    ).sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
   }, [invoices]);
   
 
-  if (transactionsData.length === 0) {
-    return null;
-  }
+  // Define hooks outside of conditional blocks
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = useState({});
 
   const columns: ColumnDef<any>[] = [
     {
@@ -133,26 +142,6 @@ export const TransactionDataTableDemo = () => {
     {
       header: "Amount Paid",
       accessorFn: (row) => row?.amount,
-      cell: ({ getValue }) => {
-        const formattedAmount = new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "DZD",
-        }).format(getValue());
-        return <div className="font-medium">{formattedAmount}</div>;
-      },
-    },
-    {
-      header: "Next Payment Day",
-      accessorFn: (row) => row?.nextPaymentDate,
-      cell: ({ getValue }) => (
-        <div className="capitalize hidden sm:table-cell">
-          {(getValue() as Date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-        </div>
-      ),
-    },
-    {
-      header: "Debt",
-      accessorFn: (row) => row?.debt,
       cell: ({ getValue }) => {
         const formattedAmount = new Intl.NumberFormat("en-US", {
           style: "currency",
@@ -223,9 +212,7 @@ export const TransactionDataTableDemo = () => {
     },
   ];
 
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
-  const [rowSelection, setRowSelection] = React.useState({});
+  
   const table = useReactTable({
     data: transactionsData,
     columns,
@@ -238,18 +225,19 @@ export const TransactionDataTableDemo = () => {
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
-    getCoreRowModel: React.useMemo(() => getCoreRowModel(), []),
-    getFilteredRowModel: React.useMemo(() => getFilteredRowModel(), []),
-    getPaginationRowModel: React.useMemo(() => getPaginationRowModel(), []),
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
     getRowId: React.useCallback((row) => row?.id, []),
     initialState: {
       pagination: {
-        pageIndex: 0, //custom initial page index
-        pageSize: 10, //custom default page size
+        pageIndex: 0,
+        pageSize: 10,
       },
     },
   });
 
+ 
   return (
     <Card>
       <CardHeader>
