@@ -393,6 +393,7 @@ const onSelected = (selectedStudent: any) => {
                           ...cls,
                           sessionsLeft: item.sessionsLeft,
                           sessionsToStudy: item.sessionsToStudy,
+                          debt: item.debt
                         }
                       : cls
                   ),
@@ -512,11 +513,15 @@ const onSelected = (selectedStudent: any) => {
         const newSessionsLeft = +event.target.value || 0;
         const initialSessions=watch(`initialClasses.${index}.sessionsLeft`)
         const initialSessionsToStudy = watch(`initialClasses.${index}.sessionsToStudy`)
+        const initialDebt =watch(`initialClasses.${index}.debt`)
+        const amount = watch(`initialClasses.${index}.amount`)
+        const newDebt = initialDebt - (((amount + initialDebt) /initialSessionsToStudy) * (newSessionsLeft - initialSessions) )
         // Updating the correct student within the selected class
         form.setValue(`filtredclasses.${index}.sessionsLeft`, newSessionsLeft);
         form.setValue(`filtredclasses.${index}.sessionsToStudy`, initialSessionsToStudy - (newSessionsLeft - initialSessions) );
-        
+        form.setValue(`filtredclasses.${index}.debt`, newDebt)
   
+
   
         
   
