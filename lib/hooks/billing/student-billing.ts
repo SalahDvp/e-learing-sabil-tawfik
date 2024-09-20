@@ -184,6 +184,7 @@ export async function updateSessionLeft(groupId, studentData, item) {
             ...std,
             sessionsLeft: item.sessionsLeft,
             sessionsToStudy: item.sessionsToStudy,
+            debt: item.debt
             //sessionsToStudy: item.sessionsToStudy
           }
         : std
