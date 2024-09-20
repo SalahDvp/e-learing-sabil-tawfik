@@ -98,24 +98,40 @@ export const  FetchDataProvider = ({ children }) => {
   
     getTeachersSalary();
   }, [date]);
-  useEffect(() => {
+    useEffect(() => {
     const getInvoices = async () => {
       try {
+        
         const invoicesSnapshot = await getDocs(
-          query(
-            collection(db, 'Billing', "payments", "Invoices"),
+          query(collection(db, 'Billing', "payments", "Invoices"),
+          ));
           
-          )
-        );
+          
+    
   
-        const invoicesData = invoicesSnapshot.docs.map((doc) => ({
-          ...doc.data(),
-          lastPaymentDate:new Date(doc.data().lastPaymentDate.toDate()),
-          transaction: doc.data().transaction.map((trans) => ({
-            ...trans,
-            paymentDate: new Date(trans.paymentDate.toDate()), // Format paymentDate as a Date object
-            nextPaymentDate:new Date(trans.nextPaymentDate.toDate()),
-          })),
+          const invoicesData = invoicesSnapshot.docs.map((doc) => {
+            const invoiceData = doc.data();
+            return {
+              ...invoiceData,
+              lastPaymentDate: new Date(invoiceData.lastPaymentDate.toDate()), // Convert lastPaymentDate
+              transaction: Array.isArray(invoiceData.transaction) // Check if transaction exists and is an array
+                ? invoiceData.transaction
+                    .map((trans) => ({
+                      ...trans,
+                      paymentDate:new Date(trans.paymentDate.toDate()), // Handle missing paymentDate
+                      nextPaymentDate: trans.nextPaymentDate ? new Date(trans.nextPaymentDate.toDate()) : new Date, // Handle missing nextPaymentDate
+                    }))
+                    .filter(
+                      (trans) =>
+                        trans.paymentDate && // Ensure paymentDate exists
+                        trans.paymentDate >= date.from && 
+                        trans.paymentDate <= date.to
+                    )
+                : [], // If transaction doesn't exist, return an empty array
+            };
+          });
+          
+  
           //paymentDate:new Date(doc.data().paymentDate.toDate()),
          /* id: doc.id,
           value: doc.id,
@@ -123,7 +139,7 @@ export const  FetchDataProvider = ({ children }) => {
           invoice: doc.id,
           paymentDate: new Date(doc.data().paymentDate.toDate())
           */
-        }));
+     
   console.log('test invoicesData',invoicesData );
         setInvoices(invoicesData);
       } catch (error) {
