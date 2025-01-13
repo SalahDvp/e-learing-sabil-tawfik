@@ -16,7 +16,7 @@ interface FetchDataProviderProps {
 // Create the provider component
 export const FetchDataProvider: React.FC<FetchDataProviderProps> = ({ children }) => {
     const [egroup, setEgroup] = useState<any[]>([]);
-
+    const [estudent,setEstudent] = useState<any[]>([]);
     useEffect(() => {
         const fetchEgroup = async () => {
             try {
@@ -44,8 +44,27 @@ export const FetchDataProvider: React.FC<FetchDataProviderProps> = ({ children }
         fetchEgroup();
     }, []);
 
+
+    useEffect(() => {
+        const fetchEStudent = async () => {
+            try {
+                const eStudentSnapshot = await getDocs(collection(db, "E-students"));
+                const eStudentData = eStudentSnapshot.docs.map((doc) => ({
+                    id: doc.id,
+                    ...doc.data(),
+                }));
+                setEstudent(eStudentData);
+            } catch (error) {
+                console.error("Error fetching e-students:", error);
+            }
+        };
+
+        fetchEStudent();
+    }, []);
+
+
     return (
-        <AppContext.Provider value={{ egroup, setEgroup }}>
+        <AppContext.Provider value={{ egroup, setEgroup,estudent,setEstudent }}>
             {children}
         </AppContext.Provider>
     );

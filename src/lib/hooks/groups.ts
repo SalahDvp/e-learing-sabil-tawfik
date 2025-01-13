@@ -8,6 +8,7 @@ interface Group {
   documents: any[];
   videos: any[];
   liveSessions: any[];
+  students:any[]
 }
 
 export async function addGroup(group: Partial<Group>, user: any, id: any) {
@@ -18,6 +19,7 @@ export async function addGroup(group: Partial<Group>, user: any, id: any) {
     documents: group.documents || [],
     videos: group.videos || [],
     liveSessions: group.liveSessions || [],
+    students:[]
   
   };
 

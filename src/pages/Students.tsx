@@ -1,12 +1,15 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import { ClassesTable } from '../components/classes/ClassesTable';
 import { getStudentsColumns } from '../components/students/StudentsColumns';
 import { StudentModal } from '../components/students/StudentModal';
 import type { Student } from '../types/student';
+import { useData } from '../contexts/fetchDataContext';
 
 export function Students() {
-  const [students, setStudents] = useState<Student[]>([]);
+  const { estudent,egroup } = useData();  // Get student data from context
+  
+  const [students, setStudents] = useState<Student[]>(estudent);  // Initialize students with estudent
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [showModal, setShowModal] = useState(false);
 
@@ -21,7 +24,7 @@ export function Students() {
           setStudents(students.filter((s) => s.id !== studentId));
         },
       }),
-    []
+    [students] // Ensure that columns are updated when the students state changes
   );
 
   const handleSaveStudent = (studentData: Partial<Student>) => {
@@ -45,6 +48,11 @@ export function Students() {
     setSelectedStudent(null);
   };
 
+  useEffect(() => {
+    // Update the students state if estudent changes
+    setStudents(estudent);
+  }, [estudent]);
+
   return (
     <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
@@ -65,6 +73,7 @@ export function Students() {
 
       {showModal && (
         <StudentModal
+        egroup={egroup}
           student={selectedStudent || undefined}
           onClose={() => {
             setShowModal(false);

@@ -1,11 +1,12 @@
 import { ColumnDef } from '@tanstack/react-table';
 import { Eye, Plus } from 'lucide-react';
 import { ClassData } from '../../types/classes';
-
+import { useMemo } from 'react';
 interface GetColumnsProps {
   onViewGroups: (classData: ClassData) => void;
   onAddGroup: (classData: ClassData) => void;
 }
+
 
 export const getClassesColumns = ({
   onViewGroups,
@@ -19,9 +20,9 @@ export const getClassesColumns = ({
       let level = '';
       const schoolLevel = info.getValue() as string;
   
-      if (schoolLevel === 'Primary School') level = 'المدرسة الابتدائية';
-      if (schoolLevel === 'Middle School') level = 'المدرسة المتوسطة';
-      if (schoolLevel === 'High School') level = 'المدرسة الثانوية';
+      if (schoolLevel === 'Primary School') level = 'الابتدائية';
+      if (schoolLevel === 'Middle School') level = 'المتوسطة';
+      if (schoolLevel === 'High School') level = 'الثانوية';
   
       return level;
     },
@@ -53,12 +54,61 @@ export const getClassesColumns = ({
   {
     accessorKey: 'subject',
     header: 'المادة',
+    cell: (info) => {
+
+      const subjectMapping = {
+        'math': 'الرياضيات 📐',
+        'Mathematics': 'الرياضيات 📐',
+        ' math': 'الرياضيات 📐',
+        'physics': 'الفيزياء ⚡',
+        'civil-engineering': 'هندسة مدنية 🏗️',
+        'electrical-engineering': 'هندسة كهربائية 🔌',
+        'process-engineering': 'هندسة الطرائق 🛠️',
+        'mechanical-engineering': 'هندسة ميكانيكية ⚙️',
+        'history': 'التاريخ 🌍',
+        'geography': 'الجغرافيا 🗺️',
+        'history-geography': 'تاريخ و جغرافيا 🌍🗺️',
+        'french': 'فرنسية 🇫🇷',
+        'english': 'إنجليزية 🇬🇧',
+        'arabic': 'عربية 🖋️',
+        'civil': 'تربية مدنية 🏛️',
+        'islamic': 'تربية إسلامية 🕌',
+        'science': 'العلوم 🧪',
+        'biology': 'علوم الطبيعة والحياة 🌱',
+        'chemistry': 'الكيمياء 🧫',
+        'philosophy': 'الفلسفة 📜',
+        'economics': 'الاقتصاد 💰',
+        'management': 'التسيير 🧾',
+        'computing': 'الإعلام الآلي 💻',
+        'literature': 'الآداب 📖',
+        'arts': 'الفنون 🎨',
+        'music': 'الموسيقى 🎼',
+        'sports': 'التربية البدنية والرياضية 🏅',
+        'sociology': 'علم الاجتماع 🧑‍🤝‍🧑',
+        'psychology': 'علم النفس 🧠',
+        'statistics': 'الإحصاء 📊',
+        'logic': 'المنطق 🔢',
+        'environment': 'علوم البيئة 🌳',
+        'astronomy': 'علم الفلك 🌌',
+        'computer-science': 'علوم الكمبيوتر 💾',
+        'business-administration': 'إدارة الأعمال 📂',
+        'foreign-languages': 'لغات أجنبية 🌏',
+        'media-studies': 'علوم الإعلام 📰',
+        'electrotechnics': 'تقنيات كهربائية ⚡',
+        'mechanical-systems': 'أنظمة ميكانيكية ⚙️',
+        'materials-science': 'علوم المواد 🧱',
+        'robotics': 'الروبوتات 🤖',
+        'cultural-studies': 'الدراسات الثقافية 🏺',
+        'international-relations': 'العلاقات الدولية 🌍',
+        'law': 'القانون ⚖️'
+    };
+    
   
+      const subjectId = info.getValue() as string;
+      return subjectMapping[subjectId] || 'غير معروف'; // Default to 'غير معروف' if the ID is not in the mapping
+    },
   },
-  {
-    accessorKey: 'description',
-    header: 'الوصف',
-  },
+  
   {
     id: 'actions',
     header: 'الإجراءات',

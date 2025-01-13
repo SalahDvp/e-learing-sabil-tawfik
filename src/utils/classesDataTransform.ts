@@ -10,6 +10,7 @@ export interface Teacher {
 }
 
 export interface ClassData {
+  some(arg0: (group: any) => boolean): unknown;
   subGroups:any
   id:string;
   level: string; // Example: 'Primary School', 'Middle School', 'High School'

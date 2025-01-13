@@ -1,15 +1,18 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import type { Student } from '../../types/student';
-import { levelData } from '../../data/levelData';
+import { transformClassesData } from '../../utils/classesDataTransform';
+import type { Level } from '../../types/level';
+import { addStudent, addStudentToGroup } from '../../lib/hooks/student';
 
 interface StudentModalProps {
   student?: Student;
   onClose: () => void;
   onSave: (student: Partial<Student>) => void;
+  egroup: Record<string, Level>;
 }
 
-export function StudentModal({ student, onClose, onSave }: StudentModalProps) {
+export function StudentModal({ student, onClose, onSave, egroup }: StudentModalProps) {
   const [formData, setFormData] = useState<Partial<Student>>(
     student || {
       name: '',
@@ -21,20 +24,57 @@ export function StudentModal({ student, onClose, onSave }: StudentModalProps) {
       status: 'active',
       parentName: '',
       parentPhone: '',
+      subGroup: '',
+      groupId:'',
+      subGroupid:''
+      
     }
   );
 
-  const [selectedLevel, setSelectedLevel] = useState(formData.level || '');
-  const [selectedGrade, setSelectedGrade] = useState(formData.grade || '');
+  const classesData = transformClassesData(egroup);
 
-  const levels = Object.entries(levelData);
-  const grades = selectedLevel
-    ? levelData[selectedLevel as keyof typeof levelData]?.grades || []
-    : [];
-  const branches =
-    selectedLevel === 'high-school' && selectedGrade
-      ? grades.find((g) => g.name === selectedGrade)?.branches || []
-      : [];
+
+  // Get unique levels
+  const levels = Array.from(new Set(classesData.map(c => c.level)));
+ 
+  // Get grades based on selected level
+  const grades = Array.from(
+    new Set(
+      classesData
+        .filter(c => c.level === formData.level)
+        .map(c => c.grade)
+    )
+  );
+
+
+  // Get available classes (with subgroups) based on selected level and grade
+  const availableClasses = classesData.filter(
+    c => c.level === formData.level && c.grade === formData.grade 
+  );
+ 
+  const handleClassSelection = (selectedClassId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      groupId: selectedClassId, // Assign the selected class id directly
+    }));
+  };
+
+  
+  console.log("Updated Form Data:", formData);
+
+
+  // Save function that calls backend to add the student and then add them to a group
+  const handleSave = async () => {
+    console.log("Form Data:", formData);
+    try {
+      const data = await addStudent(formData);
+      await addStudentToGroup(data.studentId, data.studentName, formData.subGroupid, formData.groupId);
+      onSave(formData);
+      onClose();
+    } catch (error) {
+      console.error("Error saving student:", error);
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -142,77 +182,97 @@ export function StudentModal({ student, onClose, onSave }: StudentModalProps) {
 
           {/* Academic Information */}
           <div className="grid grid-cols-2 gap-4">
+            {/* Level Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Level
               </label>
               <select
-                value={selectedLevel}
+                value={formData.level}
                 onChange={(e) => {
-                  setSelectedLevel(e.target.value);
-                  setSelectedGrade('');
                   setFormData({
                     ...formData,
-                    level: levelData[e.target.value as keyof typeof levelData]?.title,
+                    level: e.target.value,
                     grade: '',
-                    branch: '',
+                    subGroup: [''],
+                    subGroupid:''
                   });
                 }}
                 className="w-full px-3 py-2 border rounded-lg"
               >
                 <option value="">Select Level</option>
-                {levels.map(([key, value]) => (
-                  <option key={key} value={key}>
-                    {value.title}
+                {levels.map((level) => (
+                  <option key={level} value={level}>
+                    {level}
                   </option>
                 ))}
               </select>
             </div>
+
+            {/* Grade Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Grade
               </label>
               <select
-                value={selectedGrade}
+                value={formData.grade}
                 onChange={(e) => {
-                  setSelectedGrade(e.target.value);
                   setFormData({
                     ...formData,
                     grade: e.target.value,
-                    branch: '',
+                    subGroup:[''],
+                    subGroupid:''
                   });
                 }}
                 className="w-full px-3 py-2 border rounded-lg"
-                disabled={!selectedLevel}
+                disabled={!formData.level}
               >
                 <option value="">Select Grade</option>
                 {grades.map((grade) => (
-                  <option key={grade.id} value={grade.name}>
-                    {grade.name}
+                  <option key={grade} value={grade}>
+                    {grade}
                   </option>
                 ))}
               </select>
             </div>
-            {selectedLevel === 'high-school' && (
+
+            {/* Class and Subgroup Selection */}
+            {formData.level && formData.grade && (
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Branch
+                  Class & Subgroup
                 </label>
                 <select
-                  value={formData.branch}
-                  onChange={(e) =>
-                    setFormData({ ...formData, branch: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border rounded-lg"
-                  disabled={!selectedGrade}
-                >
-                  <option value="">Select Branch</option>
-                  {branches.map((branch) => (
-                    <option key={branch.id} value={branch.name}>
-                      {branch.name}
-                    </option>
-                  ))}
-                </select>
+  value={formData.subGroup}
+  onChange={(e) => {
+    const selectedClass = availableClasses.find(cls =>
+      Array.isArray(cls.subGroups) &&
+      cls.subGroups.some(group => group.id === e.target.value)
+    );
+
+    setFormData({
+      ...formData,
+      subGroup: [e.target.value],
+      subGroupid:e.target.value,
+      branch: selectedClass?.branch || ''
+    });
+
+    handleClassSelection(selectedClass?.id || ''); // Ensure the class ID is passed
+  }}
+  className="w-full px-3 py-2 border rounded-lg"
+>
+  <option value="">Select Class & Subgroup</option>
+  {availableClasses.map((cls) => (
+    <optgroup key={cls.id} label={cls.description}>
+      {Array.isArray(cls.subGroups) && cls.subGroups.map((group) => (
+        <option key={group.id} value={group.id}>
+          {group.name}
+        </option>
+      ))}
+    </optgroup>
+  ))}
+</select>
+
               </div>
             )}
           </div>
@@ -226,7 +286,7 @@ export function StudentModal({ student, onClose, onSave }: StudentModalProps) {
             Cancel
           </button>
           <button
-            onClick={() => onSave(formData)}
+            onClick={handleSave}
             className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
           >
             {student ? 'Update Student' : 'Add Student'}
