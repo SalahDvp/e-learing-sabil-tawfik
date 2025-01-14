@@ -12,6 +12,21 @@ interface StudentModalProps {
   egroup: Record<string, Level>;
 }
 
+const levelMapping = {
+  'Primary School': 'الابتدائية',
+  'Middle School': 'المتوسطة',
+  'High School': 'الثانوية',
+};
+
+const gradeMapping = {
+  'First Year': 'السنة الأولى',
+  'Second Year': 'السنة الثانية',
+  'Third Year': 'السنة الثالثة',
+  'Fourth Year': 'السنة الرابعة',
+  'Fifth Year': 'السنة الخامسة',
+};
+
+
 export function StudentModal({ student, onClose, onSave, egroup }: StudentModalProps) {
   const [formData, setFormData] = useState<Partial<Student>>(
     student || {
@@ -38,14 +53,18 @@ export function StudentModal({ student, onClose, onSave, egroup }: StudentModalP
   const levels = Array.from(new Set(classesData.map(c => c.level)));
  
   // Get grades based on selected level
+  
+
   const grades = Array.from(
     new Set(
       classesData
         .filter(c => c.level === formData.level)
         .map(c => c.grade)
     )
-  );
-
+  ).sort((a, b) => {
+    const gradeOrder = Object.keys(gradeMapping); // Use keys of gradeMapping as the order
+    return gradeOrder.indexOf(a) - gradeOrder.indexOf(b);
+  });
 
   // Get available classes (with subgroups) based on selected level and grade
   const availableClasses = classesData.filter(
@@ -182,7 +201,6 @@ export function StudentModal({ student, onClose, onSave, egroup }: StudentModalP
 
           {/* Academic Information */}
           <div className="grid grid-cols-2 gap-4">
-            {/* Level Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Level
@@ -195,7 +213,7 @@ export function StudentModal({ student, onClose, onSave, egroup }: StudentModalP
                     level: e.target.value,
                     grade: '',
                     subGroup: [''],
-                    subGroupid:''
+                    subGroupid: '',
                   });
                 }}
                 className="w-full px-3 py-2 border rounded-lg"
@@ -203,13 +221,12 @@ export function StudentModal({ student, onClose, onSave, egroup }: StudentModalP
                 <option value="">Select Level</option>
                 {levels.map((level) => (
                   <option key={level} value={level}>
-                    {level}
+                    {levelMapping[level] || level}
                   </option>
                 ))}
               </select>
             </div>
 
-            {/* Grade Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Grade
@@ -220,8 +237,8 @@ export function StudentModal({ student, onClose, onSave, egroup }: StudentModalP
                   setFormData({
                     ...formData,
                     grade: e.target.value,
-                    subGroup:[''],
-                    subGroupid:''
+                    subGroup: [''],
+                    subGroupid: '',
                   });
                 }}
                 className="w-full px-3 py-2 border rounded-lg"
@@ -230,7 +247,7 @@ export function StudentModal({ student, onClose, onSave, egroup }: StudentModalP
                 <option value="">Select Grade</option>
                 {grades.map((grade) => (
                   <option key={grade} value={grade}>
-                    {grade}
+                    {gradeMapping[grade] || grade}
                   </option>
                 ))}
               </select>
