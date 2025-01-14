@@ -25,9 +25,9 @@ export function Layout({ children }: LayoutProps) {
   const menuItems = [
     { icon: LayoutIcon, label: 'Dashboard', path: '/' },
     { icon: Users, label: 'Students', path: '/students' },
-    { icon: UserCheck, label: 'Pending Approvals', path: '/pending' },
+   // { icon: UserCheck, label: 'Pending Approvals', path: '/pending' },
     { icon: GraduationCap, label: 'Classes', path: '/classes' },
-    { icon: SettingsIcon, label: 'Settings', path: '/settings' },
+   // { icon: SettingsIcon, label: 'Settings', path: '/settings' },
   ];
 
   const handleLogout = () => {
