@@ -33,4 +33,18 @@ export interface Group {
   videos: Video[];
   liveSessions: LiveSession[];
   studentCount: number;
+  
+}
+export interface Session {
+  id: string
+  title: string
+  date: string
+  time: string
+  status: "upcoming" | "live" | "ended"
+}
+
+export interface User {
+  id: string
+  name: string
+  email: string
 }
