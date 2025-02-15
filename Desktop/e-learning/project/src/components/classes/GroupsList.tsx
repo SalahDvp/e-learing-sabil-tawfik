@@ -510,6 +510,9 @@ export function GroupsList({ groups, onDeleteGroup, selectedClass }: GroupsListP
           </div>
           <div className="h-[calc(100vh-4rem)] overflow-y-auto p-6">{renderSideSheetContent()}</div>
         </div>
+
+
+<div></div>
       )}
     </>
   )
