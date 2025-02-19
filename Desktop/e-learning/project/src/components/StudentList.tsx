@@ -1,4 +1,3 @@
-import React from 'react';
 import { Check, X, UserCircle } from 'lucide-react';
 
 interface Student {

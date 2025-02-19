@@ -512,7 +512,7 @@ export function GroupsList({ groups, onDeleteGroup, selectedClass }: GroupsListP
         </div>
 
 
-<div></div>
+
       )}
     </>
   )

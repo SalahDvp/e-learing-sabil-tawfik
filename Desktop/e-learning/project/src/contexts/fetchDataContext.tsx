@@ -15,8 +15,10 @@ interface FetchDataProviderProps {
 
 // Create the provider component
 export const FetchDataProvider: React.FC<FetchDataProviderProps> = ({ children }) => {
+    const [eStudents, setEStudents] = useState<any[]>([]);
     const [egroup, setEgroup] = useState<any[]>([]);
 
+    // Fetch E-groups once
     useEffect(() => {
         const fetchEgroup = async () => {
             try {
@@ -26,12 +28,13 @@ export const FetchDataProvider: React.FC<FetchDataProviderProps> = ({ children }
                         const subGroupsSnapshot = await getDocs(collection(db, "E-groups", doc.id, "sub-groups"));
                         const subGroups = subGroupsSnapshot.docs.map((subDoc) => ({
                             id: subDoc.id,
-                            ...subDoc.data(),
+                            name: subDoc.data().name, // Assuming sub-group has a 'name' field
                         }));
+
                         return {
                             id: doc.id,
                             ...doc.data(),
-                            subGroups, // Include subcollection data
+                            subGroups, 
                         };
                     })
                 );
@@ -44,8 +47,44 @@ export const FetchDataProvider: React.FC<FetchDataProviderProps> = ({ children }
         fetchEgroup();
     }, []);
 
+    // Fetch E-students and match subGroupId separately
+    useEffect(() => {
+        const fetchEStudents = async () => {
+            try {
+                const studentSnapshot = await getDocs(collection(db, "E-students"));
+                const studentData = studentSnapshot.docs.map((doc) => ({
+                    id: doc.id,
+                    ...doc.data(),
+                }));
+
+                // Assign correct subGroupId based on subGroup name
+                const updatedStudents = studentData.map((student) => {
+                    const studentSubGroupName = student.subGroup?.[0]; // Assuming the first value in the array
+                    let assignedSubGroupId = "";
+
+                    egroup.forEach((group) => {
+                        const matchedSubGroup = group.subGroups.find((sub) => sub.name === studentSubGroupName);
+                        if (matchedSubGroup) {
+                            assignedSubGroupId = matchedSubGroup.id;
+                        }
+                    });
+
+                    return { ...student, subGroupId: assignedSubGroupId };
+                });
+
+                setEStudents(updatedStudents);
+            } catch (error) {
+                console.error("Error fetching E-students:", error);
+            }
+        };
+
+        if (egroup.length > 0) {
+            fetchEStudents();
+        }
+    }, [egroup]); // Runs only when egroup is updated
+    
     return (
-        <AppContext.Provider value={{ egroup, setEgroup }}>
+        <AppContext.Provider value={{ egroup, setEgroup,eStudents, setEStudents }}>
             {children}
         </AppContext.Provider>
     );

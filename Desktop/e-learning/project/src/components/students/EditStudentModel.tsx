@@ -1,29 +1,21 @@
-import { useState } from 'react';
 import { X } from 'lucide-react';
 import type { Student } from '../../types/student';
 import { transformClassesData } from '../../utils/classesDataTransform';
 import type { Level } from '../../types/level';
-import { addStudent, addStudentsToTeacherGroup } from '../../lib/hooks/student';
 
-interface StudentModalProps {
-  student?: Student;
+interface EditStudentModalProps {
+  student: Student;
   onClose: () => void;
-  onSave: (student: Partial<Student>) => void;
+  onSave: (student: Student) => void;
   egroup: Record<string, Level>;
+  setEStudents: React.Dispatch<React.SetStateAction<Student[]>>;
+  eStudents: Student[];
 }
 
-const levelMapping = {
-  'Primary School': 'الابتدائية',
-  'Middle School': 'المتوسطة',
-  'High School': 'الثانوية',
-};
-
-const gradeMapping = {
-  'First Year': 'السنة الأولى',
-  'Second Year': 'السنة الثانية',
-  'Third Year': 'السنة الثالثة',
-  'Fourth Year': 'السنة الرابعة',
-  'Fifth Year': 'السنة الخامسة',
+const levelMapping: Record<string, string> = {
+  elementary: 'Elementary',
+  middle: 'Middle School',
+  high: 'High School'
 };
 
 const subjectMapping = {
@@ -74,47 +66,14 @@ const subjectMapping = {
 };
 
 const translateDescription = (description: string): string => {
-  const normalizedDesc = description.toLowerCase().trim();
-  
-  // Try direct match first
-  if (subjectMapping[normalizedDesc]) {
-    return subjectMapping[normalizedDesc];
-  }
-  
-  // Try hyphenated version
-  const hyphenatedDesc = normalizedDesc.replace(/\s+/g, '-');
-  if (subjectMapping[hyphenatedDesc]) {
-    return subjectMapping[hyphenatedDesc];
-  }
-  
-  // Try to find the best match from the mapping
-  for (const [key, value] of Object.entries(subjectMapping)) {
-    const normalizedKey = key.toLowerCase().trim();
-    if (normalizedDesc.includes(normalizedKey)) {
-      return value;
-    }
-  }
-  
-  return description;
+  return description
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
 };
 
-export function StudentModal({ student, onClose, onSave, egroup,setEStudents,eStudents }: StudentModalProps) {
-  const [formData, setFormData] = useState<Partial<Student>>(
-    student || {
-      name: '',
-      email: '',
-      phone: '',
-      level: '',
-      grade: '',
-      branch: '',
-      status: 'active',
-      parentName: '',
-      parentPhone: '',
-      subGroups:[], // Changed to array
-      groupIds: [], // Changed to array
-      subGroupIds: [] // Changed to array
-    }
-  );
+export function EditStudentModal({ student, onClose, onSave, egroup, setEStudents, eStudents }: EditStudentModalProps) {
+  const [formData, setFormData] = useState<Student>(student);
 
   const classesData = transformClassesData(egroup);
   const levels = Array.from(new Set(classesData.map(c => c.level)));
@@ -126,7 +85,7 @@ export function StudentModal({ student, onClose, onSave, egroup,setEStudents,eSt
         .map(c => c.grade)
     )
   ).sort((a, b) => {
-    const gradeOrder = Object.keys(gradeMapping);
+    const gradeOrder = Object.keys(subjectMapping);
     return gradeOrder.indexOf(a) - gradeOrder.indexOf(b);
   });
 
@@ -161,31 +120,19 @@ export function StudentModal({ student, onClose, onSave, egroup,setEStudents,eSt
   };
 
   const handleSave = async () => {
-    console.log("Form Data:", formData);
     try {
-      const studentId = await addStudent(formData);
-
-      const newStudent = {
-        ...formData,
-        id: studentId,
-       
-      };
-
-      // Add student to all selected groups
-      const promises = formData.groupIds?.map((groupId, index) => {
-        return addStudentsToTeacherGroup(
-          groupId, 
-          formData.subGroupIds?.[index] || '', 
-          { name: formData.name, id: studentId }
-        );
-      }) || [];
-
-      await Promise.all(promises);
+      // Update the student in Firestore
+      await updateStudent(formData.id, formData);
+      
+      // Update the students list in the frontend
+      setEStudents(prevStudents => 
+        prevStudents.map(s => s.id === formData.id ? formData : s)
+      );
+      
       onSave(formData);
-      setEStudents([...eStudents, newStudent as Student]);
       onClose();
     } catch (error) {
-      console.error("Error saving student:", error);
+      console.error("Error updating student:", error);
     }
   };
 
@@ -193,9 +140,7 @@ export function StudentModal({ student, onClose, onSave, egroup,setEStudents,eSt
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg w-full max-w-2xl mx-4">
         <div className="flex justify-between items-center p-6 border-b">
-          <h2 className="text-xl font-semibold">
-            {student ? 'Edit Student' : 'Add New Student'}
-          </h2>
+          <h2 className="text-xl font-semibold">Edit Student: {student.name}</h2>
           <button onClick={onClose}>
             <X className="w-5 h-5" />
           </button>
@@ -329,7 +274,7 @@ export function StudentModal({ student, onClose, onSave, egroup,setEStudents,eSt
                 <option value="">Select Grade</option>
                 {grades.map((grade) => (
                   <option key={grade} value={grade}>
-                    {gradeMapping[grade] || grade}
+                    {subjectMapping[grade] || grade}
                   </option>
                 ))}
               </select>
@@ -338,7 +283,7 @@ export function StudentModal({ student, onClose, onSave, egroup,setEStudents,eSt
             {formData.level && formData.grade && (
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Classes & Subgroups (Select Multiple)
+                  Classes & Subgroups
                 </label>
                 <div className="space-y-2 max-h-60 overflow-y-auto border rounded-lg p-4">
                   {availableClasses.map((cls) => (
@@ -378,7 +323,7 @@ export function StudentModal({ student, onClose, onSave, egroup,setEStudents,eSt
             onClick={handleSave}
             className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
           >
-            {student ? 'Update Student' : 'Add Student'}
+            Save Changes
           </button>
         </div>
       </div>
@@ -386,4 +331,4 @@ export function StudentModal({ student, onClose, onSave, egroup,setEStudents,eSt
   );
 }
 
-export default StudentModal;
+export default EditStudentModal;

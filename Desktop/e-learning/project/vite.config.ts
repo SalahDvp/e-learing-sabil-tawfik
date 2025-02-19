@@ -10,6 +10,9 @@ export default defineConfig({
   resolve: {
     extensions: ['.js', '.ts', '.jsx', '.tsx'], // Ensure .jsx is included
   },
+  server: {
+    historyApiFallback: true, // Fix 404 on refresh in development
+  },
 });
 
 

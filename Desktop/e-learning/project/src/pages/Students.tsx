@@ -3,19 +3,24 @@ import { Plus } from 'lucide-react';
 import { ClassesTable } from '../components/classes/ClassesTable';
 import { getStudentsColumns } from '../components/students/StudentsColumns';
 import { StudentModal } from '../components/students/StudentModal';
+import {EditStudentModal} from '../components/students/EditStudentModel'
 import type { Student } from '../types/student';
-
+import { useData } from '../contexts/fetchDataContext';
 export function Students() {
+  const {egroup,eStudents,setEStudents} = useData()
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+
+console.log(eStudents);
 
   const columns = useMemo(
     () =>
       getStudentsColumns({
         onViewStudent: (student) => {
           setSelectedStudent(student);
-          setShowModal(true);
+          setShowEditModal(true);
         },
         onDeleteStudent: (studentId) => {
           setStudents(students.filter((s) => s.id !== studentId));
@@ -61,10 +66,13 @@ export function Students() {
         </button>
       </div>
 
-      <ClassesTable data={students} columns={columns} />
+      <ClassesTable data={eStudents} columns={columns} />
 
       {showModal && (
         <StudentModal
+          setEStudents={setEStudents}
+          eStudents = {eStudents}
+          egroup = {egroup}
           student={selectedStudent || undefined}
           onClose={() => {
             setShowModal(false);
@@ -73,6 +81,21 @@ export function Students() {
           onSave={handleSaveStudent}
         />
       )}
+      {
+        showEditModal && (
+          <EditStudentModal
+          setEStudents={setEStudents}
+          eStudents = {eStudents}
+          egroup = {egroup}
+          student={selectedStudent || undefined}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedStudent(null);
+          }}
+          onSave={handleSaveStudent}
+        />
+        )
+      }
     </div>
   );
 }

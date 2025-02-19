@@ -10,4 +10,7 @@ export interface Student {
   status: 'active' | 'inactive';
   parentName: string;
   parentPhone: string;
+  subGroup: string,
+  groupId:string,
+  subGroupid:string
 }
